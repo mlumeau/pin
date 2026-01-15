@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pin - Setup Admin</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {{ if .Theme.CustomCSSURL }}<link rel="stylesheet" href="{{ .Theme.CustomCSSURL }}">{{ end }}
+    {{ if .Theme.InlineCSS }}<style>{{ .Theme.InlineCSSTemplate }}</style>{{ end }}
+</head>
+<body data-theme="{{ .Theme.AdminTheme }}">
+    <div class="card medium">
+        <h1>Set up your admin account</h1>
+        {{ if .Error }}
+        <div class="error">{{ .Error }}</div>
+        {{ end }}
+        {{ if .Success }}
+        <div class="message">Account created. Save this TOTP secret: <code>{{ .TOTP }}</code></div>
+        <p class="lead">Use it in your authenticator app, then log in.</p>
+        <p><a href="/login">Go to login</a></p>
+        {{ else }}
+        <form method="post" action="/setup">
+            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="submit">Create admin</button>
+        </form>
+        {{ end }}
+    </div>
+</body>
+</html>

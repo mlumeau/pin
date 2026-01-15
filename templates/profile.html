@@ -1,0 +1,142 @@
+{{ define "profile.html" }}
+    <div class="card">
+        <div class="hero">
+            {{ if .IsPrivateIdentity }}
+            <div class="pill">Private profile</div>
+            {{ end }}
+            <button type="button" class="profile-picture-flip" data-qr="{{ .ProfileURL }}" aria-label="Show QR code">
+                <div class="profile-picture-inner">
+                    <div class="profile-picture-face profile-picture-front">
+                        <picture>
+                            <source type="image/webp" srcset="/profile-picture/{{ .User.Username }}?s=128&format=webp">
+                            <img class="profile-picture" src="/profile-picture/{{ .User.Username }}?s=128" alt="{{ if .ProfilePictureAlt }}{{ .ProfilePictureAlt }}{{ else }}Profile picture{{ end }}">
+                        </picture>
+                    </div>
+                    <div class="profile-picture-face profile-picture-back">
+                        <img class="qr" src="" alt="Profile QR code">
+                    </div>
+                </div>
+                <span class="profile-picture-tooltip" role="status">Tap to reveal QR</span>
+            </button>
+            <h1>{{ if .User.DisplayName }}{{ .User.DisplayName }}{{ else }}{{ .User.Username }}{{ end }}</h1>
+            {{ if .User.Pronouns }}<div class="pill">{{ .User.Pronouns }}</div>{{ end }}
+            {{ if .User.Bio }}
+            <p class="lead">{{ .User.Bio }}</p>
+            {{ end }}
+        </div>
+
+        <div class="grid">
+            {{ if .Links }}
+            <div class="section">
+                <h2>Links</h2>
+                <ul class="links">
+                    {{ range .Links }}
+                    <li><a href="{{ .URL }}" rel="me" target="_blank"><span>{{ .Label }}</span><span>></span></a></li>
+                    {{ end }}
+                </ul>
+            </div>
+            {{ end }}
+
+            {{ if .SocialProfiles }}
+            <div class="section">
+                <h2>Social profiles</h2>
+                <ul class="links">
+                    {{ range .SocialProfiles }}
+                    <li>
+                        <a href="{{ .URL }}" rel="me" target="_blank">
+                            <span>{{ .Label }}</span>
+                            {{ if .Verified }}<span class="badge">verified</span>{{ else }}<span>></span>{{ end }}
+                        </a>
+                    </li>
+                    {{ end }}
+                </ul>
+            </div>
+            {{ end }}
+
+            {{ if or .User.ATProtoHandle .User.ATProtoDID }}
+            <div class="section">
+                <h2>AT Protocol</h2>
+                <div class="two-col">
+                    {{ if .User.ATProtoHandle }}<p class="meta"><strong>Handle</strong><br>{{ .User.ATProtoHandle }}</p>{{ end }}
+                    {{ if .User.ATProtoDID }}<p class="meta"><strong>DID</strong><br>{{ .User.ATProtoDID }}</p>{{ end }}
+                </div>
+            </div>
+            {{ end }}
+
+            <div class="section two-col">
+                {{ if .User.Organization }}<p class="meta"><strong>Organization</strong><br>{{ .User.Organization }}</p>{{ end }}
+                {{ if .User.JobTitle }}<p class="meta"><strong>Job title</strong><br>{{ .User.JobTitle }}</p>{{ end }}
+                {{ if .User.Birthdate }}<p class="meta"><strong>Birthdate</strong><br>{{ .User.Birthdate }}</p>{{ end }}
+                {{ if .User.Languages }}<p class="meta"><strong>Languages</strong><br>{{ .User.Languages }}</p>{{ end }}
+                {{ if .User.Phone }}<p class="meta"><strong>Phone</strong><br>{{ .User.Phone }}</p>{{ end }}
+                {{ if .User.Address }}<p class="meta"><strong>Address</strong><br>{{ .User.Address }}</p>{{ end }}
+                {{ if .User.Website }}<p class="meta"><strong>Website</strong><br>{{ .User.Website }}</p>{{ end }}
+                {{ if .User.Location }}<p class="meta"><strong>Location</strong><br>{{ .User.Location }}</p>{{ end }}
+                {{ if .User.Timezone }}<p class="meta"><strong>Timezone</strong><br>{{ .User.Timezone }}</p>{{ end }}
+                {{ range $key, $value := .CustomFields }}
+                <p class="meta"><strong>{{ $key }}</strong><br>{{ $value }}</p>
+                {{ end }}
+            </div>
+
+            {{ if .VerifiedDomains }}
+            <div class="section">
+                <h2>Verified domains</h2>
+                <ul class="links">
+                    {{ range .VerifiedDomains }}
+                    <li><a href="https://{{ . }}" rel="me" target="_blank"><span>{{ . }}</span><span>></span></a></li>
+                    {{ end }}
+                </ul>
+            </div>
+            {{ end }}
+
+            {{ if .Wallets }}
+            <div class="section">
+                <h2>Wallets</h2>
+                <div class="two-col">
+                    {{ range $key, $value := .Wallets }}
+                    <p class="meta"><strong>{{ $key | toUpper }}</strong><br>{{ $value }}</p>
+                    {{ end }}
+                </div>
+            </div>
+            {{ end }}
+
+            {{ if .PublicKeys }}
+            <div class="section">
+                <h2>Public keys</h2>
+                <ul class="links">
+                    {{ range $key, $value := .PublicKeys }}
+                    <li><a href="#" onclick="return false;"><span>{{ $key }}</span><span>{{ $value }}</span></a></li>
+                    {{ end }}
+                </ul>
+            </div>
+            {{ end }}
+
+            <div class="section">
+                <h2>Identity exports</h2>
+                <p class="meta">
+                    <a class="link-inline" href="{{ .ExportBase }}.json">JSON</a> ·
+                    <a class="link-inline" href="{{ .ExportBase }}.xml">XML</a> ·
+                    <a class="link-inline" href="{{ .ExportBase }}.txt">TXT</a> ·
+                    <a class="link-inline" href="{{ .ExportBase }}.vcf">vCard</a>
+                </p>
+            </div>
+        </div>
+
+        <footer>
+            Updated {{ .UpdatedAt.Format "2006-01-02" }}
+        </footer>
+    </div>
+    <script>
+        (function () {
+            const button = document.querySelector('.profile-picture-flip');
+            if (!button) return;
+            const qrImg = button.querySelector('.qr');
+            const data = button.getAttribute('data-qr');
+            const qrUrl = '/qr?data=' + encodeURIComponent(data);
+            qrImg.src = qrUrl;
+            button.addEventListener('click', function () {
+                button.classList.toggle('flipped');
+            });
+        })();
+    </script>
+{{ end }}

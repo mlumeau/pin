@@ -1,0 +1,21 @@
+{{ define "settings_layout_start" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {{ if .Theme.CustomCSSURL }}<link rel="stylesheet" href="{{ .Theme.CustomCSSURL }}">{{ end }}
+    {{ if .Theme.InlineCSS }}<style>{{ .Theme.InlineCSSTemplate }}</style>{{ end }}
+</head>
+<body data-theme="{{ .Theme.AdminTheme }}">
+    {{ if .Message }}
+    <div class="toast" data-toast>{{ .Message }}</div>
+    {{ end }}
+    <div class="card admin">
+        <button class="admin-nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰ Menu</button>
+        <div class="admin-layout">
+            {{ template "settings_nav" . }}
+            <div class="admin-main">
+{{ end }}

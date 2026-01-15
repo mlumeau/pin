@@ -1,0 +1,35 @@
+{{ define "settings_layout_end" }}
+            </div>
+        </div>
+    </div>
+    <script>
+        const navToggle = document.getElementById('nav-toggle');
+        const adminNav = document.querySelector('.admin-nav');
+        
+        if (navToggle && adminNav) {
+            navToggle.addEventListener('click', () => {
+                adminNav.classList.toggle('is-open');
+                navToggle.setAttribute('aria-expanded', adminNav.classList.contains('is-open'));
+            });
+            
+            // Close menu when a nav link is clicked
+            adminNav.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    adminNav.classList.remove('is-open');
+                    navToggle.setAttribute('aria-expanded', 'false');
+                });
+            });
+            
+            // Close menu on escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && adminNav.classList.contains('is-open')) {
+                    adminNav.classList.remove('is-open');
+                    navToggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+    </script>
+    <script src="/static/js/settings-toast.js"></script>
+</body>
+</html>
+{{ end }}

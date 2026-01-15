@@ -1,0 +1,23 @@
+{{ define "social_row" }}
+<div class="list-row" {{ if .Verified }}title="Verified profiles cannot be edited here."{{ end }}>
+    <div>
+        <label for="social_label">Label</label>
+        <input type="text" id="social_label" name="social_label" placeholder="e.g., Twitter" value="{{ .Label }}" {{ if .Verified }}disabled{{ end }}>
+    </div>
+    <div>
+        <label for="social_url">URL</label>
+        <input type="url" id="social_url" name="social_url" placeholder="https://twitter.com/username" value="{{ .URL }}" {{ if .Verified }}disabled{{ end }}>
+    </div>
+    <div class="visibility-control" data-visibility-control>
+        <input type="hidden" name="social_visibility" value="{{ if eq .Visibility "private" }}private{{ else }}public{{ end }}" data-visibility-input {{ if .Verified }}disabled{{ end }}>
+        <label class="visibility-switch">
+            <input type="checkbox" data-visibility-toggle {{ if eq .Visibility "private" }}checked{{ end }} {{ if .Verified }}disabled{{ end }}>
+            <span class="switch-track"></span>
+            <span class="switch-label visually-hidden">Private</span>
+        </label>
+    </div>
+    <button type="button" class="icon-button remove-row" aria-label="Remove social" {{ if .Verified }}disabled{{ end }}>
+        <span class="icon icon-trash" aria-hidden="true"></span>
+    </button>
+</div>
+{{ end }}

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pin - Login</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {{ if .Theme.CustomCSSURL }}<link rel="stylesheet" href="{{ .Theme.CustomCSSURL }}">{{ end }}
+    {{ if .Theme.InlineCSS }}<style>{{ .Theme.InlineCSSTemplate }}</style>{{ end }}
+</head>
+<body data-theme="{{ .Theme.AdminTheme }}">
+    <div class="card compact">
+        <h1>Welcome back</h1>
+        {{ if .Error }}
+        <div class="error">{{ .Error }}</div>
+        {{ end }}
+        <div class="error" id="passkey-error" style="display:none;"></div>
+        <form method="post" action="/login?next={{ .Next }}">
+            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+
+            <label for="totp">Authenticator code</label>
+            <input type="text" id="totp" name="totp" required>
+
+            <button type="submit">Sign in</button>
+            <button type="button" id="passkey-login">Use passkey</button>
+        </form>
+    </div>
+    <script src="/static/js/passkeys.js"></script>
+    <script>
+        initPasskeyLogin({
+            usernameInputId: "username",
+            buttonId: "passkey-login",
+            errorId: "passkey-error",
+            next: "{{ .Next }}",
+        });
+    </script>
+</body>
+</html>

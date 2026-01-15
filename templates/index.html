@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ if .ShowLanding }}PIN - Your Identity, Your Rules{{ else }}{{ if .User.DisplayName }}{{ .User.DisplayName }}{{ else }}{{ .User.Username }}{{ end }} - Identity{{ end }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {{ if .Theme.CustomCSSURL }}<link rel="stylesheet" href="{{ .Theme.CustomCSSURL }}">{{ end }}
+    {{ if .Theme.InlineCSS }}<style>{{ .Theme.InlineCSSTemplate }}</style>{{ end }}
+</head>
+<body data-theme="{{ .Theme.ProfileTheme }}">
+    {{ if .ShowLanding }}
+    {{ template "landing.html" . }}
+    {{ else }}
+    {{ template "profile.html" . }}
+    {{ end }}
+</body>
+</html>

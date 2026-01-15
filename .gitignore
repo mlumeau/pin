@@ -1,0 +1,30 @@
+# Go
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Build
+/bin/
+/dist/
+
+# Coverage
+coverage
+coverage.out
+coverage.html
+/.cover/
+
+# Editor/OS
+.DS_Store
+Thumbs.db
+
+# Local data
+identity.db
+identity.db-shm
+identity.db-wal
+
+# Uploads/cache
+/static/uploads/
+/static/.well-known/

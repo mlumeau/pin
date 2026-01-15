@@ -1,0 +1,23 @@
+{{ define "link_row" }}
+<div class="list-row">
+    <div>
+        <label for="link_label">Label</label>
+        <input type="text" id="link_label" name="link_label" placeholder="e.g., Portfolio" value="{{ .Label }}">
+    </div>
+    <div>
+        <label for="link_url">URL</label>
+        <input type="url" id="link_url" name="link_url" placeholder="https://example.com" value="{{ .URL }}">
+    </div>
+    <div class="visibility-control" data-visibility-control>
+        <input type="hidden" name="link_visibility" value="{{ if eq .Visibility "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+        <label class="visibility-switch">
+            <input type="checkbox" data-visibility-toggle {{ if eq .Visibility "private" }}checked{{ end }}>
+            <span class="switch-track"></span>
+            <span class="switch-label visually-hidden">Private</span>
+        </label>
+    </div>
+    <button type="button" class="icon-button remove-row" aria-label="Remove link">
+        <span class="icon icon-trash" aria-hidden="true"></span>
+    </button>
+</div>
+{{ end }}

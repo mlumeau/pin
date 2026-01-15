@@ -1,0 +1,116 @@
+{{ define "landing.html" }}
+    <div class="landing-wrapper">
+        <header class="landing-header">
+            <div class="landing-brand">
+                <span class="landing-brand-dot"></span>
+                <span>PIN - Personal Identity Node</span>
+            </div>
+            <nav class="landing-nav">
+                <a class="link-inline" href="{{ .ProfilePath }}">Profile</a>
+                <a class="link-inline" href="/login">Settings</a>
+            </nav>
+        </header>
+
+        <section class="landing-hero">
+            <div class="landing-hero-content">
+                <h1>Identity under your control</h1>
+                <p class="landing-tagline">PIN is a self-hosted identity platform. Own your profile, manage multiple identities, and export your data anywhere&mdash;all with zero external dependencies.</p>
+                <div class="landing-cta-group">
+                    <a href="{{ .ProfilePath }}" class="primary">View Profile</a>
+                    <a href="/login" class="secondary">Manage Settings</a>
+                </div>
+                <div class="landing-hero-divider">
+                    <p>Trusted by people and teams who need reliable, portable identity infrastructure.</p>
+                </div>
+            </div>
+            <div class="landing-hero-visual">
+                <div class="landing-profile-card">
+                    <div class="landing-profile-header">
+                        <span>Featured Profile</span>
+                        <span class="landing-profile-badge">Primary</span>
+                    </div>
+                    <div class="landing-profile-content">
+                        <div class="landing-profile-avatar">
+                            <img src="{{ .ProfilePictureURL }}" alt="{{ if .ProfilePictureAlt }}{{ .ProfilePictureAlt }}{{ else }}Profile picture{{ end }}">
+                        </div>
+                        <div class="landing-profile-info">
+                            <h3>{{ if .User.DisplayName }}{{ .User.DisplayName }}{{ else }}{{ .User.Username }}{{ end }}</h3>
+                            {{ if .User.Bio }}<div class="bio">{{ .User.Bio }}</div>{{ end }}
+                        </div>
+                    </div>
+                    <div class="landing-profile-actions">
+                        <a href="{{ .ProfilePath }}">View Profile</a>
+                        <a href="{{ .ExportBase }}.vcf">vCard</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="landing-why">
+            <h2>Why PIN exists</h2>
+            <div class="landing-why-text">
+                <p>Identity on the web is fragmented. Your information is scattered across platforms you don't control, locked in proprietary formats, and tied to services that might disappear. <strong>PIN fixes this.</strong></p>
+                <p>We believe identity is foundational infrastructure. Like DNS or email, it should be reliable, portable, and under your control. PIN gives you a canonical source of truth for who you are&mdash;on your own terms.</p>
+            </div>
+        </section>
+
+        <section class="landing-features">
+            <div class="landing-feature">
+                <h3>&#128274; Own Your Data</h3>
+                <p>No cloud vendor lock-in. Your identity runs on your server with zero external dependencies. Full control, full privacy.</p>
+            </div>
+            <div class="landing-feature">
+                <h3>&#128101; Multi-Profile Ready</h3>
+                <p>Manage individuals, teams, and organizations from one system. Perfect for personal brands or company identity infrastructure.</p>
+            </div>
+            <div class="landing-feature">
+                <h3>&#128737; Privacy Controls</h3>
+                <p>Decide what's public and what stays private. Control field-level visibility for each profile. Share selectively&mdash;your way.</p>
+            </div>
+            <div class="landing-feature">
+                <h3>&#127912; Full Customization</h3>
+                <p>Design your identity. Choose from bold themes, upload custom CSS, and make your profile truly yours.</p>
+            </div>
+            <div class="landing-feature">
+                <h3>&#127760; Portable Identity</h3>
+                <p>Export to JSON, XML, vCard, or TXT. Use the same identity data everywhere&mdash;your website, your tools, your automations.</p>
+            </div>
+            <div class="landing-feature">
+                <h3>&#128444; Profile Picture Export</h3>
+                <p>Upload your profile picture and export it in any size. Perfect for avatars, headers, or high-res prints. Control your visual identity everywhere.</p>
+            </div>
+            <div class="landing-feature">
+                <h3>&#128640; AT Protocol Compatible</h3>
+                <p>Publish your AT handle and DID, plus resolve them at <span class="inline-code">/.well-known/atproto-did</span> for seamless federation.</p>
+            </div>
+            <div class="landing-feature">
+                <h3>&#129302; API + MCP Ready</h3>
+                <p>Serve identity data to agents and automations with predictable endpoints and a built-in MCP interface.</p>
+            </div>
+        </section>
+
+        <section class="landing-exports">
+            <h2>Get Your Data, Any Format</h2>
+            <p class="landing-exports-subtitle">Deterministic endpoints. Automation-friendly. Ready to share or import.</p>
+            <div class="landing-export-buttons">
+                <a href="{{ .ExportBase }}.json">JSON</a>
+                <a href="{{ .ExportBase }}.xml">XML</a>
+                <a href="{{ .ExportBase }}.txt">TXT</a>
+                <a href="{{ .ExportBase }}.vcf">vCard</a>
+            </div>
+            <p class="landing-export-info">Use <code>{{ .ExportBase }}</code> as the base URL for programmatic access.</p>
+        </section>
+
+        {{ if .HasCustomLandingHTML }}
+        <section class="landing-custom">
+            <h2>Custom Note</h2>
+            <div class="landing-custom-html">{{ .CustomLandingHTML }}</div>
+        </section>
+        {{ end }}
+
+        <footer class="landing-footer">
+            <p>PIN: Personal Identity Node &mdash; Keep your identity consistent, portable, and yours.</p>
+            <p><a href="{{ .ProfilePath }}">View Profile</a> &bull; <a href="/json">JSON Feed</a> &bull; <a href="/login">Settings</a></p>
+        </footer>
+    </div>
+{{ end }}

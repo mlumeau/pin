@@ -1,0 +1,528 @@
+{{ define "settings_profile.html" }}
+{{ template "settings_layout_start" . }}
+                <form method="post" action="{{ .FormAction }}" enctype="multipart/form-data" id="profile-settings-form">
+                    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                    <div class="section" id="section-basics">
+                        <h2>Basics</h2>
+                        <div class="inline-row">
+                            <div>
+                                <label for="display_name">Display name</label>
+                                <input type="text" id="display_name" name="display_name" value="{{ .User.DisplayName }}" required>
+                            </div>
+                        </div>
+                        <label for="bio">Bio</label>
+                        <textarea id="bio" name="bio" rows="4">{{ .User.Bio }}</textarea>
+                    </div>
+
+                    <div class="section" id="section-picture">
+                        <div class="section-header">
+                            <h2>Profile picture</h2>
+                            <button type="button" class="ghost" id="open-upload-modal">Upload new</button>
+                        </div>
+                        <div class="profile-picture-gallery" id="profile-picture-gallery" data-active="{{ .ActiveProfilePictureID }}" data-user="{{ .User.Username }}">
+                            {{ if .ProfilePictures }}
+                            {{ range .ProfilePictures }}
+                            <div class="profile-picture-card {{ if eq $.ActiveProfilePictureID .ID }}is-selected{{ end }}" data-picture-id="{{ .ID }}">
+                                <img src="/profile-picture/{{ $.User.Username }}?s=160&picture_id={{ .ID }}&v={{ .Filename }}" alt="Profile picture">
+                                <div class="profile-picture-meta">
+                                    <span class="badge">{{ if eq $.ActiveProfilePictureID .ID }}Active{{ end }}</span>
+                                    <button type="button" class="profile-picture-alt edit-picture" data-picture-id="{{ .ID }}">Edit alt text</button>
+                                    <div class="profile-picture-actions">
+                                        <button type="button" class="ghost select-picture" data-picture-id="{{ .ID }}" {{ if eq $.ActiveProfilePictureID .ID }}disabled{{ end }}>Select</button>
+                                        <button type="button" class="icon-button delete-picture" data-picture-id="{{ .ID }}" aria-label="Delete picture">
+                                            <span class="icon icon-trash" aria-hidden="true"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {{ end }}
+                            {{ else }}
+                            <p class="meta">No profile pictures yet. Upload one to get started.</p>
+                            {{ end }}
+                        </div>
+                    </div>
+                    <div class="section" id="section-profile">
+                        <h2>Profile</h2>
+                        <div class="highlight-note">
+                            Visibility: <span class="visibility-key"><span class="visibility-icon is-public" aria-hidden="true"></span>Public</span> or <span class="visibility-key"><span class="visibility-icon is-private" aria-hidden="true"></span>Private profile</span>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="organization">Organization</label>
+                                <input type="text" id="organization" name="organization" value="{{ .User.Organization }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_organization" value="{{ if eq (index .FieldVisibility "organization") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "organization") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="job_title">Job title</label>
+                                <input type="text" id="job_title" name="job_title" value="{{ .User.JobTitle }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_job_title" value="{{ if eq (index .FieldVisibility "job_title") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "job_title") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="birthdate">Birthdate</label>
+                                <input type="date" id="birthdate" name="birthdate" value="{{ .User.Birthdate }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_birthdate" value="{{ if eq (index .FieldVisibility "birthdate") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "birthdate") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="languages">Languages</label>
+                                <input type="text" id="languages" name="languages" placeholder="en, fr" value="{{ .User.Languages }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_languages" value="{{ if eq (index .FieldVisibility "languages") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "languages") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="pronouns">Pronouns</label>
+                                <input type="text" id="pronouns" name="pronouns" value="{{ .User.Pronouns }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_pronouns" value="{{ if eq (index .FieldVisibility "pronouns") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "pronouns") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="timezone">Timezone</label>
+                                <select id="timezone" name="timezone">
+                                    <option value="" {{ if eq .User.Timezone "" }}selected{{ end }}>Select timezone</option>
+                                    <option value="UTC" {{ if eq .User.Timezone "UTC" }}selected{{ end }}>UTC</option>
+                                    <option value="America/Los_Angeles" {{ if eq .User.Timezone "America/Los_Angeles" }}selected{{ end }}>America/Los_Angeles</option>
+                                    <option value="America/Denver" {{ if eq .User.Timezone "America/Denver" }}selected{{ end }}>America/Denver</option>
+                                    <option value="America/Chicago" {{ if eq .User.Timezone "America/Chicago" }}selected{{ end }}>America/Chicago</option>
+                                    <option value="America/New_York" {{ if eq .User.Timezone "America/New_York" }}selected{{ end }}>America/New_York</option>
+                                    <option value="America/Sao_Paulo" {{ if eq .User.Timezone "America/Sao_Paulo" }}selected{{ end }}>America/Sao_Paulo</option>
+                                    <option value="Europe/London" {{ if eq .User.Timezone "Europe/London" }}selected{{ end }}>Europe/London</option>
+                                    <option value="Europe/Paris" {{ if eq .User.Timezone "Europe/Paris" }}selected{{ end }}>Europe/Paris</option>
+                                    <option value="Europe/Berlin" {{ if eq .User.Timezone "Europe/Berlin" }}selected{{ end }}>Europe/Berlin</option>
+                                    <option value="Europe/Madrid" {{ if eq .User.Timezone "Europe/Madrid" }}selected{{ end }}>Europe/Madrid</option>
+                                    <option value="Europe/Rome" {{ if eq .User.Timezone "Europe/Rome" }}selected{{ end }}>Europe/Rome</option>
+                                    <option value="Europe/Amsterdam" {{ if eq .User.Timezone "Europe/Amsterdam" }}selected{{ end }}>Europe/Amsterdam</option>
+                                    <option value="Europe/Stockholm" {{ if eq .User.Timezone "Europe/Stockholm" }}selected{{ end }}>Europe/Stockholm</option>
+                                    <option value="Europe/Zurich" {{ if eq .User.Timezone "Europe/Zurich" }}selected{{ end }}>Europe/Zurich</option>
+                                    <option value="Europe/Moscow" {{ if eq .User.Timezone "Europe/Moscow" }}selected{{ end }}>Europe/Moscow</option>
+                                    <option value="Africa/Johannesburg" {{ if eq .User.Timezone "Africa/Johannesburg" }}selected{{ end }}>Africa/Johannesburg</option>
+                                    <option value="Asia/Dubai" {{ if eq .User.Timezone "Asia/Dubai" }}selected{{ end }}>Asia/Dubai</option>
+                                    <option value="Asia/Kolkata" {{ if eq .User.Timezone "Asia/Kolkata" }}selected{{ end }}>Asia/Kolkata</option>
+                                    <option value="Asia/Bangkok" {{ if eq .User.Timezone "Asia/Bangkok" }}selected{{ end }}>Asia/Bangkok</option>
+                                    <option value="Asia/Singapore" {{ if eq .User.Timezone "Asia/Singapore" }}selected{{ end }}>Asia/Singapore</option>
+                                    <option value="Asia/Tokyo" {{ if eq .User.Timezone "Asia/Tokyo" }}selected{{ end }}>Asia/Tokyo</option>
+                                    <option value="Asia/Seoul" {{ if eq .User.Timezone "Asia/Seoul" }}selected{{ end }}>Asia/Seoul</option>
+                                    <option value="Australia/Sydney" {{ if eq .User.Timezone "Australia/Sydney" }}selected{{ end }}>Australia/Sydney</option>
+                                    <option value="Australia/Melbourne" {{ if eq .User.Timezone "Australia/Melbourne" }}selected{{ end }}>Australia/Melbourne</option>
+                                    <option value="Pacific/Auckland" {{ if eq .User.Timezone "Pacific/Auckland" }}selected{{ end }}>Pacific/Auckland</option>
+                                </select>
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_timezone" value="{{ if eq (index .FieldVisibility "timezone") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "timezone") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        {{ if and .IsAdmin (not .IsSelf) }}
+                        <label for="role">Role</label>
+                        <select id="role" name="role" {{ if not .CanEditRole }}disabled{{ end }}>
+                            <option value="user" {{ if eq .User.Role "user" }}selected{{ end }}>User</option>
+                            <option value="admin" {{ if eq .User.Role "admin" }}selected{{ end }}>Admin</option>
+                            <option value="owner" {{ if eq .User.Role "owner" }}selected{{ end }}>Owner</option>
+                        </select>
+                        {{ end }}
+                    </div>
+                    <div class="section" id="section-contact">
+                        <h2>Contact</h2>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="email_contact">Email</label>
+                                <input type="email" id="email_contact" name="email" value="{{ .User.Email }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_email" value="{{ if eq (index .FieldVisibility "email") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "email") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="phone">Phone</label>
+                                <input type="tel" id="phone" name="phone" value="{{ .User.Phone }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_phone" value="{{ if eq (index .FieldVisibility "phone") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "phone") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="address">Address</label>
+                                <textarea id="address" name="address" rows="3" placeholder="Street, city, region, country">{{ .User.Address }}</textarea>
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_address" value="{{ if eq (index .FieldVisibility "address") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "address") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="location">Location</label>
+                                <input type="text" id="location" name="location" value="{{ .User.Location }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_location" value="{{ if eq (index .FieldVisibility "location") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "location") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="website">Website</label>
+                                <input type="url" id="website" name="website" value="{{ .User.Website }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_website" value="{{ if eq (index .FieldVisibility "website") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "website") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section" id="section-custom">
+                        <h2>Custom fields</h2>
+                        <div id="custom-fields-list" class="list">
+                            {{ range $key, $value := .CustomFields }}
+                            {{ template "custom_field_row" (dict "Key" $key "Value" $value "Visibility" (index $.CustomFieldVisibility $key)) }}
+                            {{ end }}
+                        </div>
+                        <button type="button" id="add-custom-field">Add field</button>
+                    </div>
+
+                    <div class="section" id="section-links">
+                        <h2>Links</h2>
+                        <div id="links-list" class="list">
+                            {{ range .Links }}
+                            {{ template "link_row" . }}
+                            {{ end }}
+                        </div>
+                        <button type="button" id="add-link">Add link</button>
+                    </div>
+
+                    <div class="section" id="section-social">
+                        <h2>Social profiles</h2>
+                        <div id="social-list" class="list">
+                            {{ range .SocialProfiles }}
+                            {{ template "social_row" (dict "Label" (firstNonEmpty .Label .Provider) "URL" .URL "Visibility" .Visibility "Verified" .Verified) }}
+                            {{ end }}
+                        </div>
+                        <button type="button" id="add-social">Add social profile</button>
+
+                        {{ if .IsSelf }}
+                        <div class="link-actions" style="margin-top: 0.75rem;">
+                            {{ if .GitHubOAuthEnabled }}
+                            <a href="/oauth/github/start">Connect GitHub</a>
+                            {{ else }}
+                            <span>Connect GitHub (not configured)</span>
+                            {{ end }}
+                            |
+                            {{ if .RedditOAuthEnabled }}
+                            <a href="/oauth/reddit/start">Connect Reddit</a>
+                            {{ else }}
+                            <span>Connect Reddit (not configured)</span>
+                            {{ end }}
+                        </div>
+                        <div style="margin-top: 0.75rem;">
+                            <button type="button" class="ghost" id="open-bluesky" {{ if not .BlueskyEnabled }}disabled{{ end }}>Verify Bluesky</button>
+                        </div>
+                        {{ end }}
+                    </div>
+
+                    <div class="section" id="section-wallets">
+                        <h2>Wallets</h2>
+                        <div id="wallets-list" class="list">
+                            {{ range .WalletEntries }}
+                            {{ template "wallet_row" . }}
+                            {{ end }}
+                        </div>
+                        <button type="button" id="add-wallet">Add wallet</button>
+                    </div>
+
+                    <div class="section" id="section-keys">
+                        <h2>Public keys</h2>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="key_pgp">PGP</label>
+                                <textarea id="key_pgp" name="key_pgp" rows="3" placeholder="PGP public key">{{ index .PublicKeys "pgp" }}</textarea>
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_key_pgp" value="{{ if eq (index .FieldVisibility "key_pgp") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "key_pgp") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="key_ssh">SSH</label>
+                                <textarea id="key_ssh" name="key_ssh" rows="2" placeholder="SSH public key">{{ index .PublicKeys "ssh" }}</textarea>
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_key_ssh" value="{{ if eq (index .FieldVisibility "key_ssh") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "key_ssh") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="key_age">age</label>
+                                <textarea id="key_age" name="key_age" rows="2" placeholder="age public key">{{ index .PublicKeys "age" }}</textarea>
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_key_age" value="{{ if eq (index .FieldVisibility "key_age") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "key_age") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="key_activitypub">ActivityPub (PEM)</label>
+                                <textarea id="key_activitypub" name="key_activitypub" rows="4" placeholder="ActivityPub public key (PEM)">{{ index .PublicKeys "activitypub" }}</textarea>
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_key_activitypub" value="{{ if eq (index .FieldVisibility "key_activitypub") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "key_activitypub") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section" id="section-atproto">
+                        <h2>AT Protocol</h2>
+                        <div class="highlight-note">
+                            Set your AT handle and DID. PIN serves the DID at <span class="inline-code">/.well-known/atproto-did</span> for domain-based handles.
+                        </div>
+                        {{ if .User.ATProtoHandle }}
+                        <p class="meta">
+                            {{ if .ATProtoHandleVerified }}
+                            Handle matches a verified domain.
+                            {{ else }}
+                            Handle does not match a verified domain. Verify the domain or use a verified domain below to prefill.
+                            {{ end }}
+                        </p>
+                        {{ end }}
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="atproto_handle">AT handle</label>
+                                <input type="text" id="atproto_handle" name="atproto_handle" placeholder="you.example.com" value="{{ .User.ATProtoHandle }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_atproto_handle" value="{{ if eq (index .FieldVisibility "atproto_handle") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "atproto_handle") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="atproto_did">AT DID</label>
+                                <input type="text" id="atproto_did" name="atproto_did" placeholder="did:plc:xxxx" value="{{ .User.ATProtoDID }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_atproto_did" value="{{ if eq (index .FieldVisibility "atproto_did") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "atproto_did") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section" id="section-verified">
+                        <h2>Verified domains</h2>
+                        <div class="highlight-note">
+                            Enter a domain name to generate a token. Publish it in a <span class="inline-code">/.well-known/pin-verify</span> file on your domain (one token per line), then click Verify to confirm ownership.
+                        </div>
+                        <input type="hidden" id="verified_domains_input" name="verified_domains" value="{{ .VerifiedDomains }}">
+                        <div class="domain-add-row">
+                            <input type="text" id="domain-verify-input" placeholder="example.com">
+                            <button type="button" id="domain-verify-add">Add domain</button>
+                        </div>
+                        <div class="domain-verify-list" id="domain-verify-list">
+                            {{ range .DomainVerifications }}
+                            {{ template "domain_row" (dict "Domain" .Domain "Token" .Token "VerifiedAt" .VerifiedAt "Username" $.User.Username "IsProtected" (eq .Domain $.ProtectedDomain) "Visibility" (index $.DomainVisibility .Domain)) }}
+                            {{ end }}
+                        </div>
+                    </div>
+
+                    <div class="section" id="section-aliases">
+                        <h2>Aliases</h2>
+                        <label for="aliases">One per line</label>
+                        <textarea id="aliases" name="aliases" rows="3">{{ .Aliases }}</textarea>
+                    </div>
+                </form>
+
+                <div class="modal" id="bluesky-modal" aria-hidden="true">
+                    <div class="modal-backdrop" data-close="true"></div>
+                    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bluesky-title">
+                        <div class="modal-header">
+                            <h3 id="bluesky-title">Verify Bluesky</h3>
+                            <button type="button" class="ghost" data-close="true">Close</button>
+                        </div>
+                        <form method="post" action="/settings/profile/social/bluesky">
+                            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                            <label for="bsky_handle">Bluesky handle</label>
+                            <input type="text" id="bsky_handle" name="bsky_handle" placeholder="you.bsky.social" {{ if not .BlueskyEnabled }}disabled{{ end }}>
+                            <label for="bsky_app_password">Bluesky app password</label>
+                            <input type="password" id="bsky_app_password" name="bsky_app_password" placeholder="xxxx-xxxx-xxxx-xxxx" {{ if not .BlueskyEnabled }}disabled{{ end }}>
+                            <button type="submit" {{ if not .BlueskyEnabled }}disabled{{ end }}>Verify Bluesky</button>
+                        </form>
+                    </div>
+                </div>
+    <div class="modal" id="profile-picture-modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close="true"></div>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="profile-picture-title">
+            <div class="modal-header">
+                <h3 id="profile-picture-title">Upload profile picture</h3>
+                <button type="button" class="ghost" data-close="true">Close</button>
+            </div>
+            <form id="profile-picture-upload-form" method="post" action="/settings/profile/profile-picture/upload" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                <label for="profile_picture_modal">Choose image</label>
+                <input type="file" id="profile_picture_modal" name="profile_picture" accept="image/*" required>
+                <label for="profile_picture_alt_modal">Alt text (optional)</label>
+                <input type="text" id="profile_picture_alt_modal" name="profile_picture_alt" placeholder="Describe the image">
+                <div class="upload-progress" id="profile-picture-upload-progress" aria-hidden="true">
+                    <div class="upload-progress-track">
+                        <div class="upload-progress-bar" id="profile-picture-upload-bar" style="width: 0%"></div>
+                    </div>
+                    <p class="meta" id="profile-picture-upload-label">Uploading…</p>
+                </div>
+                <button type="submit">Upload</button>
+            </form>
+        </div>
+    </div>
+    <div class="modal" id="profile-picture-alt-modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close="true"></div>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="profile-picture-alt-title">
+            <div class="modal-header">
+                <h3 id="profile-picture-alt-title">Edit profile picture alt text</h3>
+                <button type="button" class="ghost" data-close="true">Close</button>
+            </div>
+            <form id="profile-picture-alt-form">
+                <label for="profile-picture-alt-input">Alt text</label>
+                <input type="text" id="profile-picture-alt-input" name="profile_picture_alt" placeholder="Describe the image">
+                <input type="hidden" id="profile-picture-alt-id" name="profile_picture_id" value="">
+                <button type="submit">Save</button>
+            </form>
+        </div>
+    </div>
+    <div class="modal" id="profile-picture-delete-modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close="true"></div>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="profile-picture-delete-title">
+            <div class="modal-header">
+                <h3 id="profile-picture-delete-title">Delete profile picture</h3>
+            </div>
+            <form id="profile-picture-delete-form">
+                <p class="meta">This removes the profile picture from your gallery.</p>
+                <input type="hidden" id="profile-picture-delete-id" name="profile_picture_id" value="">
+                <div class="modal-actions">
+                    <button type="button" class="ghost" data-close="true">Cancel</button>
+                    <button type="submit">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        window.__PROFILE_PICTURES__ = {{ .ProfilePictures | toJSON }};
+        window.__PROFILE_ACTIVE_PICTURE__ = {{ .ActiveProfilePictureID }};
+        window.__PROFILE_CSRF__ = "{{ .CSRFToken }}";
+        window.__PROFILE_USER__ = "{{ .User.Username }}";
+    </script>
+    <template id="custom-field-template">
+        {{ template "custom_field_row" (dict "Key" "" "Value" "" "Visibility" "public") }}
+    </template>
+    <template id="link-template">
+        {{ template "link_row" (dict "Label" "" "URL" "" "Visibility" "public") }}
+    </template>
+    <template id="social-template">
+        {{ template "social_row" (dict "Label" "" "URL" "" "Visibility" "public" "Verified" false) }}
+    </template>
+    <template id="wallet-template">
+        {{ template "wallet_row" (dict "Label" "" "Address" "" "Visibility" "public") }}
+    </template>
+    <script src="/static/js/settings-nav.js"></script>
+    <script src="/static/js/settings-copy.js"></script>
+    <script src="/static/js/settings-profile.js"></script>
+    <script>
+        initSettingsNav();
+        initSettingsProfile();
+    </script>
+{{ template "settings_layout_end" . }}
+{{ end }}

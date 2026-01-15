@@ -1,0 +1,28 @@
+/* Admin-defined default theme sample */
+/* This CSS file demonstrates overriding the default surface, panel, and accent colors. */
+:root {
+    --surface: #0e1117;
+    --panel: #1e2430;
+    --accent: #ff8c42;
+    --ink: #f5f7fb;
+}
+
+body {
+    background-color: var(--surface);
+    color: var(--ink);
+}
+
+.section {
+    background: var(--panel);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.ghost {
+    color: var(--ink);
+    border-color: var(--accent);
+}
+
+.ghost:hover {
+    background-image: linear-gradient(135deg, var(--accent), #ff5245);
+}

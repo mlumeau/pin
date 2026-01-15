@@ -1,0 +1,115 @@
+package admin
+
+import (
+	"net/http"
+	"net/url"
+	"strings"
+
+	"golang.org/x/crypto/bcrypt"
+	featuresettings "pin/internal/features/settings"
+	"pin/internal/platform/core"
+)
+
+func (h Handler) Security(w http.ResponseWriter, r *http.Request) {
+	session, _ := h.deps.GetSession(r, "pin_session")
+
+	current, err := h.deps.CurrentUser(r)
+	if err != nil {
+		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
+		return
+	}
+	if current.PrivateToken == "" {
+		token := core.RandomTokenURL(32)
+		if err := h.deps.UpdatePrivateToken(r.Context(), current.ID, token); err == nil {
+			current.PrivateToken = token
+		}
+	}
+
+	passkeys, _ := h.deps.ListPasskeys(r.Context(), current.ID)
+	settingsSvc := featuresettings.NewService(h.deps)
+	theme := settingsSvc.ThemeSettings(r.Context(), &current)
+	showAppearanceNav := isAdmin(current) || settingsSvc.ServerThemePolicy(r.Context()).AllowUserTheme
+	data := map[string]interface{}{
+		"User":               current,
+		"IsAdmin":            isAdmin(current),
+		"Passkeys":           passkeys,
+		"Title":              "Settings - Privacy & security",
+		"Message":            "",
+		"CSRFToken":          h.deps.EnsureCSRF(session),
+		"PrivateIdentityURL": h.deps.BaseURL(r) + "/p/" + url.PathEscape(core.ShortHash(strings.ToLower(current.Username), 7)) + "/" + url.PathEscape(current.PrivateToken),
+		"Theme":              theme,
+		"ShowAppearanceNav":  showAppearanceNav,
+	}
+	if toast := r.URL.Query().Get("toast"); toast != "" {
+		data["Message"] = toast
+	}
+
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+		if !h.deps.ValidateCSRF(session, r.FormValue("csrf_token")) {
+			http.Error(w, "Invalid CSRF token", http.StatusBadRequest)
+			return
+		}
+
+		if newPassword := r.FormValue("new_password"); newPassword != "" {
+			hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+			if err != nil {
+				http.Error(w, "Failed to update password", http.StatusInternalServerError)
+				return
+			}
+			current.PasswordHash = string(hash)
+			h.deps.AuditAttempt(r.Context(), current.ID, "password.update", current.Username, nil)
+			if err := h.deps.UpdateUser(r.Context(), current); err != nil {
+				h.deps.AuditOutcome(r.Context(), current.ID, "password.update", current.Username, err, nil)
+				http.Error(w, "Failed to update password", http.StatusInternalServerError)
+				return
+			}
+			h.deps.AuditOutcome(r.Context(), current.ID, "password.update", current.Username, nil, nil)
+			data["Message"] = "Password updated successfully."
+		} else {
+			data["Message"] = "Enter a new password to update."
+		}
+	}
+
+	if err := session.Save(r, w); err != nil {
+		http.Error(w, "Session error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.deps.RenderTemplate(w, "settings_security.html", data); err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+	}
+}
+
+func (h Handler) PrivateIdentityRegenerate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	session, _ := h.deps.GetSession(r, "pin_session")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+	if !h.deps.ValidateCSRF(session, r.FormValue("csrf_token")) {
+		http.Error(w, "Invalid CSRF token", http.StatusBadRequest)
+		return
+	}
+	current, err := h.deps.CurrentUser(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	h.deps.AuditAttempt(r.Context(), current.ID, "private_identity.regenerate", current.Username, nil)
+	token := core.RandomTokenURL(32)
+	if err := h.deps.UpdatePrivateToken(r.Context(), current.ID, token); err != nil {
+		h.deps.AuditOutcome(r.Context(), current.ID, "private_identity.regenerate", current.Username, err, nil)
+		http.Error(w, "Failed to update private identity", http.StatusInternalServerError)
+		return
+	}
+	h.deps.AuditOutcome(r.Context(), current.ID, "private_identity.regenerate", current.Username, nil, nil)
+	http.Redirect(w, r, "/settings/security?toast=Private%20link%20regenerated#section-private-identity", http.StatusFound)
+}

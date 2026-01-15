@@ -1,0 +1,38 @@
+{{ define "wallet_row" }}
+{{ $select := walletSelectValue .Label }}
+<div class="list-row wallet-row">
+    <div>
+        <label for="wallet_currency">Currency</label>
+        <select id="wallet_currency" class="wallet-label-select" aria-label="Wallet currency">
+            <option value="BTC" {{ if eq $select "BTC" }}selected{{ end }}>BTC</option>
+            <option value="ETH" {{ if eq $select "ETH" }}selected{{ end }}>ETH</option>
+            <option value="USDT" {{ if eq $select "USDT" }}selected{{ end }}>USDT</option>
+            <option value="USDC" {{ if eq $select "USDC" }}selected{{ end }}>USDC</option>
+            <option value="BNB" {{ if eq $select "BNB" }}selected{{ end }}>BNB</option>
+            <option value="SOL" {{ if eq $select "SOL" }}selected{{ end }}>SOL</option>
+            <option value="XRP" {{ if eq $select "XRP" }}selected{{ end }}>XRP</option>
+            <option value="ADA" {{ if eq $select "ADA" }}selected{{ end }}>ADA</option>
+            <option value="DOGE" {{ if eq $select "DOGE" }}selected{{ end }}>DOGE</option>
+            <option value="TRX" {{ if eq $select "TRX" }}selected{{ end }}>TRX</option>
+            <option value="MATIC" {{ if eq $select "MATIC" }}selected{{ end }}>MATIC</option>
+            <option value="DOT" {{ if eq $select "DOT" }}selected{{ end }}>DOT</option>
+            <option value="OTHER" {{ if eq $select "OTHER" }}selected{{ end }}>Other</option>
+        </select>
+    </div>
+    <div>
+        <label for="wallet_address">Address</label>
+        <input type="text" id="wallet_address" name="wallet_address" placeholder="Wallet address" value="{{ .Address }}">
+    </div>
+    <div class="visibility-control" data-visibility-control>
+        <input type="hidden" name="wallet_visibility" value="{{ if eq .Visibility "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+        <label class="visibility-switch">
+            <input type="checkbox" data-visibility-toggle {{ if eq .Visibility "private" }}checked{{ end }}>
+            <span class="switch-track"></span>
+            <span class="switch-label visually-hidden">Private</span>
+        </label>
+    </div>
+    <button type="button" class="icon-button remove-row" aria-label="Remove wallet">
+        <span class="icon icon-trash" aria-hidden="true"></span>
+    </button>
+</div>
+{{ end }}

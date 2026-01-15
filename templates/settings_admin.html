@@ -1,0 +1,324 @@
+{{ define "settings_admin.html" }}
+{{ template "settings_layout_start" . }}
+                {{ if .IsAdmin }}
+                <div class="section" id="section-landing">
+                    <h2>Landing page</h2>
+                    <p class="meta">Choose what visitors see at the root URL.</p>
+                    <form method="post" action="/settings/admin/server#section-landing" class="landing-form" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                        <input type="hidden" name="server_action" value="landing">
+                        <div class="landing-options">
+                            <div class="landing-choice-group">
+                                <label class="landing-choice">
+                                    <input type="radio" name="landing_mode" value="generic" {{ if ne .LandingMode "profile" }}checked{{ end }}>
+                                    <div>
+                                        <strong>Product landing (default)</strong>
+                                        <div class="meta">Explain PIN, link to the profile, and feature identity exports.</div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="landing-choice-group">
+                                <label class="landing-choice">
+                                    <input type="radio" name="landing_mode" value="profile" {{ if eq .LandingMode "profile" }}checked{{ end }}>
+                                    <div>
+                                        <strong>Profile first</strong>
+                                        <div class="meta">Send visitors straight to the owner profile.</div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="landing-choice-group">
+                                <label class="landing-choice">
+                                    <input type="radio" name="landing_mode" value="custom" {{ if eq .LandingMode "custom" }}checked{{ end }}>
+                                    <div>
+                                        <strong>Custom index.html</strong>
+                                        <p class="meta">Upload a full HTML file to replace the built-in landing page. Select "Custom index.html" to make it live.</p>
+                                        <div class="landing-custom-upload">
+                                            <input type="file" id="landing_custom_file" name="landing_custom_file" accept=".html,.htm">
+                                            {{ if .HasCustomLandingFile }}
+                                            <div class="landing-file-row">
+                                                <p class="meta">Current file: {{ if .LandingCustomURL }}<a class="link-inline" href="{{ .LandingCustomURL }}" target="_blank" rel="noreferrer">{{ .LandingCustomPath }}</a>{{ else }}{{ .LandingCustomPath }}{{ end }}</p>
+                                                <button type="submit" class="icon-button" name="landing_remove_custom" value="1" aria-label="Remove custom landing page">
+                                                    <span class="icon icon-trash" aria-hidden="true"></span>
+                                                </button>
+                                            </div>
+                                            {{ else }}
+                                            <p class="meta">No custom landing page uploaded.</p>
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit">Save landing page</button>
+                    </form>
+                </div>
+
+                <div class="section" id="section-theme">
+                    <h2>Theme</h2>
+                    <p class="meta">Set the default look and control what users can customize.</p>
+                    <form method="post" action="/settings/admin/server#section-theme">
+                        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                        <input type="hidden" name="server_action" value="theme_default">
+                        <label for="default_theme">Default theme</label>
+                        <select id="default_theme" name="default_theme">
+                            {{ if .HasDefaultCustomCSS }}
+                            <option value="default_custom_css" {{ if eq $.DefaultTheme "default_custom_css" }}selected{{ end }}>Default theme</option>
+                            {{ end }}
+                            {{ range .ThemeOptions }}
+                            <option value="{{ .Name }}" {{ if eq $.DefaultTheme .Name }}selected{{ end }}>{{ .Label }}</option>
+                            {{ end }}
+                        </select>
+                        <label class="checkbox-row">
+                            <input type="checkbox" name="default_theme_force" value="1" {{ if .DefaultThemeForce }}checked{{ end }}>
+                            <span>Force this theme for every user (overrides individual selections).</span>
+                        </label>
+                        <button type="submit">Save default theme</button>
+                    </form>
+                    <div class="section" id="section-default-theme-css">
+                        <h3>Default theme CSS</h3>
+                        <p class="meta">Upload a CSS file that powers the "Default theme" option in appearance.</p>
+                        <form method="post" action="/settings/admin/server#section-theme" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                            <input type="hidden" name="server_action" value="theme_default_css">
+                            <div class="custom-css-row">
+                            <div class="custom-css-upload">
+                                <label for="default_custom_css_file">Upload CSS file</label>
+                                <input type="file" id="default_custom_css_file" name="default_custom_css_file" accept=".css">
+                            </div>
+                        </div>
+                            {{ if .DefaultCustomCSSURL }}
+                            <div class="landing-file-row">
+                                <p class="meta">Current file: <a class="link-inline" href="{{ .DefaultCustomCSSURL }}" target="_blank" rel="noreferrer">{{ .DefaultCustomCSSName }}</a></p>
+                                <button type="submit" class="icon-button custom-css-remove" name="remove_default_custom_css" value="1" aria-label="Remove default CSS">
+                                    <span class="icon icon-trash" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                            {{ end }}
+                            <p class="meta">Default CSS appears as the "Default theme" card in Appearance settings.</p>
+                            <button type="submit">Save default CSS</button>
+                        </form>
+                    </div>
+                    <div class="section-divider"></div>
+                    <form method="post" action="/settings/admin/server#section-theme">
+                        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                        <input type="hidden" name="server_action" value="theme_access">
+                        <label class="checkbox-row">
+                            <input type="checkbox" name="allow_user_theme" value="1" {{ if .AllowUserTheme }}checked{{ end }}>
+                            <span>Allow users to choose their theme</span>
+                        </label>
+                        <label class="checkbox-row">
+                            <input type="checkbox" name="allow_user_custom_css" value="1" {{ if .AllowUserCustomCSS }}checked{{ end }}>
+                            <span>Allow users to add custom CSS</span>
+                        </label>
+                        <p class="meta">Custom CSS is ignored when theme selection is disabled.</p>
+                        <button type="submit">Save theme access</button>
+                    </form>
+                </div>
+
+                <div class="section" id="section-users">
+                    <h2>Users</h2>
+                    <form method="get" action="/settings/admin/server#section-users" class="user-controls">
+                        <input type="hidden" name="user_page" value="1">
+                        <input type="hidden" name="user_dir" value="{{ .UsersDir }}">
+                        <div class="user-controls-row">
+                            <div class="user-controls-field">
+                                <label for="user_q">Search</label>
+                                <input type="text" id="user_q" name="user_q" value="{{ .UsersQuery }}" placeholder="Username, name, or email">
+                            </div>
+                            <div class="user-controls-field">
+                                <label for="user_sort">Sort by</label>
+                                <select id="user_sort" name="user_sort">
+                                    <option value="id" {{ if eq .UsersSort "id" }}selected{{ end }}>Newest</option>
+                                    <option value="username" {{ if eq .UsersSort "username" }}selected{{ end }}>Username</option>
+                                    <option value="display_name" {{ if eq .UsersSort "display_name" }}selected{{ end }}>Display name</option>
+                                    <option value="email" {{ if eq .UsersSort "email" }}selected{{ end }}>Email</option>
+                                    <option value="role" {{ if eq .UsersSort "role" }}selected{{ end }}>Role</option>
+                                </select>
+                            </div>
+                            <div class="user-controls-action">
+                                <button type="submit">Apply</button>
+                            </div>
+                            <div class="user-controls-action user-controls-actions">
+                                <button type="button" id="user_dir_toggle" class="icon-button user-dir-button" data-next-dir="{{ if eq .UsersDir "asc" }}desc{{ else }}asc{{ end }}" aria-label="Toggle sort direction">
+                                    <span class="icon {{ if eq .UsersDir "desc" }}icon-arrow-down{{ else }}icon-arrow-up{{ end }}" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="list">
+                        {{ range .Users }}
+                        <div class="list-row">
+                            <div>
+                                <strong>{{ if .DisplayName }}{{ .DisplayName }}{{ else }}{{ .Username }}{{ end }}</strong>
+                                <div class="meta">{{ .Username }} · {{ .Email }} · {{ .Role }}</div>
+                            </div>
+                            <div class="link-actions">
+                                <a href="/settings/admin/users/{{ .ID }}/edit">Edit</a>
+                                {{ if ne .Role "owner" }}
+                                <form method="post" action="/settings/admin/users/{{ .ID }}/delete" style="display:inline;">
+                                    <button type="submit" class="icon-button" aria-label="Delete user">
+                                        <span class="icon icon-trash" aria-hidden="true"></span>
+                                    </button>
+                                </form>
+                                {{ end }}
+                            </div>
+                        </div>
+                        {{ end }}
+                    </div>
+                    <div class="audit-pagination">
+                        {{ if gt .UsersPage 1 }}
+                        <a href="/settings/admin/server?user_page=1&user_q={{ urlquery .UsersQuery }}&user_sort={{ .UsersSort }}&user_dir={{ .UsersDir }}#section-users" class="ghost">First</a>
+                        <a href="/settings/admin/server?user_page={{ .UsersPrevPage }}&user_q={{ urlquery .UsersQuery }}&user_sort={{ .UsersSort }}&user_dir={{ .UsersDir }}#section-users" class="ghost">Previous</a>
+                        {{ else }}
+                        <span class="meta">First</span>
+                        <span class="meta">Previous</span>
+                        {{ end }}
+                        <span class="meta">Page {{ .UsersPage }} of {{ .UsersTotal }}</span>
+                        {{ if lt .UsersPage .UsersTotal }}
+                        <a href="/settings/admin/server?user_page={{ .UsersNextPage }}&user_q={{ urlquery .UsersQuery }}&user_sort={{ .UsersSort }}&user_dir={{ .UsersDir }}#section-users" class="ghost">Next</a>
+                        <a href="/settings/admin/server?user_page={{ .UsersTotal }}&user_q={{ urlquery .UsersQuery }}&user_sort={{ .UsersSort }}&user_dir={{ .UsersDir }}#section-users" class="ghost">Last</a>
+                        {{ else }}
+                        <span class="meta">Next</span>
+                        <span class="meta">Last</span>
+                        {{ end }}
+                    </div>
+                </div>
+
+                <div class="section" id="section-invites">
+                    <div class="invite-header">
+                        <h2>Invites</h2>
+                        {{ if gt .UsedInvitesCount 0 }}
+                        <button type="button" class="ghost invite-toggle" id="invite_used_toggle" data-show-label="Show used invites ({{ .UsedInvitesCount }})" data-hide-label="Hide used invites ({{ .UsedInvitesCount }})" aria-pressed="false">Show used invites ({{ .UsedInvitesCount }})</button>
+                        {{ end }}
+                    </div>
+                    <form method="post" action="/settings/admin/invites/create">
+                        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                        <label for="invite_role">Role</label>
+                        <div class="invite-create-row">
+                            <select id="invite_role" name="role">
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            <button type="submit" class="invite-create">Create invite</button>
+                        </div>
+                    </form>
+                    {{ if .Invites }}
+                    <div class="invite-list hide-used" id="invite_list">
+                        {{ range .Invites }}
+                        <div class="invite-row {{ if .UsedAt.Valid }}is-used{{ end }}">
+                            <div class="invite-meta">
+                                <strong>{{ .Role }}</strong>
+                                {{ if .UsedAt.Valid }}
+                                <span>(used by {{ if .UsedByName }}{{ .UsedByName }}{{ else }}unknown{{ end }})</span>
+                                {{ else }}
+                                <span>(active)</span>
+                                {{ end }}
+                            </div>
+                            <span class="copy-pill">
+                                <span class="copy-pill-text">{{ $.InviteBaseURL }}/invite/{{ .Token }}</span>
+                                <button type="button" class="icon-button copy-button" data-copy-value="{{ $.InviteBaseURL }}/invite/{{ .Token }}" data-copy-feedback="Copied" aria-label="Copy invite link">
+                                    <span class="icon icon-copy" aria-hidden="true"></span>
+                                </button>
+                                <form method="post" action="/settings/admin/invites/delete" class="inline-form">
+                                    <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+                                    <input type="hidden" name="invite_id" value="{{ .ID }}">
+                                    <button type="submit" class="icon-button" aria-label="Delete invite">
+                                        <span class="icon icon-trash" aria-hidden="true"></span>
+                                    </button>
+                                </form>
+                            </span>
+                        </div>
+                        {{ end }}
+                    </div>
+                    {{ end }}
+                </div>
+                <div class="section" id="section-audit">
+                    <h2>Audit log</h2>
+                    {{ if .AuditLogs }}
+                    <div class="audit-downloads">
+                        <span class="meta">Download</span>
+                        <a class="link-inline" href="/settings/admin/audit-log/download?scope=page&audit_page={{ .AuditPage }}&format=csv">Page CSV</a>
+                        <a class="link-inline" href="/settings/admin/audit-log/download?scope=page&audit_page={{ .AuditPage }}&format=json">Page JSON</a>
+                        <a class="link-inline" href="/settings/admin/audit-log/download?scope=page&audit_page={{ .AuditPage }}&format=txt">Page TXT</a>
+                        <span class="meta">|</span>
+                        <a class="link-inline" href="/settings/admin/audit-log/download?scope=all&format=csv">All CSV</a>
+                        <a class="link-inline" href="/settings/admin/audit-log/download?scope=all&format=json">All JSON</a>
+                        <a class="link-inline" href="/settings/admin/audit-log/download?scope=all&format=txt">All TXT</a>
+                    </div>
+                    <div class="list is-terminal">
+                        {{ range .AuditLogs }}
+                        <div class="list-row">
+                            <div>
+                                <strong>{{ .Action }}</strong>
+                                <div class="meta">
+                                    <span>by {{ if .ActorName }}{{ .ActorName }}{{ else }}system{{ end }}</span>
+                                    <span>· object {{ if .Target }}{{ .Target }}{{ else }}n/a{{ end }}</span>
+                                    <span>· log #{{ .ID }}</span>
+                                </div>
+                            </div>
+                            <div class="meta">{{ .CreatedAt.Format "2006-01-02 15:04:05" }}</div>
+                        </div>
+                        {{ end }}
+                    </div>
+                    <div class="audit-pagination">
+                        {{ if gt .AuditPage 1 }}
+                        <a href="/settings/admin/server?audit_page=1#section-audit" class="ghost">First</a>
+                        <a href="/settings/admin/server?audit_page={{ .AuditPrevPage }}#section-audit" class="ghost">Previous</a>
+                        {{ else }}
+                        <span class="meta">First</span>
+                        <span class="meta">Previous</span>
+                        {{ end }}
+                        <span class="meta">Page {{ .AuditPage }} of {{ .AuditTotal }}</span>
+                        {{ if .AuditHasMore }}
+                        <a href="/settings/admin/server?audit_page={{ .AuditNextPage }}#section-audit" class="ghost">Next</a>
+                        <a href="/settings/admin/server?audit_page={{ .AuditTotal }}#section-audit" class="ghost">Last</a>
+                        {{ else }}
+                        <span class="meta">Next</span>
+                        <span class="meta">Last</span>
+                        {{ end }}
+                    </div>
+                    {{ else }}
+                    <p class="meta">No audit events yet.</p>
+                    {{ end }}
+                </div>
+                {{ else }}
+                <div class="section">
+                    <h2>Server</h2>
+                    <p class="meta">You do not have access to server administration.</p>
+                </div>
+                {{ end }}
+    <script src="/static/js/settings-nav.js"></script>
+    <script src="/static/js/settings-copy.js"></script>
+    <script>
+        initSettingsNav();
+        const userDirToggle = document.getElementById("user_dir_toggle");
+        if (userDirToggle) {
+            userDirToggle.addEventListener("click", () => {
+                const form = userDirToggle.closest("form");
+                const nextDir = userDirToggle.getAttribute("data-next-dir");
+                if (!form || !nextDir) {
+                    return;
+                }
+                const dirInput = form.querySelector("input[name=\"user_dir\"]");
+                if (dirInput) {
+                    dirInput.value = nextDir;
+                }
+                form.submit();
+            });
+        }
+
+        const inviteToggle = document.getElementById("invite_used_toggle");
+        const inviteList = document.getElementById("invite_list");
+        if (inviteToggle && inviteList) {
+            const showLabel = inviteToggle.getAttribute("data-show-label") || "Show used invites";
+            const hideLabel = inviteToggle.getAttribute("data-hide-label") || "Hide used invites";
+            inviteList.classList.add("hide-used");
+            inviteToggle.addEventListener("click", () => {
+                const hidden = inviteList.classList.toggle("hide-used");
+                inviteToggle.textContent = hidden ? showLabel : hideLabel;
+                inviteToggle.setAttribute("aria-pressed", (!hidden).toString());
+            });
+        }
+    </script>
+{{ template "settings_layout_end" . }}
+{{ end }}

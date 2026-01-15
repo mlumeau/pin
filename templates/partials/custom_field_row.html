@@ -1,0 +1,23 @@
+{{ define "custom_field_row" }}
+<div class="list-row">
+    <div>
+        <label for="custom_key">Label</label>
+        <input type="text" id="custom_key" name="custom_key" placeholder="e.g., Expertise" value="{{ .Key }}">
+    </div>
+    <div>
+        <label for="custom_value">Value</label>
+        <input type="text" id="custom_value" name="custom_value" placeholder="e.g., AI & Robotics" value="{{ .Value }}">
+    </div>
+    <div class="visibility-control" data-visibility-control>
+        <input type="hidden" name="custom_visibility" value="{{ if eq .Visibility "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+        <label class="visibility-switch">
+            <input type="checkbox" data-visibility-toggle {{ if eq .Visibility "private" }}checked{{ end }}>
+            <span class="switch-track"></span>
+            <span class="switch-label visually-hidden">Private</span>
+        </label>
+    </div>
+    <button type="button" class="icon-button remove-row" aria-label="Remove field">
+        <span class="icon icon-trash" aria-hidden="true"></span>
+    </button>
+</div>
+{{ end }}

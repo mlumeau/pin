@@ -1,0 +1,61 @@
+{{ define "settings_nav" }}
+            <nav class="admin-nav">
+                <div class="admin-brand">
+                    <h1>Settings</h1>
+                </div>
+                <div class="admin-nav-sections">
+                    <div class="admin-nav-section">
+                        <a class="admin-nav-title" href="/settings/profile">Profile</a>
+                        <div class="admin-subnav">
+                            <a href="/settings/profile#section-basics">Basics</a>
+                            <a href="/settings/profile#section-picture">Profile picture</a>
+                            <a href="/settings/profile#section-profile">Profile</a>
+                            <a href="/settings/profile#section-contact">Contact</a>
+                            <a href="/settings/profile#section-custom">Custom fields</a>
+                            <a href="/settings/profile#section-links">Links</a>
+                            <a href="/settings/profile#section-social">Social</a>
+                            <a href="/settings/profile#section-wallets">Wallets</a>
+                            <a href="/settings/profile#section-keys">Public keys</a>
+                            <a href="/settings/profile#section-atproto">AT Protocol</a>
+                            <a href="/settings/profile#section-verified">Verified domains</a>
+                            <a href="/settings/profile#section-aliases">Aliases</a>
+                        </div>
+                    </div>
+                    {{ if .ShowAppearanceNav }}
+                    <div class="admin-nav-section">
+                        <a class="admin-nav-title" href="/settings/appearance">Appearance</a>
+                        <div class="admin-subnav">
+                            <a href="/settings/appearance#section-themes">Themes</a>
+                            <a href="/settings/appearance#section-custom-css">Custom CSS</a>
+                        </div>
+                    </div>
+                    {{ end }}
+                    <div class="admin-nav-section">
+                        <a class="admin-nav-title" href="/settings/security">Privacy &amp; security</a>
+                        <div class="admin-subnav">
+                            <a href="/settings/security#section-password">Password</a>
+                            <a href="/settings/security#section-passkeys">Passkeys</a>
+                            <a href="/settings/security#section-private-identity">Private identity</a>
+                        </div>
+                    </div>
+                    {{ if .IsAdmin }}
+                    <div class="admin-nav-section is-admin-only">
+                        <a class="admin-nav-title" href="/settings/admin/server">
+                            <span>Server</span>
+                            <span class="admin-nav-badge">Admin</span>
+                        </a>
+                        <div class="admin-subnav">
+                            <a href="/settings/admin/server#section-landing">Landing page</a>
+                            <a href="/settings/admin/server#section-theme">Theme</a>
+                            <a href="/settings/admin/server#section-users">Users</a>
+                            <a href="/settings/admin/server#section-invites">Invites</a>
+                            <a href="/settings/admin/server#section-audit">Audit log</a>
+                        </div>
+                    </div>
+                    {{ end }}
+                </div>
+                <div class="admin-nav-actions">
+                    <a class="admin-link" href="/logout">Log out</a>
+                </div>
+            </nav>
+{{ end }}

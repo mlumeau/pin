@@ -1,0 +1,42 @@
+{{ define "domain_row" }}
+<div class="domain-verify-row" data-domain="{{ .Domain }}" data-domain-verified="{{ if .VerifiedAt.Valid }}true{{ else }}false{{ end }}">
+    <div class="domain-verify-main">
+        <strong>{{ .Domain }}</strong>
+        <input type="hidden" name="verified_domain" value="{{ .Domain }}">
+        <div class="domain-verify-token copy-pill">
+            <span class="meta">Token:</span>
+            <span class="inline-code">{{ .Token }}</span>
+            <button type="button" class="icon-button copy-button" data-copy-value="{{ .Token }}" data-copy-feedback="Copied" aria-label="Copy token">
+                <span class="icon icon-copy" aria-hidden="true"></span>
+            </button>
+        </div>
+    </div>
+    <div class="domain-verify-actions">
+        {{ if .VerifiedAt.Valid }}
+        {{ if .IsProtected }}
+        <span class="meta">Server domain</span>
+        {{ else }}
+        <span class="meta">Verified</span>
+        {{ end }}
+        {{ if .Username }}
+        <button type="button" class="ghost domain-atproto-handle" data-atproto-handle="{{ .Username }}.{{ .Domain }}">Use as AT handle</button>
+        {{ end }}
+        {{ else }}
+        <button type="button" class="ghost domain-verify">Verify</button>
+        {{ end }}
+        {{ if not .IsProtected }}
+        <button type="button" class="icon-button domain-delete" aria-label="Remove domain">
+            <span class="icon icon-trash" aria-hidden="true"></span>
+        </button>
+        {{ end }}
+        <div class="visibility-control" data-visibility-control>
+            <input type="hidden" name="verified_domain_visibility" value="{{ if eq .Visibility "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+            <label class="visibility-switch">
+                <input type="checkbox" data-visibility-toggle {{ if eq .Visibility "private" }}checked{{ end }}>
+                <span class="switch-track"></span>
+                <span class="switch-label visually-hidden">Private</span>
+            </label>
+        </div>
+    </div>
+</div>
+{{ end }}
