@@ -1,0 +1,154 @@
+package public
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gorilla/sessions"
+	"pin/internal/config"
+	"pin/internal/domain"
+)
+
+type publicDeps struct {
+	hasUser bool
+}
+
+func (d publicDeps) Config() config.Config                     { return config.Config{} }
+func (d publicDeps) HasUser(ctx context.Context) (bool, error) { return d.hasUser, nil }
+func (d publicDeps) GetOwnerUser(ctx context.Context) (domain.User, error) {
+	return domain.User{}, errors.New("no user")
+}
+func (publicDeps) FindUserByIdentifier(ctx context.Context, identifier string) (domain.User, error) {
+	return domain.User{}, errors.New("not found")
+}
+func (publicDeps) GetUserByPrivateToken(ctx context.Context, token string) (domain.User, error) {
+	return domain.User{}, errors.New("not found")
+}
+func (publicDeps) Reserved() map[string]struct{} { return map[string]struct{}{} }
+func (publicDeps) RenderTemplate(w http.ResponseWriter, name string, data interface{}) error {
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+func (publicDeps) BaseURL(r *http.Request) string { return "http://example.test" }
+func (publicDeps) GetSession(r *http.Request, name string) (*sessions.Session, error) {
+	store := sessions.NewCookieStore([]byte("test-secret"))
+	return store.Get(r, name)
+}
+func (publicDeps) EnsureCSRF(session *sessions.Session) string               { return "token" }
+func (publicDeps) ValidateCSRF(session *sessions.Session, token string) bool { return true }
+func (publicDeps) CheckIdentifierCollisions(ctx context.Context, identifiers []string, excludeID int) error {
+	return nil
+}
+func (publicDeps) CreateUser(ctx context.Context, username, email, role, passwordHash, totpSecret, themeProfile, privateToken string) (int64, error) {
+	return 0, nil
+}
+func (publicDeps) UpdatePrivateToken(ctx context.Context, userID int, token string) error { return nil }
+func (publicDeps) UpsertUserIdentifiers(ctx context.Context, userID int, username string, aliases []string, email string) error {
+	return nil
+}
+func (publicDeps) AuditAttempt(ctx context.Context, actorID int, action, target string, meta map[string]string) {
+}
+func (publicDeps) AuditOutcome(ctx context.Context, actorID int, action, target string, err error, meta map[string]string) {
+}
+
+// settings.Store
+func (publicDeps) GetSettings(ctx context.Context, keys ...string) (map[string]string, error) {
+	return map[string]string{}, nil
+}
+func (publicDeps) GetSetting(ctx context.Context, key string) (string, bool, error) {
+	return "", false, nil
+}
+func (publicDeps) SetSetting(ctx context.Context, key, value string) error         { return nil }
+func (publicDeps) SetSettings(ctx context.Context, values map[string]string) error { return nil }
+func (publicDeps) DeleteSetting(ctx context.Context, key string) error             { return nil }
+func (publicDeps) UpdateUserTheme(ctx context.Context, userID int, themeProfile, customCSSPath, customCSSInline string) error {
+	return nil
+}
+
+// domains.Store
+func (publicDeps) ListDomainVerifications(ctx context.Context, userID int) ([]domain.DomainVerification, error) {
+	return nil, nil
+}
+func (publicDeps) UpsertDomainVerification(ctx context.Context, userID int, domain, token string) error {
+	return nil
+}
+func (publicDeps) DeleteDomainVerification(ctx context.Context, userID int, domain string) error {
+	return nil
+}
+func (publicDeps) MarkDomainVerified(ctx context.Context, userID int, domain string) error {
+	return nil
+}
+
+// domains.Protector
+func (publicDeps) HasDomainVerification(ctx context.Context, userID int, domain string) (bool, error) {
+	return false, nil
+}
+func (publicDeps) ProtectedDomain(ctx context.Context) string                  { return "" }
+func (publicDeps) SetProtectedDomain(ctx context.Context, domain string) error { return nil }
+
+// profilepicture.Store
+func (publicDeps) ListProfilePictures(ctx context.Context, userID int) ([]domain.ProfilePicture, error) {
+	return nil, nil
+}
+func (publicDeps) CreateProfilePicture(ctx context.Context, userID int, filename, alt string) (int64, error) {
+	return 0, nil
+}
+func (publicDeps) SetActiveProfilePicture(ctx context.Context, userID int, pictureID int64) error {
+	return nil
+}
+func (publicDeps) DeleteProfilePicture(ctx context.Context, userID int, pictureID int64) (string, error) {
+	return "", nil
+}
+func (publicDeps) UpdateProfilePictureAlt(ctx context.Context, userID int, pictureID int64, alt string) error {
+	return nil
+}
+func (publicDeps) ClearProfilePictureSelection(ctx context.Context, userID int) error { return nil }
+func (publicDeps) GetProfilePictureFilename(ctx context.Context, userID int, pictureID int64) (string, error) {
+	return "", nil
+}
+func (publicDeps) GetProfilePictureAlt(ctx context.Context, userID int, pictureID int64) (string, error) {
+	return "", nil
+}
+
+func TestQR(t *testing.T) {
+	handler := Handler{}
+	req := httptest.NewRequest(http.MethodGet, "/qr?data=hello", nil)
+	rec := httptest.NewRecorder()
+	handler.QR(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "image/png" {
+		t.Fatalf("expected png content type, got %q", ct)
+	}
+	body := rec.Body.Bytes()
+	if len(body) < 8 || string(body[:8]) != "\x89PNG\r\n\x1a\n" {
+		t.Fatalf("expected png header")
+	}
+}
+
+func TestQRMissingData(t *testing.T) {
+	handler := Handler{}
+	req := httptest.NewRequest(http.MethodGet, "/qr", nil)
+	rec := httptest.NewRecorder()
+	handler.QR(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestIndexRedirectsToSetup(t *testing.T) {
+	handler := Handler{deps: publicDeps{hasUser: false}}
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	handler.Index(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("expected redirect, got %d", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != "/setup" {
+		t.Fatalf("expected /setup, got %q", loc)
+	}
+}
