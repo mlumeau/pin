@@ -344,6 +344,7 @@ func (h Handler) Setup(w http.ResponseWriter, r *http.Request) {
 		"Success":   false,
 		"CSRFToken": h.deps.EnsureCSRF(session),
 		"TOTP":      "",
+		"TOTPURL":   "",
 		"Theme":     theme,
 	}
 
@@ -378,6 +379,7 @@ func (h Handler) Setup(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			secret := key.Secret()
+			otpURL := key.URL()
 
 			defaultTheme := featuresettings.DefaultThemeName
 			if themeValue, ok, _ := settingsSvc.ServerDefaultTheme(r.Context()); ok {
@@ -400,6 +402,7 @@ func (h Handler) Setup(w http.ResponseWriter, r *http.Request) {
 
 			data["Success"] = true
 			data["TOTP"] = secret
+			data["TOTPURL"] = otpURL
 		}
 	}
 

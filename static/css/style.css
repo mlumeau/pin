@@ -1967,6 +1967,52 @@ body {
 }
 .landing-mini-lines span:nth-child(2) { width: 70%; }
 .landing-mini-lines span:nth-child(3) { width: 50%; }
+.setup-card { display: grid; gap: 1.5rem; }
+.setup-header { display: grid; gap: 0.35rem; }
+.setup-subtitle { margin: 0; color: var(--muted); }
+.setup-form { margin-top: 0.5rem; }
+.totp-setup { align-items: start; }
+.totp-setup .qr {
+    width: 200px;
+    height: 200px;
+    border-radius: var(--radius-surface);
+    border: 1px solid var(--border);
+    background: var(--panel-contrast);
+}
+.totp-setup code { word-break: break-all; }
+.setup-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+    counter-reset: step;
+}
+.setup-steps li {
+    position: relative;
+    padding: 0.75rem 0.9rem 0.75rem 2.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-surface);
+    background: var(--panel-strong);
+}
+.setup-steps li::before {
+    counter-increment: step;
+    content: counter(step);
+    position: absolute;
+    left: 0.85rem;
+    top: 0.7rem;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background: var(--brand);
+    color: var(--card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+.setup-actions { margin-top: 1rem; }
 .landing-exports {
     display: grid;
     gap: 0.6rem;
@@ -2130,7 +2176,13 @@ h1 {
     margin: 0 0 0.75rem;
     font-family: var(--font-heading);
 }
-.lead { color: var(--muted); margin: 0 0 1.5rem; }
+.lead {
+    color: var(--ink);
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.6;
+    margin: 0 0 1.5rem;
+}
 .pill {
     display: inline-flex;
     gap: 0.5rem;
