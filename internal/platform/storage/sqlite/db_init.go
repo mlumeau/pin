@@ -2,12 +2,8 @@ package sqlitestore
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
-
-	"pin/internal/platform/core"
 )
 
 // InitDB ensures the SQLite schema exists and applies lightweight migrations.
@@ -151,70 +147,6 @@ func InitDB(db *sql.DB) error {
 		}
 	}
 
-	if err := backfillUserDefaults(db); err != nil {
-		return err
-	}
-	if err := backfillUserIdentifiers(db); err != nil {
-		return err
-	}
-	return nil
-}
-
-func backfillUserDefaults(db *sql.DB) error {
-	rows, err := db.Query("SELECT id, COALESCE(private_token,''), COALESCE(role,''), COALESCE(updated_at,'') FROM user")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	now := time.Now().UTC().Format(time.RFC3339)
-	for rows.Next() {
-		var id int
-		var privateToken, role, updatedAt string
-		if err := rows.Scan(&id, &privateToken, &role, &updatedAt); err != nil {
-			return err
-		}
-		if strings.TrimSpace(privateToken) == "" {
-			if _, err := db.Exec("UPDATE user SET private_token = ? WHERE id = ?", core.RandomToken(32), id); err != nil {
-				return err
-			}
-		}
-		if strings.TrimSpace(role) == "" {
-			if _, err := db.Exec("UPDATE user SET role = 'user' WHERE id = ?", id); err != nil {
-				return err
-			}
-		}
-		if strings.TrimSpace(updatedAt) == "" {
-			if _, err := db.Exec("UPDATE user SET updated_at = ? WHERE id = ?", now, id); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func backfillUserIdentifiers(db *sql.DB) error {
-	rows, err := db.Query("SELECT id, username, COALESCE(aliases,'[]'), COALESCE(email,'') FROM user")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id int
-		var username, aliasesJSON, email string
-		if err := rows.Scan(&id, &username, &aliasesJSON, &email); err != nil {
-			return err
-		}
-		var aliases []string
-		_ = json.Unmarshal([]byte(aliasesJSON), &aliases)
-		idents := buildIdentifiers(username, aliases, email)
-		for _, ident := range idents {
-			if _, err := db.Exec("INSERT OR IGNORE INTO user_identifier (identifier, user_id) VALUES (?, ?)", strings.ToLower(strings.TrimSpace(ident)), id); err != nil {
-				return err
-			}
-		}
-	}
 	return nil
 }
 
