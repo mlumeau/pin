@@ -10,8 +10,8 @@ import (
 	_ "modernc.org/sqlite"
 	"pin/internal/config"
 	"pin/internal/features/identity"
-	platformhttp "pin/internal/platform/http"
-	platformserver "pin/internal/platform/server"
+	pinhttp "pin/internal/platform/http"
+	pinserver "pin/internal/platform/server"
 	"pin/internal/platform/storage"
 	sqlitestore "pin/internal/platform/storage/sqlite"
 )
@@ -62,14 +62,14 @@ func main() {
 		log.Fatalf("db init: %v", err)
 	}
 
-	srv, err := platformserver.NewServer(cfg, db, identity.TemplateFuncs())
+	srv, err := pinserver.NewServer(cfg, db, identity.TemplateFuncs())
 	if err != nil {
 		log.Fatalf("server init: %v", err)
 	}
 
 	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 	log.Printf("listening on %s", addr)
-	if err := http.ListenAndServe(addr, platformhttp.Routes(srv)); err != nil {
+	if err := http.ListenAndServe(addr, pinhttp.Routes(srv)); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
 }

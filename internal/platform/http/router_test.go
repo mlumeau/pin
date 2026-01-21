@@ -5,14 +5,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	platformhttp "pin/internal/platform/http"
+	pinhttp "pin/internal/platform/http"
 	"pin/internal/testutil"
 )
 
 func TestRoutesSetupPage(t *testing.T) {
 	testutil.ChdirRepoRoot(t)
 	srv := testutil.NewServer(t)
-	handler := platformhttp.Routes(srv)
+	handler := pinhttp.Routes(srv)
 
 	req := httptest.NewRequest(http.MethodGet, "/setup", nil)
 	rec := httptest.NewRecorder()

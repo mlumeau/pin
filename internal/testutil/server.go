@@ -9,7 +9,7 @@ import (
 	_ "modernc.org/sqlite"
 	"pin/internal/config"
 	"pin/internal/features/identity"
-	platformserver "pin/internal/platform/server"
+	pinserver "pin/internal/platform/server"
 	sqlitestore "pin/internal/platform/storage/sqlite"
 )
 
@@ -28,7 +28,7 @@ func TestConfig(t *testing.T) config.Config {
 	}
 }
 
-func NewServer(t *testing.T) *platformserver.Server {
+func NewServer(t *testing.T) *pinserver.Server {
 	t.Helper()
 	cfg := TestConfig(t)
 
@@ -43,7 +43,7 @@ func NewServer(t *testing.T) *platformserver.Server {
 		t.Fatalf("init db: %v", err)
 	}
 
-	srv, err := platformserver.NewServer(cfg, db, identity.TemplateFuncs())
+	srv, err := pinserver.NewServer(cfg, db, identity.TemplateFuncs())
 	if err != nil {
 		t.Fatalf("new server: %v", err)
 	}

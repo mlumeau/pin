@@ -3,6 +3,7 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -62,12 +63,18 @@ func NewServerWithRepos(cfg config.Config, db *sql.DB, repos contracts.Repos, ex
 	}
 	applyTemplateFuncs(funcs, extraFuncs...)
 	tmpl := template.New("").Funcs(funcs)
-	tmpl, err := tmpl.ParseGlob(filepath.Join("templates", "*.html"))
-	if err != nil {
-		return nil, err
+
+	// Load templates from feature-specific and shared locations
+	templatePatterns := []string{
+		filepath.Join("templates", "public", "*.html"),
+		filepath.Join("templates", "auth", "*.html"),
+		filepath.Join("templates", "settings", "*.html"),
 	}
-	if _, err := tmpl.ParseGlob(filepath.Join("templates", "partials", "*.html")); err != nil {
-		return nil, err
+
+	for _, pattern := range templatePatterns {
+		if _, err := tmpl.ParseGlob(pattern); err != nil {
+			return nil, fmt.Errorf("failed to parse templates from %s: %w", pattern, err)
+		}
 	}
 
 	if err := media.EnsureDefaultWebP(cfg.StaticDir); err != nil {

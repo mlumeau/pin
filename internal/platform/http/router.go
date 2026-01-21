@@ -14,13 +14,13 @@ import (
 	"pin/internal/features/passkeys"
 	"pin/internal/features/profilepicture"
 	"pin/internal/features/public"
-	platformserver "pin/internal/platform/server"
+	pinserver "pin/internal/platform/server"
 	"pin/internal/platform/wiring"
 )
 
 // Routes builds the HTTP mux using server handlers. As features move out of
 // internal/app, routing will live here.
-func Routes(s *platformserver.Server) http.Handler {
+func Routes(s *pinserver.Server) http.Handler {
 	mux := http.NewServeMux()
 	register := func(pattern string, handler http.Handler) {
 		s.RegisterRoute(mux, pattern, handler)

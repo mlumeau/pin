@@ -61,11 +61,19 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 	settingsSvc := featuresettings.NewService(h.deps)
 	theme := settingsSvc.ThemeSettings(r.Context(), nil)
 	data := map[string]interface{}{
-		"Error":     "",
-		"Success":   false,
-		"CSRFToken": h.deps.EnsureCSRF(session),
-		"TOTP":      "",
-		"Theme":     theme,
+		"Error":            "",
+		"Success":          false,
+		"CSRFToken":        h.deps.EnsureCSRF(session),
+		"TOTP":             "",
+		"TOTPURL":          "",
+		"Theme":            theme,
+		"PageTitle":        "Pin - Accept Invite",
+		"PageHeading":      "Join this Pin instance",
+		"PageSubheading":   "Create your account to get started.",
+		"FormAction":       r.URL.String(),
+		"FormButtonLabel":  "Create account",
+		"SuccessMessage":   "Account created. Set up your authenticator app to finish.",
+		"IsAdmin":          false,
 	}
 
 	if r.Method == http.MethodPost {
@@ -99,6 +107,7 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			secret := key.Secret()
+			otpURL := key.URL()
 
 			defaultTheme := featuresettings.DefaultThemeName
 			if themeValue, ok, _ := settingsSvc.ServerDefaultTheme(r.Context()); ok {
@@ -119,6 +128,7 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 			h.deps.AuditOutcome(r.Context(), int(userID), "user.create", username, nil, map[string]string{"source": "invite"})
 			data["Success"] = true
 			data["TOTP"] = secret
+			data["TOTPURL"] = otpURL
 		}
 	}
 
@@ -127,7 +137,7 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.deps.RenderTemplate(w, "invite.html", data); err != nil {
+	if err := h.deps.RenderTemplate(w, "account-setup.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 	}
 }

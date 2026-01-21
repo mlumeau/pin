@@ -2,14 +2,14 @@ package wiring
 
 import (
 	"pin/internal/contracts"
-	platformserver "pin/internal/platform/server"
+	pinserver "pin/internal/platform/server"
 )
 
 type Deps struct {
-	srv   *platformserver.Server
+	srv   *pinserver.Server
 	repos contracts.Repos
 }
 
-func NewDeps(srv *platformserver.Server) Deps {
+func NewDeps(srv *pinserver.Server) Deps {
 	return Deps{srv: srv, repos: srv.Repos()}
 }

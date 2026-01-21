@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -41,12 +42,11 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 	usedInvitesCount := 0
 	defaultTheme := featuresettings.DefaultThemeName
 	defaultThemeForce := false
-	themeValue, ok, force := settingsSvc.ServerDefaultTheme(r.Context())
-	defaultThemeForce = force
+	themeValue, ok, _ := settingsSvc.ServerDefaultTheme(r.Context())
 	if ok {
 		defaultTheme = themeValue
 	}
-	defaultCustomCSSPath, _ := settingsSvc.ServerDefaultCustomCSS(r.Context())
+	defaultCustomCSSPath, hasDefaultCustomCSS := settingsSvc.ServerDefaultCustomCSS(r.Context())
 	themePolicy := settingsSvc.ServerThemePolicy(r.Context())
 	showAppearanceNav := isAdminUser || themePolicy.AllowUserTheme
 	userPage := 1
@@ -84,7 +84,10 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid CSRF token", http.StatusBadRequest)
 			return
 		}
-		action := strings.TrimSpace(r.FormValue("action"))
+		action := strings.TrimSpace(r.FormValue("server_action"))
+		if action == "" {
+			action = strings.TrimSpace(r.FormValue("action"))
+		}
 		switch action {
 		case "export-users":
 			users, err := h.deps.ListUsers(r.Context())
@@ -107,13 +110,69 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 			}
 			writer.Flush()
 			return
-		case "set-default-theme":
-			if defaultCustomCSSPath != "" && r.FormValue("theme_default_force") == "on" {
-				defaultThemeForce = true
-			} else {
-				defaultThemeForce = false
+		case "landing":
+			landingMode := strings.TrimSpace(r.FormValue("landing_mode"))
+			if landingMode != "generic" && landingMode != "profile" && landingMode != "custom" {
+				landingMode = "generic"
 			}
-			themeValue := featuresettings.NormalizeThemeChoice(r.FormValue("theme_default"))
+			
+			// Handle custom landing file upload or delete
+			if r.FormValue("landing_remove_custom") == "1" {
+				// Delete custom landing file
+				customPath := strings.TrimSpace(landing.CustomPath)
+				if customPath != "" {
+					_ = os.Remove(filepath.Join(featuresettings.LandingDir(h.deps.Config()), customPath))
+				}
+				if err := settingsSvc.SaveLandingSettings(r.Context(), featuresettings.LandingSettings{Mode: landingMode, CustomPath: ""}); err != nil {
+					http.Error(w, "Failed to save landing page", http.StatusInternalServerError)
+					return
+				}
+				message = "Custom landing page removed."
+			} else if file, header, err := r.FormFile("landing_custom_file"); err == nil && header != nil && header.Filename != "" {
+				// Upload new custom landing file
+				defer file.Close()
+				ext := strings.ToLower(filepath.Ext(header.Filename))
+				if ext != ".html" && ext != ".htm" {
+					http.Error(w, "Landing page must be an HTML file", http.StatusBadRequest)
+					return
+				}
+				if err := os.MkdirAll(featuresettings.LandingDir(h.deps.Config()), 0755); err != nil {
+					http.Error(w, "Failed to store landing page", http.StatusInternalServerError)
+					return
+				}
+				filename := fmt.Sprintf("landing_custom_%d.html", time.Now().UTC().UnixNano())
+				destPath := filepath.Join(featuresettings.LandingDir(h.deps.Config()), filename)
+				dest, err := os.Create(destPath)
+				if err != nil {
+					http.Error(w, "Failed to store landing page", http.StatusInternalServerError)
+					return
+				}
+				if _, err := io.Copy(dest, io.LimitReader(file, h.deps.Config().MaxUploadBytes)); err != nil {
+					_ = dest.Close()
+					_ = os.Remove(destPath)
+					http.Error(w, "Failed to store landing page", http.StatusInternalServerError)
+					return
+				}
+				_ = dest.Close()
+				if prev := strings.TrimSpace(landing.CustomPath); prev != "" && prev != filename {
+					_ = os.Remove(filepath.Join(featuresettings.LandingDir(h.deps.Config()), prev))
+				}
+				if err := settingsSvc.SaveLandingSettings(r.Context(), featuresettings.LandingSettings{Mode: landingMode, CustomPath: filename}); err != nil {
+					http.Error(w, "Failed to save landing page", http.StatusInternalServerError)
+					return
+				}
+				message = "Landing page updated."
+			} else {
+				// Just save the mode without a file
+				if err := settingsSvc.SaveLandingSettings(r.Context(), featuresettings.LandingSettings{Mode: landingMode, CustomPath: landing.CustomPath}); err != nil {
+					http.Error(w, "Failed to save landing page", http.StatusInternalServerError)
+					return
+				}
+				message = "Landing page saved."
+			}
+		case "theme_default":
+			defaultThemeForce = r.FormValue("default_theme_force") == "1"
+			themeValue := featuresettings.NormalizeThemeChoice(r.FormValue("default_theme"))
 			if themeValue == featuresettings.DefaultCustomThemeName && defaultCustomCSSPath == "" {
 				themeValue = featuresettings.DefaultThemeName
 			}
@@ -130,60 +189,66 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 			} else {
 				message = "Default theme saved."
 			}
-		case "set-theme-policy":
+			http.Redirect(w, r, "/settings/admin/server?toast="+url.QueryEscape(message)+"#section-theme", http.StatusSeeOther)
+			return
+		case "theme_access":
 			policy := featuresettings.ThemePolicy{
-				AllowUserTheme:     r.FormValue("theme_user_select") == "on",
-				AllowUserCustomCSS: r.FormValue("theme_user_custom_css") == "on",
+				AllowUserTheme:     r.FormValue("allow_user_theme") == "1",
+				AllowUserCustomCSS: r.FormValue("allow_user_custom_css") == "1",
 			}
 			if err := settingsSvc.SaveServerThemePolicy(r.Context(), policy); err != nil {
 				http.Error(w, "Failed to save theme policy", http.StatusInternalServerError)
 				return
 			}
 			message = "Theme policy saved."
-		case "upload-default-css":
-			file, header, err := r.FormFile("default_css_file")
-			if err != nil || header == nil || header.Filename == "" {
-				http.Error(w, "Missing CSS file", http.StatusBadRequest)
-				return
-			}
-			defer file.Close()
-			ext := strings.ToLower(filepath.Ext(header.Filename))
-			if ext != ".css" {
-				http.Error(w, "Default CSS must be a .css file", http.StatusBadRequest)
-				return
-			}
-			if err := os.MkdirAll(featuresettings.ThemeDir(h.deps.Config()), 0755); err != nil {
-				http.Error(w, "Failed to store CSS", http.StatusInternalServerError)
-				return
-			}
-			filename := fmt.Sprintf("theme_default_%d.css", time.Now().UTC().UnixNano())
-			destPath := filepath.Join(featuresettings.ThemeDir(h.deps.Config()), filename)
-			dest, err := os.Create(destPath)
-			if err != nil {
-				http.Error(w, "Failed to store CSS", http.StatusInternalServerError)
-				return
-			}
-			if _, err := io.Copy(dest, io.LimitReader(file, h.deps.Config().MaxUploadBytes)); err != nil {
+		case "theme_default_css":
+			// Check if this is a delete request
+			if r.FormValue("remove_default_custom_css") == "1" {
+				if defaultCustomCSSPath != "" {
+					_ = os.Remove(filepath.Join(featuresettings.ThemeDir(h.deps.Config()), defaultCustomCSSPath))
+				}
+				_ = settingsSvc.SaveServerDefaultCustomCSS(r.Context(), "")
+				message = "Default CSS removed."
+			} else {
+				// Upload new CSS file
+				file, header, err := r.FormFile("default_custom_css_file")
+				if err != nil || header == nil || header.Filename == "" {
+					http.Error(w, "Missing CSS file", http.StatusBadRequest)
+					return
+				}
+				defer file.Close()
+				ext := strings.ToLower(filepath.Ext(header.Filename))
+				if ext != ".css" {
+					http.Error(w, "Default CSS must be a .css file", http.StatusBadRequest)
+					return
+				}
+				if err := os.MkdirAll(featuresettings.ThemeDir(h.deps.Config()), 0755); err != nil {
+					http.Error(w, "Failed to store CSS", http.StatusInternalServerError)
+					return
+				}
+				filename := fmt.Sprintf("theme_default_%d.css", time.Now().UTC().UnixNano())
+				destPath := filepath.Join(featuresettings.ThemeDir(h.deps.Config()), filename)
+				dest, err := os.Create(destPath)
+				if err != nil {
+					http.Error(w, "Failed to store CSS", http.StatusInternalServerError)
+					return
+				}
+				if _, err := io.Copy(dest, io.LimitReader(file, h.deps.Config().MaxUploadBytes)); err != nil {
+					_ = dest.Close()
+					_ = os.Remove(destPath)
+					http.Error(w, "Failed to store CSS", http.StatusInternalServerError)
+					return
+				}
 				_ = dest.Close()
-				_ = os.Remove(destPath)
-				http.Error(w, "Failed to store CSS", http.StatusInternalServerError)
-				return
+				if prev := strings.TrimSpace(defaultCustomCSSPath); prev != "" && prev != filename {
+					_ = os.Remove(filepath.Join(featuresettings.ThemeDir(h.deps.Config()), prev))
+				}
+				if err := settingsSvc.SaveServerDefaultCustomCSS(r.Context(), filename); err != nil {
+					http.Error(w, "Failed to save CSS", http.StatusInternalServerError)
+					return
+				}
+				message = "Default CSS uploaded."
 			}
-			_ = dest.Close()
-			if prev := strings.TrimSpace(defaultCustomCSSPath); prev != "" && prev != filename {
-				_ = os.Remove(filepath.Join(featuresettings.ThemeDir(h.deps.Config()), prev))
-			}
-			if err := settingsSvc.SaveServerDefaultCustomCSS(r.Context(), filename); err != nil {
-				http.Error(w, "Failed to save CSS", http.StatusInternalServerError)
-				return
-			}
-			message = "Default CSS uploaded."
-		case "delete-default-css":
-			if defaultCustomCSSPath != "" {
-				_ = os.Remove(filepath.Join(featuresettings.ThemeDir(h.deps.Config()), defaultCustomCSSPath))
-			}
-			_ = settingsSvc.SaveServerDefaultCustomCSS(r.Context(), "")
-			message = "Default CSS removed."
 		}
 	}
 
@@ -259,38 +324,47 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"User":                 current,
-		"IsAdmin":              isAdmin(current),
-		"Users":                users,
-		"UserQuery":            userQuery,
-		"UserSort":             userSort,
-		"UserDir":              userDir,
-		"UserPage":             userPage,
-		"UserPrevPage":         userPrevPage,
-		"UserNextPage":         userNextPage,
-		"UserTotalPages":       userTotalPages,
-		"UserDirOverride":      userDirOverride,
-		"Invites":              invites,
-		"InvitesUsedCount":     usedInvitesCount,
-		"AuditLogs":            auditLogs,
-		"AuditPage":            auditPage,
-		"AuditPrevPage":        auditPrevPage,
-		"AuditNextPage":        auditNextPage,
-		"AuditHasMore":         auditHasMore,
-		"AuditTotalPages":      auditTotalPages,
-		"Theme":                theme,
-		"Landing":              landing,
-		"CSRFToken":            h.deps.EnsureCSRF(session),
-		"Message":              message,
-		"DefaultTheme":         defaultTheme,
-		"DefaultThemeForce":    defaultThemeForce,
-		"DefaultCustomCSS":     featuresettings.ThemeCustomCSSURL(defaultCustomCSSPath),
-		"DefaultCustomCSSName": filepath.Base(defaultCustomCSSPath),
-		"ThemePolicy":          themePolicy,
-		"ShowAppearanceNav":    showAppearanceNav,
+		"User":                    current,
+		"IsAdmin":                 isAdmin(current),
+		"Users":                   users,
+		"UserQuery":               userQuery,
+		"UserSort":                userSort,
+		"UserDir":                 userDir,
+		"UserPage":                userPage,
+		"UserPrevPage":            userPrevPage,
+		"UserNextPage":            userNextPage,
+		"UserTotalPages":          userTotalPages,
+		"UserDirOverride":         userDirOverride,
+		"Invites":                 invites,
+		"InvitesUsedCount":        usedInvitesCount,
+		"AuditLogs":               auditLogs,
+		"AuditPage":               auditPage,
+		"AuditPrevPage":           auditPrevPage,
+		"AuditNextPage":           auditNextPage,
+		"AuditHasMore":            auditHasMore,
+		"AuditTotal":              auditTotal,
+		"AuditTotalPages":         auditTotalPages,
+		"Theme":                   theme,
+		"Landing":                 landing,
+		"LandingMode":             landing.Mode,
+		"LandingCustomPath":       landing.CustomPath,
+		"HasCustomLandingFile":    landing.CustomPath != "",
+		"LandingCustomURL":        featuresettings.LandingCustomURL(landing.CustomPath),
+		"CSRFToken":               h.deps.EnsureCSRF(session),
+		"Message":                 message,
+		"DefaultTheme":            defaultTheme,
+		"DefaultThemeForce":       defaultThemeForce,
+		"DefaultCustomCSS":        featuresettings.ThemeCustomCSSURL(defaultCustomCSSPath),
+		"DefaultCustomCSSName":    filepath.Base(defaultCustomCSSPath),
+		"HasDefaultCustomCSS":     hasDefaultCustomCSS,
+		"ThemeOptions":            featuresettings.ThemeOptions(),
+		"ThemePolicy":             themePolicy,
+		"AllowUserTheme":          themePolicy.AllowUserTheme,
+		"AllowUserCustomCSS":      themePolicy.AllowUserCustomCSS,
+		"ShowAppearanceNav":       showAppearanceNav,
 	}
 
-	if err := h.deps.RenderTemplate(w, "settings_admin_server.html", data); err != nil {
+	if err := h.deps.RenderTemplate(w, "settings_admin.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 	}
 }
