@@ -84,7 +84,7 @@ func LoadConfig() (Config, error) {
 		StaticDir:          filepath.Join(getBaseDir(), "static"),
 		UploadsDir:         uploadsDir,
 		ProfilePictureDir:  filepath.Join(uploadsDir, "profile-pictures"),
-		AllowedExts:        map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".gif": true},
+		AllowedExts:        map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".webp": true},
 		Host:               getEnv("PIN_HOST", "127.0.0.1"),
 		Port:               getEnv("PIN_PORT", "5000"),
 		CookieSecure:       envBool("PIN_COOKIE_SECURE", isProd),

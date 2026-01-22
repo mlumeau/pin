@@ -321,7 +321,7 @@ func (h Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	defer profilePictureFile.Close()
 	ext := strings.ToLower(filepath.Ext(profilePictureHeader.Filename))
 	if !h.cfg.AllowedExts[ext] {
-		http.Error(w, "Profile picture must be an image (png/jpg/gif)", http.StatusBadRequest)
+		http.Error(w, "Profile picture must be an image (png/jpg/gif/webp)", http.StatusBadRequest)
 		return
 	}
 	if err := os.MkdirAll(h.cfg.ProfilePictureDir, 0755); err != nil {

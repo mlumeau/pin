@@ -22,7 +22,7 @@ func TestConfig(t *testing.T) config.Config {
 		StaticDir:         tempDir,
 		UploadsDir:        uploadsDir,
 		ProfilePictureDir: filepath.Join(uploadsDir, "profile-pictures"),
-		AllowedExts:       map[string]bool{".png": true},
+		AllowedExts:       map[string]bool{".png": true, ".webp": true},
 		BaseURL:           "http://example.test",
 		CookieSameSite:    http.SameSiteLaxMode,
 	}
