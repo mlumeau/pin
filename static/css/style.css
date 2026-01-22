@@ -2194,6 +2194,10 @@ h1 {
     font-weight: 600;
     font-size: 0.9rem;
 }
+.private-pill {
+    display: flex;
+    width: fit-content;
+}
 form { display: grid; gap: 1.2rem; }
 label { font-weight: 700; color: var(--ink); display: block; font-size: 0.95rem; }
 .checkbox-row {

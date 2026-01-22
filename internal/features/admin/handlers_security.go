@@ -28,20 +28,23 @@ func (h Handler) Security(w http.ResponseWriter, r *http.Request) {
 	passkeys, _ := h.deps.ListPasskeys(r.Context(), current.ID)
 	settingsSvc := featuresettings.NewService(h.deps)
 	theme := settingsSvc.ThemeSettings(r.Context(), &current)
-	showAppearanceNav := isAdmin(current) || settingsSvc.ServerThemePolicy(r.Context()).AllowUserTheme
+	isAdminUser := isAdmin(current)
+	showAppearanceNav := isAdminUser || settingsSvc.ServerThemePolicy(r.Context()).AllowUserTheme
+	message := ""
 	data := map[string]interface{}{
 		"User":               current,
-		"IsAdmin":            isAdmin(current),
+		"IsAdmin":            isAdminUser,
 		"Passkeys":           passkeys,
 		"Title":              "Settings - Privacy & security",
-		"Message":            "",
+		"Message":            message,
 		"CSRFToken":          h.deps.EnsureCSRF(session),
 		"PrivateIdentityURL": h.deps.BaseURL(r) + "/p/" + url.PathEscape(core.ShortHash(strings.ToLower(current.Username), 7)) + "/" + url.PathEscape(current.PrivateToken),
 		"Theme":              theme,
 		"ShowAppearanceNav":  showAppearanceNav,
 	}
 	if toast := r.URL.Query().Get("toast"); toast != "" {
-		data["Message"] = toast
+		message = toast
+		data["Message"] = message
 	}
 
 	if r.Method == http.MethodPost {

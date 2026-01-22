@@ -118,6 +118,20 @@
                         </div>
                         <div class="field-visibility-row">
                             <div class="field-visibility-input">
+                                <label for="location">Location</label>
+                                <input type="text" id="location" name="location" value="{{ .User.Location }}">
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_location" value="{{ if eq (index .FieldVisibility "location") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "location") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
                                 <label for="timezone">Timezone</label>
                                 <select id="timezone" name="timezone">
                                     <option value="" {{ if eq .User.Timezone "" }}selected{{ end }}>Select timezone</option>
@@ -205,20 +219,6 @@
                                 <input type="hidden" name="visibility_address" value="{{ if eq (index .FieldVisibility "address") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
                                 <label class="visibility-switch">
                                     <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "address") "private" }}checked{{ end }}>
-                                    <span class="switch-track"></span>
-                                    <span class="switch-label visually-hidden">Private</span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="field-visibility-row">
-                            <div class="field-visibility-input">
-                                <label for="location">Location</label>
-                                <input type="text" id="location" name="location" value="{{ .User.Location }}">
-                            </div>
-                            <div class="visibility-control" data-visibility-control>
-                                <input type="hidden" name="visibility_location" value="{{ if eq (index .FieldVisibility "location") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
-                                <label class="visibility-switch">
-                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "location") "private" }}checked{{ end }}>
                                     <span class="switch-track"></span>
                                     <span class="switch-label visually-hidden">Private</span>
                                 </label>

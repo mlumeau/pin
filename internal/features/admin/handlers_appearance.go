@@ -25,8 +25,9 @@ func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 	settingsSvc := featuresettings.NewService(h.deps)
 	theme := settingsSvc.ThemeSettings(r.Context(), &current)
 	policy := settingsSvc.ServerThemePolicy(r.Context())
-	canSelectTheme := isAdmin(current) || policy.AllowUserTheme
-	canCustomCSS := isAdmin(current) || (policy.AllowUserTheme && policy.AllowUserCustomCSS)
+	isAdminUser := isAdmin(current)
+	canSelectTheme := isAdminUser || policy.AllowUserTheme
+	canCustomCSS := isAdminUser || (policy.AllowUserTheme && policy.AllowUserCustomCSS)
 	showAppearanceNav := canSelectTheme
 	defaultCustomCSSPath, hasDefaultCustomCSS := settingsSvc.ServerDefaultCustomCSS(r.Context())
 	defaultCustomThemeOption := featuresettings.ThemeOption{
@@ -35,9 +36,10 @@ func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 		Description: "Use the server default CSS file for the app.",
 	}
 	cfg := h.deps.Config()
+	message := ""
 	data := map[string]interface{}{
 		"User":                 current,
-		"IsAdmin":              isAdmin(current),
+		"IsAdmin":              isAdminUser,
 		"Themes":               featuresettings.ThemeOptions(),
 		"Theme":                theme,
 		"Title":                "Settings - Appearance",
@@ -45,14 +47,15 @@ func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 		"HasDefaultCustomCSS":  hasDefaultCustomCSS,
 		"DefaultCustomCSSURL":  featuresettings.ThemeCustomCSSURL(defaultCustomCSSPath),
 		"DefaultCustomCSSName": filepath.Base(defaultCustomCSSPath),
-		"Message":              "",
+		"Message":              message,
 		"CSRFToken":            h.deps.EnsureCSRF(session),
 		"CanSelectTheme":       canSelectTheme,
 		"CanCustomCSS":         canCustomCSS,
 		"ShowAppearanceNav":    showAppearanceNav,
 	}
 	if toast := r.URL.Query().Get("toast"); toast != "" {
-		data["Message"] = toast
+		message = toast
+		data["Message"] = message
 	}
 
 	if r.Method == http.MethodPost {

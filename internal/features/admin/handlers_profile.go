@@ -17,6 +17,7 @@ import (
 	"pin/internal/features/domains"
 	"pin/internal/features/identity"
 	featuresettings "pin/internal/features/settings"
+	"pin/internal/features/users"
 	"pin/internal/platform/core"
 	"pin/internal/platform/media"
 )
@@ -42,7 +43,8 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 
 	settingsSvc := featuresettings.NewService(h.deps)
 	theme := settingsSvc.ThemeSettings(r.Context(), &current)
-	showAppearanceNav := isAdmin(current) || settingsSvc.ServerThemePolicy(r.Context()).AllowUserTheme
+	isAdminUser := isAdmin(current)
+	showAppearanceNav := isAdminUser || settingsSvc.ServerThemePolicy(r.Context()).AllowUserTheme
 
 	var links []domain.Link
 	if current.LinksJSON != "" {
@@ -54,38 +56,43 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cfg := h.deps.Config()
+	visibility := identity.DecodeStringMap(current.VisibilityJSON)
+	wallets := identity.DecodeStringMap(current.WalletsJSON)
+	publicKeys := identity.DecodeStringMap(current.PublicKeysJSON)
+	message := ""
 	data := map[string]interface{}{
 		"User":                   current,
 		"Links":                  links,
 		"SocialProfiles":         socialProfiles,
 		"CustomFields":           identity.DecodeStringMap(current.CustomFieldsJSON),
-		"FieldVisibility":        identity.DecodeStringMap(current.VisibilityJSON),
-		"CustomFieldVisibility":  visibilityCustomMap(identity.DecodeStringMap(current.VisibilityJSON)),
-		"Wallets":                identity.DecodeStringMap(current.WalletsJSON),
-		"WalletEntries":          buildWalletEntries(identity.DecodeStringMap(current.WalletsJSON), identity.DecodeStringMap(current.VisibilityJSON)),
-		"PublicKeys":             identity.DecodeStringMap(current.PublicKeysJSON),
-		"VerifiedDomains":        verifiedDomainsToText(current.VerifiedDomainsJSON),
+		"FieldVisibility":        visibility,
+		"CustomFieldVisibility":  users.VisibilityCustomMap(visibility),
+		"Wallets":                wallets,
+		"WalletEntries":          users.BuildWalletEntries(wallets, visibility),
+		"PublicKeys":             publicKeys,
+		"VerifiedDomains":        users.VerifiedDomainsToText(current.VerifiedDomainsJSON),
 		"DomainVerifications":    []domain.DomainVerification{},
-		"Aliases":                aliasesToText(current.AliasesJSON),
+		"Aliases":                users.AliasesToText(current.AliasesJSON),
 		"GitHubOAuthEnabled":     cfg.GitHubClientID != "" && cfg.GitHubClientSecret != "" && cfg.BaseURL != "",
 		"RedditOAuthEnabled":     cfg.RedditClientID != "" && cfg.RedditClientSecret != "" && cfg.BaseURL != "",
 		"BlueskyEnabled":         cfg.BlueskyPDS != "",
-		"IsAdmin":                isAdmin(current),
+		"IsAdmin":                isAdminUser,
 		"IsSelf":                 true,
 		"FormAction":             "/settings/profile",
 		"ProfilePictures":        []domain.ProfilePicture{},
 		"ActiveProfilePictureID": int64(0),
 		"Title":                  "Settings - Profile",
-		"Message":                "",
+		"Message":                message,
 		"CSRFToken":              h.deps.EnsureCSRF(session),
 		"PrivateIdentityURL":     h.deps.BaseURL(r) + "/p/" + url.PathEscape(core.ShortHash(strings.ToLower(current.Username), 7)) + "/" + url.PathEscape(current.PrivateToken),
 		"Theme":                  theme,
 		"ShowAppearanceNav":      showAppearanceNav,
 		"ProtectedDomain":        h.deps.ProtectedDomain(r.Context()),
-		"DomainVisibility":       domainVisibilityMap(identity.DecodeStringMap(current.VisibilityJSON)),
+		"DomainVisibility":       users.DomainVisibilityMap(visibility),
 	}
 	if toast := r.URL.Query().Get("toast"); toast != "" {
-		data["Message"] = toast
+		message = toast
+		data["Message"] = message
 	}
 	if pics, err := h.deps.ListProfilePictures(r.Context(), current.ID); err == nil {
 		data["ProfilePictures"] = pics
@@ -119,9 +126,9 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		displayName := strings.TrimSpace(r.FormValue("display_name"))
 		email := strings.TrimSpace(r.FormValue("email"))
 		bio := strings.TrimSpace(r.FormValue("bio"))
-		links = parseLinksForm(r.Form["link_label"], r.Form["link_url"], r.Form["link_visibility"])
-		customFields := parseCustomFieldsForm(r.Form["custom_key"], r.Form["custom_value"])
-		fieldVisibility := parseVisibilityForm(r.Form, []string{
+		links = users.ParseLinksForm(r.Form["link_label"], r.Form["link_url"], r.Form["link_visibility"])
+		customFields := users.ParseCustomFieldsForm(r.Form["custom_key"], r.Form["custom_value"])
+		fieldVisibility := users.ParseVisibilityForm(r.Form, []string{
 			"email",
 			"organization",
 			"job_title",
@@ -140,15 +147,15 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 			"key_age",
 			"key_activitypub",
 		})
-		customVisibility := parseCustomVisibilityForm(r.Form["custom_key"], r.Form["custom_value"], r.Form["custom_visibility"])
+		customVisibility := users.ParseCustomVisibilityForm(r.Form["custom_key"], r.Form["custom_value"], r.Form["custom_visibility"])
 		social := identity.MergeSocialProfiles(identity.ParseSocialForm(r.Form["social_label"], r.Form["social_url"], r.Form["social_visibility"]), socialProfiles)
-		aliases := parseAliasesText(r.FormValue("aliases"))
+		aliases := users.ParseAliasesText(r.FormValue("aliases"))
 		if err := identity.ValidateIdentifiers(r.Context(), current.Username, aliases, current.Email, current.ID, h.deps.Reserved(), h.deps.CheckIdentifierCollisions); err != nil {
 			h.deps.AuditOutcome(r.Context(), current.ID, "profile.update", current.Username, err, nil)
 			data["Message"] = err.Error()
 			goto renderProfile
 		}
-		wallets, walletVisibility, err := parseWalletForm(r.Form["wallet_label"], r.Form["wallet_address"], r.Form["wallet_visibility"])
+		wallets, walletVisibility, err := users.ParseWalletForm(r.Form["wallet_label"], r.Form["wallet_address"], r.Form["wallet_visibility"])
 		if err != nil {
 			data["Message"] = err.Error()
 			goto renderProfile
@@ -162,8 +169,8 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 			"age":         strings.TrimSpace(r.FormValue("key_age")),
 			"activitypub": strings.TrimSpace(r.FormValue("key_activitypub")),
 		}
-		verifiedDomains := parseVerifiedDomainsText(r.FormValue("verified_domains"))
-		domainVisibility := parseVerifiedDomainVisibilityForm(r.Form["verified_domain"], r.Form["verified_domain_visibility"])
+		verifiedDomains := users.ParseVerifiedDomainsText(r.FormValue("verified_domains"))
+		domainVisibility := users.ParseVerifiedDomainVisibilityForm(r.Form["verified_domain"], r.Form["verified_domain_visibility"])
 		h.deps.AuditAttempt(r.Context(), current.ID, "domain.sync", current.Username, nil)
 		domainRows, verified, err := domains.NewService(h.deps).CreateDomains(r.Context(), current.ID, verifiedDomains, func() string {
 			return domains.RandomTokenURL(12)
@@ -233,9 +240,9 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		if customJSON, err := json.Marshal(customFields); err == nil {
 			current.CustomFieldsJSON = string(customJSON)
 		}
-		visibility := buildVisibilityMap(fieldVisibility, filterCustomVisibility(customFields, customVisibility))
+		visibility := users.BuildVisibilityMap(fieldVisibility, users.FilterCustomVisibility(customFields, customVisibility))
 		for domain, vis := range domainVisibility {
-			visibility["verified_domain:"+domain] = normalizeVisibility(vis)
+			visibility["verified_domain:"+domain] = users.NormalizeVisibility(vis)
 		}
 		if visibilityJSON, err := json.Marshal(visibility); err == nil {
 			current.VisibilityJSON = string(visibilityJSON)
@@ -272,15 +279,15 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		data["Links"] = links
 		data["CustomFields"] = customFields
 		data["FieldVisibility"] = fieldVisibility
-		data["CustomFieldVisibility"] = filterCustomVisibility(customFields, customVisibility)
+		data["CustomFieldVisibility"] = users.FilterCustomVisibility(customFields, customVisibility)
 		data["SocialProfiles"] = social
 		data["Wallets"] = identity.DecodeStringMap(current.WalletsJSON)
 		data["PublicKeys"] = identity.DecodeStringMap(current.PublicKeysJSON)
 		data["DomainVerifications"] = domainRows
 		data["VerifiedDomains"] = identity.DomainsToText(domainRows)
 		data["ATProtoHandleVerified"] = identity.IsATProtoHandleVerified(current.ATProtoHandle, identity.VerifiedDomains(domainRows))
-		data["DomainVisibility"] = domainVisibilityMap(identity.DecodeStringMap(current.VisibilityJSON))
-		data["Aliases"] = aliasesToText(current.AliasesJSON)
+		data["DomainVisibility"] = users.DomainVisibilityMap(identity.DecodeStringMap(current.VisibilityJSON))
+		data["Aliases"] = users.AliasesToText(current.AliasesJSON)
 	}
 
 renderProfile:

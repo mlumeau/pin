@@ -52,9 +52,9 @@ func (h Handler) Login(w http.ResponseWriter, r *http.Request) {
 	theme := featuresettings.NewService(h.deps).DefaultThemeSettings(r.Context())
 	data := map[string]interface{}{
 		"Error":     "",
-		"Next":      next,
 		"CSRFToken": h.deps.EnsureCSRF(session),
 		"Theme":     theme,
+		"Next":      next,
 	}
 
 	if r.Method == http.MethodPost {

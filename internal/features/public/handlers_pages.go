@@ -73,11 +73,13 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	publicUser, customFields := identity.VisibleIdentity(user, false)
 	showLanding := landing.Mode != featuresettings.LandingModeProfile
+	profilePath := "/" + url.PathEscape(user.Username)
+	profilePictureAlt := profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user)
 
 	data := map[string]interface{}{
 		"User":              publicUser,
-		"ProfilePictureAlt": profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user),
 		"Theme":             theme,
+		"ProfilePictureAlt": profilePictureAlt,
 		"ShowLanding":       showLanding,
 	}
 
@@ -100,14 +102,13 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 		data["PublicKeys"] = publicKeys
 		data["VerifiedDomains"] = verifiedDomains
 		data["ProfileURL"] = h.deps.BaseURL(r)
-		data["ExportBase"] = "/" + url.PathEscape(user.Username)
+		data["ExportBase"] = profilePath
 		updatedAt := user.UpdatedAt
 		if updatedAt.IsZero() {
 			updatedAt = time.Now().UTC()
 		}
 		data["UpdatedAt"] = updatedAt
 	} else {
-		profilePath := "/" + url.PathEscape(user.Username)
 		data["ProfilePath"] = profilePath
 		data["ProfileURL"] = h.deps.BaseURL(r) + profilePath
 		data["ExportBase"] = profilePath
@@ -150,12 +151,13 @@ func (h Handler) Landing(w http.ResponseWriter, r *http.Request) {
 
 	publicUser, _ := identity.VisibleIdentity(user, false)
 	profilePath := "/" + url.PathEscape(user.Username)
+	profilePictureAlt := profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user)
 	data := map[string]interface{}{
 		"User":                 publicUser,
 		"ProfilePath":          profilePath,
 		"ProfileURL":           h.deps.BaseURL(r) + profilePath,
 		"ExportBase":           profilePath,
-		"ProfilePictureAlt":    profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user),
+		"ProfilePictureAlt":    profilePictureAlt,
 		"ProfilePictureURL":    "/profile-picture/" + url.PathEscape(user.Username) + "?s=160",
 		"HasCustomLandingHTML": false,
 		"Theme":                theme,
@@ -230,6 +232,9 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	if updatedAt.IsZero() {
 		updatedAt = time.Now().UTC()
 	}
+	profilePath := "/" + url.PathEscape(user.Username)
+	profileURL := h.deps.BaseURL(r) + profilePath
+	profilePictureAlt := profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user)
 	data := map[string]interface{}{
 		"User":              publicUser,
 		"Links":             links,
@@ -238,9 +243,9 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		"Wallets":           wallets,
 		"PublicKeys":        publicKeys,
 		"VerifiedDomains":   verifiedDomains,
-		"ProfileURL":        h.deps.BaseURL(r) + "/" + url.PathEscape(user.Username),
-		"ExportBase":        "/" + url.PathEscape(user.Username),
-		"ProfilePictureAlt": profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user),
+		"ProfileURL":        profileURL,
+		"ExportBase":        profilePath,
+		"ProfilePictureAlt": profilePictureAlt,
 		"UpdatedAt":         updatedAt,
 		"Theme":             theme,
 	}
@@ -306,6 +311,8 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 	if updatedAt.IsZero() {
 		updatedAt = time.Now().UTC()
 	}
+	profilePath := "/p/" + url.PathEscape(expectedHash) + "/" + url.PathEscape(user.PrivateToken)
+	profileURL := h.deps.BaseURL(r) + profilePath
 	data := map[string]interface{}{
 		"User":              privateUser,
 		"Links":             links,
@@ -314,8 +321,8 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 		"Wallets":           identity.DecodeStringMap(privateUser.WalletsJSON),
 		"PublicKeys":        identity.DecodeStringMap(privateUser.PublicKeysJSON),
 		"VerifiedDomains":   identity.DecodeStringSlice(privateUser.VerifiedDomainsJSON),
-		"ProfileURL":        h.deps.BaseURL(r) + "/p/" + url.PathEscape(expectedHash) + "/" + url.PathEscape(user.PrivateToken),
-		"ExportBase":        "/p/" + url.PathEscape(expectedHash) + "/" + url.PathEscape(user.PrivateToken),
+		"ProfileURL":        profileURL,
+		"ExportBase":        profilePath,
 		"ProfilePictureAlt": profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user),
 		"IsPrivateIdentity": true,
 		"UpdatedAt":         updatedAt,
@@ -343,8 +350,6 @@ func (h Handler) Setup(w http.ResponseWriter, r *http.Request) {
 		"Error":            "",
 		"Success":          false,
 		"CSRFToken":        h.deps.EnsureCSRF(session),
-		"TOTP":             "",
-		"TOTPURL":          "",
 		"Theme":            theme,
 		"PageTitle":        "Pin - Setup Admin",
 		"PageHeading":      "Set up your admin account",
@@ -353,6 +358,8 @@ func (h Handler) Setup(w http.ResponseWriter, r *http.Request) {
 		"FormButtonLabel":  "Create admin",
 		"FormIntro":        "You can change these details later in settings.",
 		"SuccessMessage":   "Account created. Set up your authenticator app to finish.",
+		"TOTP":             "",
+		"TOTPURL":          "",
 		"IsAdmin":          true,
 	}
 

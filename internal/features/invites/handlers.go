@@ -64,8 +64,6 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 		"Error":            "",
 		"Success":          false,
 		"CSRFToken":        h.deps.EnsureCSRF(session),
-		"TOTP":             "",
-		"TOTPURL":          "",
 		"Theme":            theme,
 		"PageTitle":        "Pin - Accept Invite",
 		"PageHeading":      "Join this Pin instance",
@@ -73,6 +71,8 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 		"FormAction":       r.URL.String(),
 		"FormButtonLabel":  "Create account",
 		"SuccessMessage":   "Account created. Set up your authenticator app to finish.",
+		"TOTP":             "",
+		"TOTPURL":          "",
 		"IsAdmin":          false,
 	}
 

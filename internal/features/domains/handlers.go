@@ -49,17 +49,17 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-	domains := parseDomains(r.FormValue("domains"))
-	if len(domains) == 0 {
+	domainList := parseDomains(r.FormValue("domains"))
+	if len(domainList) == 0 {
 		http.Error(w, "No domains provided", http.StatusBadRequest)
 		return
 	}
-	h.deps.AuditAttempt(r.Context(), current.ID, "domain.create", strings.Join(domains, ","), nil)
-	rows, verified, err := h.svc.CreateDomains(r.Context(), current.ID, domains, func() string {
+	h.deps.AuditAttempt(r.Context(), current.ID, "domain.create", strings.Join(domainList, ","), nil)
+	rows, verified, err := h.svc.CreateDomains(r.Context(), current.ID, domainList, func() string {
 		return RandomTokenURL(12)
 	})
 	if err != nil {
-		h.deps.AuditOutcome(r.Context(), current.ID, "domain.create", strings.Join(domains, ","), err, nil)
+		h.deps.AuditOutcome(r.Context(), current.ID, "domain.create", strings.Join(domainList, ","), err, nil)
 		http.Error(w, "Failed to save domains", http.StatusInternalServerError)
 		return
 	}
@@ -67,11 +67,11 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	meta := map[string]string{"verified_domains": domainsJSON}
 	current.VerifiedDomainsJSON = domainsJSON
 	if err := h.deps.UpdateUser(r.Context(), current); err != nil {
-		h.deps.AuditOutcome(r.Context(), current.ID, "domain.create", strings.Join(domains, ","), err, meta)
+		h.deps.AuditOutcome(r.Context(), current.ID, "domain.create", strings.Join(domainList, ","), err, meta)
 		http.Error(w, "Failed to save profile", http.StatusInternalServerError)
 		return
 	}
-	h.deps.AuditOutcome(r.Context(), current.ID, "domain.create", strings.Join(domains, ","), nil, meta)
+	h.deps.AuditOutcome(r.Context(), current.ID, "domain.create", strings.Join(domainList, ","), nil, meta)
 	if wantsJSON(r) {
 		writeJSON(w, map[string]interface{}{
 			"ok":       true,

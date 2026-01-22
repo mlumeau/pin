@@ -2,7 +2,7 @@
     <div class="card">
         <div class="hero">
             {{ if .IsPrivateIdentity }}
-            <div class="pill">Private profile</div>
+            <div class="pill private-pill">Private profile</div>
             {{ end }}
             <button type="button" class="profile-picture-flip" data-qr="{{ .ProfileURL }}" aria-label="Show QR code">
                 <div class="profile-picture-inner">
@@ -26,6 +26,39 @@
         </div>
 
         <div class="grid">
+
+            {{ if or .User.Organization .User.JobTitle .User.Birthdate .User.Languages .User.Location .User.Timezone }}
+            <div class="section two-col">
+                {{ if .User.Organization }}<p class="meta"><strong>Organization</strong><br>{{ .User.Organization }}</p>{{ end }}
+                {{ if .User.JobTitle }}<p class="meta"><strong>Job title</strong><br>{{ .User.JobTitle }}</p>{{ end }}
+                {{ if .User.Birthdate }}<p class="meta"><strong>Birthdate</strong><br>{{ .User.Birthdate }}</p>{{ end }}
+                {{ if .User.Location }}<p class="meta"><strong>Location</strong><br>{{ .User.Location }}</p>{{ end }}
+                {{ if .User.Languages }}<p class="meta"><strong>Languages</strong><br>{{ .User.Languages }}</p>{{ end }}
+                {{ if .User.Timezone }}<p class="meta"><strong>Timezone</strong><br>{{ .User.Timezone }}</p>{{ end }}
+            </div>
+            {{ end }}
+
+            {{ if or .User.Email .User.Phone .User.Address .User.Website}}
+            <div class="section">
+                <h2>Contact</h2>
+                <div class="two-col">
+                    {{ if .User.Email }}<p class="meta"><strong>Email</strong><br>{{ .User.Email }}</p>{{ end }}
+                    {{ if .User.Phone }}<p class="meta"><strong>Phone</strong><br>{{ .User.Phone }}</p>{{ end }}
+                    {{ if .User.Address }}<p class="meta"><strong>Address</strong><br>{{ .User.Address }}</p>{{ end }}
+                    {{ if .User.Website }}<p class="meta"><strong>Website</strong><br>{{ .User.Website }}</p>{{ end }}
+                </div>
+            </div>
+            {{ end }}
+
+            {{ if .CustomFields }}
+            <div class="section">
+                <h2>Additional information</h2>
+                {{ range $key, $value := .CustomFields }}
+                <p class="meta"><strong>{{ $key }}</strong><br>{{ $value }}</p>
+                {{ end }}
+            </div>
+            {{ end }}
+
             {{ if .Links }}
             <div class="section">
                 <h2>Links</h2>
@@ -62,21 +95,6 @@
                 </div>
             </div>
             {{ end }}
-
-            <div class="section two-col">
-                {{ if .User.Organization }}<p class="meta"><strong>Organization</strong><br>{{ .User.Organization }}</p>{{ end }}
-                {{ if .User.JobTitle }}<p class="meta"><strong>Job title</strong><br>{{ .User.JobTitle }}</p>{{ end }}
-                {{ if .User.Birthdate }}<p class="meta"><strong>Birthdate</strong><br>{{ .User.Birthdate }}</p>{{ end }}
-                {{ if .User.Languages }}<p class="meta"><strong>Languages</strong><br>{{ .User.Languages }}</p>{{ end }}
-                {{ if .User.Phone }}<p class="meta"><strong>Phone</strong><br>{{ .User.Phone }}</p>{{ end }}
-                {{ if .User.Address }}<p class="meta"><strong>Address</strong><br>{{ .User.Address }}</p>{{ end }}
-                {{ if .User.Website }}<p class="meta"><strong>Website</strong><br>{{ .User.Website }}</p>{{ end }}
-                {{ if .User.Location }}<p class="meta"><strong>Location</strong><br>{{ .User.Location }}</p>{{ end }}
-                {{ if .User.Timezone }}<p class="meta"><strong>Timezone</strong><br>{{ .User.Timezone }}</p>{{ end }}
-                {{ range $key, $value := .CustomFields }}
-                <p class="meta"><strong>{{ $key }}</strong><br>{{ $value }}</p>
-                {{ end }}
-            </div>
 
             {{ if .VerifiedDomains }}
             <div class="section">
