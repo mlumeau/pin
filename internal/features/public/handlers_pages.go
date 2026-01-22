@@ -1,7 +1,6 @@
 package public
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"os"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
-	"pin/internal/domain"
 	"pin/internal/features/domains"
 	"pin/internal/features/identity"
 	"pin/internal/features/identity/export"
@@ -84,17 +82,11 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !showLanding {
-		var links []domain.Link
-		if publicUser.LinksJSON != "" {
-			_ = json.Unmarshal([]byte(publicUser.LinksJSON), &links)
-		}
-		var socialProfiles []domain.SocialProfile
-		if publicUser.SocialProfilesJSON != "" {
-			_ = json.Unmarshal([]byte(publicUser.SocialProfilesJSON), &socialProfiles)
-		}
-		wallets := identity.DecodeStringMap(publicUser.WalletsJSON)
-		publicKeys := identity.DecodeStringMap(publicUser.PublicKeysJSON)
-		verifiedDomains := identity.DecodeStringSlice(publicUser.VerifiedDomainsJSON)
+		links := identity.DecodeLinks(publicUser.LinksJSON)
+		socialProfiles := identity.DecodeSocialProfiles(publicUser.SocialProfilesJSON)
+		wallets := identity.WalletsMapToStructs(identity.DecodeStringMap(publicUser.WalletsJSON))
+		publicKeys := identity.PublicKeysMapToStructs(identity.DecodeStringMap(publicUser.PublicKeysJSON))
+		verifiedDomains := identity.VerifiedDomainsSliceToStructs(identity.DecodeStringSlice(publicUser.VerifiedDomainsJSON))
 		data["Links"] = links
 		data["SocialProfiles"] = socialProfiles
 		data["CustomFields"] = customFields
@@ -217,17 +209,11 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	settingsSvc := featuresettings.NewService(h.deps)
 	theme := settingsSvc.ThemeSettings(r.Context(), &user)
 	publicUser, customFields := identity.VisibleIdentity(user, false)
-	var links []domain.Link
-	if publicUser.LinksJSON != "" {
-		_ = json.Unmarshal([]byte(publicUser.LinksJSON), &links)
-	}
-	var socialProfiles []domain.SocialProfile
-	if publicUser.SocialProfilesJSON != "" {
-		_ = json.Unmarshal([]byte(publicUser.SocialProfilesJSON), &socialProfiles)
-	}
-	wallets := identity.DecodeStringMap(publicUser.WalletsJSON)
-	publicKeys := identity.DecodeStringMap(publicUser.PublicKeysJSON)
-	verifiedDomains := identity.DecodeStringSlice(publicUser.VerifiedDomainsJSON)
+	links := identity.DecodeLinks(publicUser.LinksJSON)
+	socialProfiles := identity.DecodeSocialProfiles(publicUser.SocialProfilesJSON)
+	wallets := identity.WalletsMapToStructs(identity.DecodeStringMap(publicUser.WalletsJSON))
+	publicKeys := identity.PublicKeysMapToStructs(identity.DecodeStringMap(publicUser.PublicKeysJSON))
+	verifiedDomains := identity.VerifiedDomainsSliceToStructs(identity.DecodeStringSlice(publicUser.VerifiedDomainsJSON))
 	updatedAt := user.UpdatedAt
 	if updatedAt.IsZero() {
 		updatedAt = time.Now().UTC()
@@ -298,14 +284,8 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var links []domain.Link
-	if privateUser.LinksJSON != "" {
-		_ = json.Unmarshal([]byte(privateUser.LinksJSON), &links)
-	}
-	var socialProfiles []domain.SocialProfile
-	if privateUser.SocialProfilesJSON != "" {
-		_ = json.Unmarshal([]byte(privateUser.SocialProfilesJSON), &socialProfiles)
-	}
+	links := identity.DecodeLinks(privateUser.LinksJSON)
+	socialProfiles := identity.DecodeSocialProfiles(privateUser.SocialProfilesJSON)
 	theme := featuresettings.NewService(h.deps).ThemeSettings(r.Context(), &user)
 	updatedAt := user.UpdatedAt
 	if updatedAt.IsZero() {
@@ -318,9 +298,9 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 		"Links":             links,
 		"SocialProfiles":    socialProfiles,
 		"CustomFields":      customFields,
-		"Wallets":           identity.DecodeStringMap(privateUser.WalletsJSON),
-		"PublicKeys":        identity.DecodeStringMap(privateUser.PublicKeysJSON),
-		"VerifiedDomains":   identity.DecodeStringSlice(privateUser.VerifiedDomainsJSON),
+		"Wallets":           identity.WalletsMapToStructs(identity.DecodeStringMap(privateUser.WalletsJSON)),
+		"PublicKeys":        identity.PublicKeysMapToStructs(identity.DecodeStringMap(privateUser.PublicKeysJSON)),
+		"VerifiedDomains":   identity.VerifiedDomainsSliceToStructs(identity.DecodeStringSlice(privateUser.VerifiedDomainsJSON)),
 		"ProfileURL":        profileURL,
 		"ExportBase":        profilePath,
 		"ProfilePictureAlt": profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user),
@@ -347,20 +327,20 @@ func (h Handler) Setup(w http.ResponseWriter, r *http.Request) {
 	settingsSvc := featuresettings.NewService(h.deps)
 	theme := settingsSvc.ThemeSettings(r.Context(), nil)
 	data := map[string]interface{}{
-		"Error":            "",
-		"Success":          false,
-		"CSRFToken":        h.deps.EnsureCSRF(session),
-		"Theme":            theme,
-		"PageTitle":        "Pin - Setup Admin",
-		"PageHeading":      "Set up your admin account",
-		"PageSubheading":   "Create the first owner account for this Pin instance.",
-		"FormAction":       "/setup",
-		"FormButtonLabel":  "Create admin",
-		"FormIntro":        "You can change these details later in settings.",
-		"SuccessMessage":   "Account created. Set up your authenticator app to finish.",
-		"TOTP":             "",
-		"TOTPURL":          "",
-		"IsAdmin":          true,
+		"Error":           "",
+		"Success":         false,
+		"CSRFToken":       h.deps.EnsureCSRF(session),
+		"Theme":           theme,
+		"PageTitle":       "Pin - Setup Admin",
+		"PageHeading":     "Set up your admin account",
+		"PageSubheading":  "Create the first owner account for this Pin instance.",
+		"FormAction":      "/setup",
+		"FormButtonLabel": "Create admin",
+		"FormIntro":       "You can change these details later in settings.",
+		"SuccessMessage":  "Account created. Set up your authenticator app to finish.",
+		"TOTP":            "",
+		"TOTPURL":         "",
+		"IsAdmin":         true,
 	}
 
 	if r.Method == http.MethodPost {

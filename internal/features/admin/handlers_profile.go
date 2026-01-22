@@ -48,22 +48,22 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 
 	var links []domain.Link
 	if current.LinksJSON != "" {
-		_ = json.Unmarshal([]byte(current.LinksJSON), &links)
+		links = identity.DecodeLinks(current.LinksJSON)
 	}
 	var socialProfiles []domain.SocialProfile
 	if current.SocialProfilesJSON != "" {
-		_ = json.Unmarshal([]byte(current.SocialProfilesJSON), &socialProfiles)
+		socialProfiles = identity.DecodeSocialProfiles(current.SocialProfilesJSON)
 	}
 
 	cfg := h.deps.Config()
-	visibility := identity.DecodeStringMap(current.VisibilityJSON)
+	visibility := identity.DecodeVisibilityMap(current.VisibilityJSON)
 	wallets := identity.DecodeStringMap(current.WalletsJSON)
 	publicKeys := identity.DecodeStringMap(current.PublicKeysJSON)
 	message := ""
 	data := map[string]interface{}{
 		"User":                   current,
-		"Links":                  links,
-		"SocialProfiles":         socialProfiles,
+		"Links":                  users.BuildLinkEntries(links, visibility),
+		"SocialProfiles":         users.BuildSocialEntries(socialProfiles, visibility),
 		"CustomFields":           identity.DecodeStringMap(current.CustomFieldsJSON),
 		"FieldVisibility":        visibility,
 		"CustomFieldVisibility":  users.VisibilityCustomMap(visibility),
@@ -126,7 +126,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		displayName := strings.TrimSpace(r.FormValue("display_name"))
 		email := strings.TrimSpace(r.FormValue("email"))
 		bio := strings.TrimSpace(r.FormValue("bio"))
-		links = users.ParseLinksForm(r.Form["link_label"], r.Form["link_url"], r.Form["link_visibility"])
+		links, linkVisibility := users.ParseLinksForm(r.Form["link_label"], r.Form["link_url"], r.Form["link_visibility"])
 		customFields := users.ParseCustomFieldsForm(r.Form["custom_key"], r.Form["custom_value"])
 		fieldVisibility := users.ParseVisibilityForm(r.Form, []string{
 			"email",
@@ -148,7 +148,8 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 			"key_activitypub",
 		})
 		customVisibility := users.ParseCustomVisibilityForm(r.Form["custom_key"], r.Form["custom_value"], r.Form["custom_visibility"])
-		social := identity.MergeSocialProfiles(identity.ParseSocialForm(r.Form["social_label"], r.Form["social_url"], r.Form["social_visibility"]), socialProfiles)
+		social, socialVisibility := identity.ParseSocialForm(r.Form["social_label"], r.Form["social_url"], r.Form["social_visibility"])
+		social = identity.MergeSocialProfiles(social, socialProfiles)
 		aliases := users.ParseAliasesText(r.FormValue("aliases"))
 		if err := identity.ValidateIdentifiers(r.Context(), current.Username, aliases, current.Email, current.ID, h.deps.Reserved(), h.deps.CheckIdentifierCollisions); err != nil {
 			h.deps.AuditOutcome(r.Context(), current.ID, "profile.update", current.Username, err, nil)
@@ -234,9 +235,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		current.Timezone = strings.TrimSpace(r.FormValue("timezone"))
 		current.ATProtoHandle = strings.TrimSpace(r.FormValue("atproto_handle"))
 		current.ATProtoDID = strings.TrimSpace(r.FormValue("atproto_did"))
-		if linksJSON, err := json.Marshal(links); err == nil {
-			current.LinksJSON = string(linksJSON)
-		}
+		current.LinksJSON = identity.EncodeLinks(links)
 		if customJSON, err := json.Marshal(customFields); err == nil {
 			current.CustomFieldsJSON = string(customJSON)
 		}
@@ -244,12 +243,14 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		for domain, vis := range domainVisibility {
 			visibility["verified_domain:"+domain] = users.NormalizeVisibility(vis)
 		}
-		if visibilityJSON, err := json.Marshal(visibility); err == nil {
-			current.VisibilityJSON = string(visibilityJSON)
+		for key, value := range linkVisibility {
+			visibility[key] = value
 		}
-		if socialJSON, err := json.Marshal(social); err == nil {
-			current.SocialProfilesJSON = string(socialJSON)
+		for key, value := range socialVisibility {
+			visibility[key] = value
 		}
+		current.VisibilityJSON = identity.EncodeVisibilityMap(visibility)
+		current.SocialProfilesJSON = identity.EncodeSocialProfiles(social)
 		if walletsJSON, err := json.Marshal(identity.StripEmptyMap(wallets)); err == nil {
 			current.WalletsJSON = string(walletsJSON)
 		}
@@ -276,17 +277,17 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 
 		data["Message"] = core.FirstNonEmpty(data["Message"].(string), "Profile updated successfully.")
 		data["User"] = current
-		data["Links"] = links
+		data["Links"] = users.BuildLinkEntries(links, visibility)
 		data["CustomFields"] = customFields
 		data["FieldVisibility"] = fieldVisibility
 		data["CustomFieldVisibility"] = users.FilterCustomVisibility(customFields, customVisibility)
-		data["SocialProfiles"] = social
+		data["SocialProfiles"] = users.BuildSocialEntries(social, visibility)
 		data["Wallets"] = identity.DecodeStringMap(current.WalletsJSON)
 		data["PublicKeys"] = identity.DecodeStringMap(current.PublicKeysJSON)
 		data["DomainVerifications"] = domainRows
 		data["VerifiedDomains"] = identity.DomainsToText(domainRows)
 		data["ATProtoHandleVerified"] = identity.IsATProtoHandleVerified(current.ATProtoHandle, identity.VerifiedDomains(domainRows))
-		data["DomainVisibility"] = users.DomainVisibilityMap(identity.DecodeStringMap(current.VisibilityJSON))
+		data["DomainVisibility"] = users.DomainVisibilityMap(identity.DecodeVisibilityMap(current.VisibilityJSON))
 		data["Aliases"] = users.AliasesToText(current.AliasesJSON)
 	}
 

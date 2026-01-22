@@ -2,11 +2,9 @@ package sqlitestore
 
 import (
 	"database/sql"
-	"fmt"
-	"strings"
 )
 
-// InitDB ensures the SQLite schema exists and applies lightweight migrations.
+// InitDB ensures the SQLite schema exists.
 func InitDB(db *sql.DB) error {
 	stmts := []string{
 		`CREATE TABLE IF NOT EXISTS user (
@@ -107,71 +105,7 @@ func InitDB(db *sql.DB) error {
 		}
 	}
 
-	columns := map[string]string{
-		"email":                   "TEXT",
-		"display_name":            "TEXT",
-		"bio":                     "TEXT",
-		"organization":            "TEXT",
-		"job_title":               "TEXT",
-		"birthdate":               "TEXT",
-		"languages":               "TEXT",
-		"phone":                   "TEXT",
-		"address":                 "TEXT",
-		"custom_fields":           "TEXT",
-		"visibility":              "TEXT",
-		"private_token":           "TEXT",
-		"links":                   "TEXT",
-		"aliases":                 "TEXT",
-		"social_profiles":         "TEXT",
-		"wallets":                 "TEXT",
-		"public_keys":             "TEXT",
-		"location":                "TEXT",
-		"website":                 "TEXT",
-		"pronouns":                "TEXT",
-		"verified_domains":        "TEXT",
-		"atproto_handle":          "TEXT",
-		"atproto_did":             "TEXT",
-		"timezone":                "TEXT",
-		"profile_picture_id":      "INTEGER",
-		"role":                    "TEXT",
-		"password_hash":           "TEXT",
-		"totp_secret":             "TEXT",
-		"theme_profile":           "TEXT",
-		"theme_custom_css_path":   "TEXT",
-		"theme_custom_css_inline": "TEXT",
-		"updated_at":              "TEXT",
-	}
-	for col, typ := range columns {
-		if err := ensureColumn(db, "user", col, typ); err != nil {
-			return err
-		}
-	}
-
 	return nil
-}
-
-func ensureColumn(db *sql.DB, table, column, columnType string) error {
-	rows, err := db.Query("PRAGMA table_info(" + table + ")")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var cid int
-		var name, ctype string
-		var notnull int
-		var dflt sql.NullString
-		var pk int
-		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
-			return err
-		}
-		if strings.EqualFold(name, column) {
-			return nil
-		}
-	}
-	_, err = db.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, columnType))
-	return err
 }
 
 func nullInt(value sql.NullInt64) interface{} {

@@ -341,16 +341,15 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 		"UsersNextPage":        userNextPage,
 		"UsersTotal":           userTotalPages,
 		"Invites":              invites,
-		// Backwards-compatible invite keys expected by template
-		"UsedInvitesCount": usedInvitesCount,
-		"InviteBaseURL":    h.deps.BaseURL(r),
-		"AuditLogs":        auditLogs,
-		"AuditPage":        auditPage,
-		"AuditPrevPage":    auditPrevPage,
-		"AuditNextPage":    auditNextPage,
-		"AuditHasMore":     auditHasMore,
-		"AuditTotal":       auditTotal,
-		"AuditTotalPages":  auditTotalPages,
+		"UsedInvitesCount":     usedInvitesCount,
+		"InviteBaseURL":        h.deps.BaseURL(r),
+		"AuditLogs":            auditLogs,
+		"AuditPage":            auditPage,
+		"AuditPrevPage":        auditPrevPage,
+		"AuditNextPage":        auditNextPage,
+		"AuditHasMore":         auditHasMore,
+		"AuditTotal":           auditTotal,
+		"AuditTotalPages":      auditTotalPages,
 	}
 
 	if err := h.deps.RenderTemplate(w, "settings_admin.html", data); err != nil {

@@ -9,16 +9,11 @@ import (
 
 	"pin/internal/config"
 	"pin/internal/domain"
-	"pin/internal/platform/core"
 )
 
 const (
 	defaultThemeName             = "classic"
 	defaultCustomThemeName       = "default_custom_css"
-	themeProfileKey              = "theme_profile"
-	themeAdminKey                = "theme_admin"
-	themeCustomCSSPathKey        = "theme_custom_css_path"
-	themeCustomCSSInlineKey      = "theme_custom_css_inline"
 	themeDefaultKey              = "theme_default"
 	themeDefaultForceKey         = "theme_default_force"
 	themeDefaultCustomCSSPathKey = "theme_default_custom_css_path"
@@ -215,14 +210,6 @@ func (s Service) ThemeSettings(ctx context.Context, user *domain.User) ThemeSett
 			settings.InlineCSS = ""
 		}
 
-		if !defaultSet && userIsAdmin && rawTheme == "" && settings.CustomCSSPath == "" && strings.TrimSpace(settings.InlineCSS) == "" && strings.EqualFold(user.Role, "owner") {
-			legacy := s.legacyThemeSettings(ctx)
-			if legacy.ProfileTheme != "" {
-				settings.ProfileTheme = legacy.ProfileTheme
-				settings.CustomCSSPath = legacy.CustomCSSPath
-				settings.InlineCSS = legacy.InlineCSS
-			}
-		}
 	} else {
 		rawTheme := ""
 		if owner, err := s.store.GetOwnerUser(ctx); err == nil {
@@ -238,36 +225,10 @@ func (s Service) ThemeSettings(ctx context.Context, user *domain.User) ThemeSett
 				settings.ProfileTheme = defaultTheme
 			}
 		}
-		if !defaultSet && rawTheme == "" && settings.ProfileTheme == defaultThemeName && settings.CustomCSSPath == "" && strings.TrimSpace(settings.InlineCSS) == "" {
-			legacy := s.legacyThemeSettings(ctx)
-			if legacy.ProfileTheme != "" {
-				settings = legacy
-			}
-		}
 	}
 
 	settings.ProfileTheme = NormalizeThemeChoice(settings.ProfileTheme)
 	settings.AdminTheme = settings.ProfileTheme
-	settings.CustomCSSURL = ThemeCustomCSSURL(settings.CustomCSSPath)
-	settings.InlineCSSTemplate = template.CSS(settings.InlineCSS)
-	return settings
-}
-
-func (s Service) legacyThemeSettings(ctx context.Context) ThemeSettings {
-	settings := ThemeSettings{}
-	values, err := s.store.GetSettings(ctx, themeProfileKey, themeAdminKey, themeCustomCSSPathKey, themeCustomCSSInlineKey)
-	if err != nil {
-		return settings
-	}
-	settings.ProfileTheme = values[themeProfileKey]
-	settings.AdminTheme = core.FirstNonEmpty(values[themeAdminKey], settings.AdminTheme)
-	settings.CustomCSSPath = values[themeCustomCSSPathKey]
-	settings.InlineCSS = values[themeCustomCSSInlineKey]
-	settings.ProfileTheme = NormalizeThemeChoice(settings.ProfileTheme)
-	if settings.ProfileTheme == "" {
-		settings.ProfileTheme = defaultThemeName
-	}
-	settings.AdminTheme = core.FirstNonEmpty(settings.AdminTheme, settings.ProfileTheme)
 	settings.CustomCSSURL = ThemeCustomCSSURL(settings.CustomCSSPath)
 	settings.InlineCSSTemplate = template.CSS(settings.InlineCSS)
 	return settings

@@ -68,14 +68,8 @@ func NewHandler(source Source) Handler {
 
 // Build constructs the identity export payload for a user.
 func (h Handler) Build(ctx context.Context, r *http.Request, user domain.User, customFields map[string]string, profileURL string) (identityExport, error) {
-	var links []domain.Link
-	if user.LinksJSON != "" {
-		_ = json.Unmarshal([]byte(user.LinksJSON), &links)
-	}
-	var socialProfiles []domain.SocialProfile
-	if user.SocialProfilesJSON != "" {
-		_ = json.Unmarshal([]byte(user.SocialProfilesJSON), &socialProfiles)
-	}
+	links := identity.DecodeLinks(user.LinksJSON)
+	socialProfiles := identity.DecodeSocialProfiles(user.SocialProfilesJSON)
 	wallets := identity.DecodeStringMap(user.WalletsJSON)
 	publicKeys := identity.DecodeStringMap(user.PublicKeysJSON)
 	verifiedDomains := identity.DecodeStringSlice(user.VerifiedDomainsJSON)

@@ -2,6 +2,8 @@ package identity
 
 import (
 	"encoding/json"
+	"sort"
+	"strconv"
 	"strings"
 
 	"pin/internal/domain"
@@ -16,14 +18,14 @@ func VisibleIdentity(user domain.User, isPrivate bool) (domain.User, map[string]
 		}
 		return user, customFields
 	}
-	fieldVisibility := DecodeStringMap(user.VisibilityJSON)
+	fieldVisibility := DecodeVisibilityMap(user.VisibilityJSON)
 	defaultPrivate := map[string]bool{
 		"email":     true,
 		"phone":     true,
 		"address":   true,
 		"birthdate": true,
 	}
-	customVisibility := DecodeStringMap(user.VisibilityJSON)
+	customVisibility := fieldVisibility
 	applyVisibilityToStringFields(map[string]*string{
 		"email":          &user.Email,
 		"organization":   &user.Organization,
@@ -41,41 +43,37 @@ func VisibleIdentity(user domain.User, isPrivate bool) (domain.User, map[string]
 	}, fieldVisibility, defaultPrivate)
 
 	if user.LinksJSON != "" {
-		var links []domain.Link
-		if err := json.Unmarshal([]byte(user.LinksJSON), &links); err == nil {
+		links := DecodeLinks(user.LinksJSON)
+		if len(links) > 0 {
 			var out []domain.Link
-			for _, link := range links {
-				if NormalizeVisibility(link.Visibility) == "private" {
+			for i, link := range links {
+				if isVisibilityPrivate(customVisibility, LinkVisibilityKey(i), "") {
 					continue
 				}
 				out = append(out, link)
 			}
-			if data, err := json.Marshal(out); err == nil {
-				user.LinksJSON = string(data)
-			}
+			user.LinksJSON = EncodeLinks(out)
 		}
 	}
 
 	if user.SocialProfilesJSON != "" {
-		var socialProfiles []domain.SocialProfile
-		if err := json.Unmarshal([]byte(user.SocialProfilesJSON), &socialProfiles); err == nil {
+		socialProfiles := DecodeSocialProfiles(user.SocialProfilesJSON)
+		if len(socialProfiles) > 0 {
 			var out []domain.SocialProfile
-			for _, profile := range socialProfiles {
-				if NormalizeVisibility(profile.Visibility) == "private" {
+			for i, profile := range socialProfiles {
+				if isVisibilityPrivate(customVisibility, SocialVisibilityKey(i), "") {
 					continue
 				}
 				out = append(out, profile)
 			}
-			if data, err := json.Marshal(out); err == nil {
-				user.SocialProfilesJSON = string(data)
-			}
+			user.SocialProfilesJSON = EncodeSocialProfiles(out)
 		}
 	}
 
 	if user.WalletsJSON != "" {
 		if m := DecodeStringMap(user.WalletsJSON); len(m) > 0 {
 			for k := range m {
-				if NormalizeVisibility(customVisibility["wallet."+k]) == "private" {
+				if isVisibilityPrivate(customVisibility, "wallet."+strings.ToLower(k), "") {
 					delete(m, k)
 				}
 			}
@@ -85,7 +83,7 @@ func VisibleIdentity(user domain.User, isPrivate bool) (domain.User, map[string]
 	if user.PublicKeysJSON != "" {
 		if m := DecodeStringMap(user.PublicKeysJSON); len(m) > 0 {
 			for k := range m {
-				if NormalizeVisibility(customVisibility["key."+k]) == "private" {
+				if isVisibilityPrivate(customVisibility, "key."+strings.ToLower(k), "") {
 					delete(m, k)
 				}
 			}
@@ -165,6 +163,51 @@ func EncodeStringMap(values map[string]string) string {
 	return ""
 }
 
+func DecodeVisibilityMap(jsonStr string) map[string]string {
+	out := map[string]string{}
+	if jsonStr == "" {
+		return out
+	}
+	var entries []domain.Visibility
+	if err := json.Unmarshal([]byte(jsonStr), &entries); err != nil {
+		return out
+	}
+	for _, entry := range entries {
+		key := strings.TrimSpace(entry.Key)
+		if key == "" {
+			continue
+		}
+		out[key] = NormalizeVisibility(entry.Visibility)
+	}
+	return out
+}
+
+func EncodeVisibilityMap(values map[string]string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	entries := make([]domain.Visibility, 0, len(keys))
+	for _, key := range keys {
+		entries = append(entries, domain.Visibility{
+			Key:        key,
+			Visibility: NormalizeVisibility(values[key]),
+		})
+	}
+	if data, err := json.Marshal(entries); err == nil {
+		return string(data)
+	}
+	return ""
+}
+
 func DecodeStringSlice(jsonStr string) []string {
 	var out []string
 	if jsonStr == "" {
@@ -182,6 +225,211 @@ func EncodeStringSlice(values []string) string {
 		return string(data)
 	}
 	return ""
+}
+
+func DecodeCustomFields(jsonStr string) []domain.CustomField {
+	var out []domain.CustomField
+	if jsonStr == "" {
+		return out
+	}
+	_ = json.Unmarshal([]byte(jsonStr), &out)
+	return out
+}
+
+func EncodeCustomFields(values []domain.CustomField) string {
+	if len(values) == 0 {
+		return ""
+	}
+	if data, err := json.Marshal(values); err == nil {
+		return string(data)
+	}
+	return ""
+}
+
+func DecodeWallets(jsonStr string) []domain.Wallet {
+	var out []domain.Wallet
+	if jsonStr == "" {
+		return out
+	}
+	_ = json.Unmarshal([]byte(jsonStr), &out)
+	return out
+}
+
+func EncodeWallets(values []domain.Wallet) string {
+	if len(values) == 0 {
+		return ""
+	}
+	if data, err := json.Marshal(values); err == nil {
+		return string(data)
+	}
+	return ""
+}
+
+func DecodePublicKeys(jsonStr string) []domain.PublicKey {
+	var out []domain.PublicKey
+	if jsonStr == "" {
+		return out
+	}
+	_ = json.Unmarshal([]byte(jsonStr), &out)
+	return out
+}
+
+func EncodePublicKeys(values []domain.PublicKey) string {
+	if len(values) == 0 {
+		return ""
+	}
+	if data, err := json.Marshal(values); err == nil {
+		return string(data)
+	}
+	return ""
+}
+
+func DecodeVerifiedDomains(jsonStr string) []domain.VerifiedDomain {
+	var out []domain.VerifiedDomain
+	if jsonStr == "" {
+		return out
+	}
+	_ = json.Unmarshal([]byte(jsonStr), &out)
+	return out
+}
+
+func EncodeVerifiedDomains(values []domain.VerifiedDomain) string {
+	if len(values) == 0 {
+		return ""
+	}
+	if data, err := json.Marshal(values); err == nil {
+		return string(data)
+	}
+	return ""
+}
+
+func DecodeAliases(jsonStr string) []domain.Alias {
+	var out []domain.Alias
+	if jsonStr == "" {
+		return out
+	}
+	_ = json.Unmarshal([]byte(jsonStr), &out)
+	return out
+}
+
+func EncodeAliases(values []domain.Alias) string {
+	if len(values) == 0 {
+		return ""
+	}
+	if data, err := json.Marshal(values); err == nil {
+		return string(data)
+	}
+	return ""
+}
+
+// DecodeLinks decodes LinksJSON to []domain.Link
+func DecodeLinks(jsonStr string) []domain.Link {
+	var out []domain.Link
+	if jsonStr == "" {
+		return out
+	}
+	_ = json.Unmarshal([]byte(jsonStr), &out)
+	return out
+}
+
+// EncodeLinks encodes []domain.Link to JSON string
+func EncodeLinks(values []domain.Link) string {
+	if len(values) == 0 {
+		return ""
+	}
+	if data, err := json.Marshal(values); err == nil {
+		return string(data)
+	}
+	return ""
+}
+
+// DecodeSocialProfiles decodes SocialProfilesJSON to []domain.SocialProfile
+func DecodeSocialProfiles(jsonStr string) []domain.SocialProfile {
+	var out []domain.SocialProfile
+	if jsonStr == "" {
+		return out
+	}
+	_ = json.Unmarshal([]byte(jsonStr), &out)
+	return out
+}
+
+// EncodeSocialProfiles encodes []domain.SocialProfile to JSON string
+func EncodeSocialProfiles(values []domain.SocialProfile) string {
+	if len(values) == 0 {
+		return ""
+	}
+	if data, err := json.Marshal(values); err == nil {
+		return string(data)
+	}
+	return ""
+}
+
+// WalletsMapToStructs converts a map[string]string to []domain.Wallet
+func WalletsMapToStructs(wallets map[string]string) []domain.Wallet {
+	if len(wallets) == 0 {
+		return nil
+	}
+	var out []domain.Wallet
+	for label, address := range wallets {
+		if strings.TrimSpace(label) == "" || strings.TrimSpace(address) == "" {
+			continue
+		}
+		out = append(out, domain.Wallet{
+			Label:   label,
+			Address: address,
+		})
+	}
+	return out
+}
+
+// PublicKeysMapToStructs converts a map[string]string to []domain.PublicKey
+func PublicKeysMapToStructs(keys map[string]string) []domain.PublicKey {
+	if len(keys) == 0 {
+		return nil
+	}
+	var out []domain.PublicKey
+	algorithms := []string{"pgp", "ssh", "age", "activitypub"}
+	for _, algo := range algorithms {
+		if key := strings.TrimSpace(keys[algo]); key != "" {
+			out = append(out, domain.PublicKey{
+				Algorithm: algo,
+				Key:       key,
+			})
+		}
+	}
+	return out
+}
+
+// VerifiedDomainsSliceToStructs converts []string to []domain.VerifiedDomain
+func VerifiedDomainsSliceToStructs(domains []string) []domain.VerifiedDomain {
+	if len(domains) == 0 {
+		return nil
+	}
+	var out []domain.VerifiedDomain
+	for _, d := range domains {
+		if strings.TrimSpace(d) == "" {
+			continue
+		}
+		out = append(out, domain.VerifiedDomain{
+			Domain: d,
+		})
+	}
+	return out
+}
+
+// AliasesSliceToStructs converts []string to []domain.Alias
+func AliasesSliceToStructs(aliases []string) []domain.Alias {
+	if len(aliases) == 0 {
+		return nil
+	}
+	var out []domain.Alias
+	for _, alias := range aliases {
+		if strings.TrimSpace(alias) == "" {
+			continue
+		}
+		out = append(out, domain.Alias{Name: alias})
+	}
+	return out
 }
 
 func StripEmptyMap(values map[string]string) map[string]string {
@@ -237,8 +485,9 @@ func BuildAttachments(user domain.User, wallets, keys map[string]string, domains
 	return attachments
 }
 
-func ParseSocialForm(labels, urls, visibilities []string) []domain.SocialProfile {
+func ParseSocialForm(labels, urls, visibilities []string) ([]domain.SocialProfile, map[string]string) {
 	var out []domain.SocialProfile
+	visibility := map[string]string{}
 	maxLen := len(labels)
 	if len(urls) > maxLen {
 		maxLen = len(urls)
@@ -261,17 +510,18 @@ func ParseSocialForm(labels, urls, visibilities []string) []domain.SocialProfile
 		if label == "" || urlStr == "" {
 			continue
 		}
-		visibility := ""
+		vis := ""
 		if i < len(visibilities) {
-			visibility = visibilities[i]
+			vis = visibilities[i]
 		}
+		index := len(out)
 		out = append(out, domain.SocialProfile{
-			Label:      label,
-			URL:        urlStr,
-			Visibility: NormalizeVisibility(visibility),
+			Label: label,
+			URL:   urlStr,
 		})
+		visibility[SocialVisibilityKey(index)] = NormalizeVisibility(vis)
 	}
-	return out
+	return out, visibility
 }
 
 func NormalizeVisibility(input string) string {
@@ -299,4 +549,21 @@ func applyVisibilityToStringFields(fields map[string]*string, visibility map[str
 			*ptr = ""
 		}
 	}
+}
+
+func isVisibilityPrivate(values map[string]string, key string, fallback string) bool {
+	if key != "" {
+		if vis, ok := values[key]; ok {
+			return NormalizeVisibility(vis) == "private"
+		}
+	}
+	return fallback == "private"
+}
+
+func LinkVisibilityKey(index int) string {
+	return "link:" + strconv.Itoa(index)
+}
+
+func SocialVisibilityKey(index int) string {
+	return "social:" + strconv.Itoa(index)
 }

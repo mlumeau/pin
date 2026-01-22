@@ -101,7 +101,7 @@
                 <h2>Verified domains</h2>
                 <ul class="links">
                     {{ range .VerifiedDomains }}
-                    <li><a href="https://{{ . }}" rel="me" target="_blank"><span>{{ . }}</span><span>></span></a></li>
+                    <li><a href="https://{{ .Domain }}" rel="me" target="_blank"><span>{{ .Domain }}</span><span>></span></a></li>
                     {{ end }}
                 </ul>
             </div>
@@ -111,8 +111,8 @@
             <div class="section">
                 <h2>Wallets</h2>
                 <div class="two-col">
-                    {{ range $key, $value := .Wallets }}
-                    <p class="meta"><strong>{{ $key | toUpper }}</strong><br>{{ $value }}</p>
+                    {{ range .Wallets }}
+                    <p class="meta"><strong>{{ .Label | toUpper }}</strong><br>{{ .Address }}</p>
                     {{ end }}
                 </div>
             </div>
@@ -122,8 +122,8 @@
             <div class="section">
                 <h2>Public keys</h2>
                 <ul class="links">
-                    {{ range $key, $value := .PublicKeys }}
-                    <li><a href="#" onclick="return false;"><span>{{ $key }}</span><span>{{ $value }}</span></a></li>
+                    {{ range .PublicKeys }}
+                    <li><a href="#" onclick="return false;"><span>{{ .Algorithm }}</span><span>{{ .Key }}</span></a></li>
                     {{ end }}
                 </ul>
             </div>

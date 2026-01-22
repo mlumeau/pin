@@ -7,12 +7,27 @@ import (
 	"strings"
 
 	"pin/internal/domain"
+	"pin/internal/features/identity"
 	"pin/internal/platform/core"
 )
 
 type WalletEntry struct {
 	Label      string
 	Address    string
+	Visibility string
+}
+
+type LinkEntry struct {
+	Label      string
+	URL        string
+	Visibility string
+}
+
+type SocialEntry struct {
+	Label      string
+	URL        string
+	Provider   string
+	Verified   bool
 	Visibility string
 }
 
@@ -41,8 +56,52 @@ func BuildWalletEntries(wallets map[string]string, visibility map[string]string)
 	return out
 }
 
-func ParseLinksForm(labels, urls, visibilities []string) []domain.Link {
+func BuildLinkEntries(links []domain.Link, visibility map[string]string) []LinkEntry {
+	if len(links) == 0 {
+		return []LinkEntry{}
+	}
+	out := make([]LinkEntry, 0, len(links))
+	for i, link := range links {
+		if strings.TrimSpace(link.Label) == "" || strings.TrimSpace(link.URL) == "" {
+			continue
+		}
+		visKey := identity.LinkVisibilityKey(i)
+		out = append(out, LinkEntry{
+			Label:      link.Label,
+			URL:        link.URL,
+			Visibility: visibilityValue(visibility, visKey, nil),
+		})
+	}
+	return out
+}
+
+func BuildSocialEntries(social []domain.SocialProfile, visibility map[string]string) []SocialEntry {
+	if len(social) == 0 {
+		return []SocialEntry{}
+	}
+	out := make([]SocialEntry, 0, len(social))
+	for i, profile := range social {
+		if strings.TrimSpace(profile.URL) == "" {
+			continue
+		}
+		if strings.TrimSpace(profile.Label) == "" && strings.TrimSpace(profile.Provider) == "" {
+			continue
+		}
+		visKey := identity.SocialVisibilityKey(i)
+		out = append(out, SocialEntry{
+			Label:      profile.Label,
+			URL:        profile.URL,
+			Provider:   profile.Provider,
+			Verified:   profile.Verified,
+			Visibility: visibilityValue(visibility, visKey, nil),
+		})
+	}
+	return out
+}
+
+func ParseLinksForm(labels, urls, visibilities []string) ([]domain.Link, map[string]string) {
 	var links []domain.Link
+	visibility := map[string]string{}
 	maxLen := len(labels)
 	if len(urls) > maxLen {
 		maxLen = len(urls)
@@ -65,13 +124,15 @@ func ParseLinksForm(labels, urls, visibilities []string) []domain.Link {
 		if label == "" || urlStr == "" {
 			continue
 		}
-		visibility := ""
+		vis := ""
 		if i < len(visibilities) {
-			visibility = visibilities[i]
+			vis = visibilities[i]
 		}
-		links = append(links, domain.Link{Label: label, URL: urlStr, Visibility: NormalizeVisibility(visibility)})
+		index := len(links)
+		links = append(links, domain.Link{Label: label, URL: urlStr})
+		visibility[identity.LinkVisibilityKey(index)] = NormalizeVisibility(vis)
 	}
-	return links
+	return links, visibility
 }
 
 func ParseCustomFieldsForm(keys, values []string) map[string]string {

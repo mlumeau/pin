@@ -11,13 +11,12 @@ import (
 )
 
 const (
-	landingModeGeneric      = "generic"
-	landingModeProfile      = "profile"
-	landingModeCustom       = "custom"
-	landingModeKey          = "landing_mode"
-	landingCustomPathKey    = "landing_custom_path"
-	legacyLandingCustomHTML = "landing_custom_html"
-	landingUploadsSubdir    = "landing"
+	landingModeGeneric   = "generic"
+	landingModeProfile   = "profile"
+	landingModeCustom    = "custom"
+	landingModeKey       = "landing_mode"
+	landingCustomPathKey = "landing_custom_path"
+	landingUploadsSubdir = "landing"
 )
 
 const (
@@ -59,7 +58,6 @@ func (s Service) SaveLandingSettings(ctx context.Context, settings LandingSettin
 	}); err != nil {
 		return err
 	}
-	_ = s.store.DeleteSetting(ctx, legacyLandingCustomHTML)
 	return nil
 }
 

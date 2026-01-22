@@ -91,18 +91,50 @@ type DomainVerification struct {
 	CreatedAt  time.Time
 }
 
+// Visibility represents a keyed visibility entry stored on the user.
+type Visibility struct {
+	Key        string `json:"key"`
+	Visibility string `json:"visibility"`
+}
+
 // Link is a label + URL pair serialized into JSON for storage.
 type Link struct {
-	Label      string `json:"label"`
-	URL        string `json:"url"`
-	Visibility string `json:"visibility,omitempty"`
+	Label string `json:"label"`
+	URL   string `json:"url"`
 }
 
 // SocialProfile represents a social link with optional verification metadata.
 type SocialProfile struct {
-	Label      string `json:"label"`
-	URL        string `json:"url"`
-	Provider   string `json:"provider,omitempty"`
-	Verified   bool   `json:"verified"`
-	Visibility string `json:"visibility,omitempty"`
+	Label    string `json:"label"`
+	URL      string `json:"url"`
+	Provider string `json:"provider,omitempty"`
+	Verified bool   `json:"verified"`
+}
+
+// CustomField represents a user-defined custom field in key-value format.
+type CustomField struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// Wallet represents a cryptocurrency or payment address with visibility settings.
+type Wallet struct {
+	Label   string `json:"label"`
+	Address string `json:"address"`
+}
+
+// PublicKey represents a cryptographic public key for a specific algorithm.
+type PublicKey struct {
+	Algorithm string `json:"algorithm"`
+	Key       string `json:"key"`
+}
+
+// VerifiedDomain represents a verified domain associated with a user.
+type VerifiedDomain struct {
+	Domain string `json:"domain"`
+}
+
+// Alias represents an alternative username or identifier for a user.
+type Alias struct {
+	Name string `json:"name"`
 }

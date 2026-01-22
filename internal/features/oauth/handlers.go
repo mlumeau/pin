@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/sessions"
 	"pin/internal/domain"
+	"pin/internal/features/identity"
 	"pin/internal/platform/core"
 )
 
@@ -391,10 +392,7 @@ func (h Handler) addOrUpdateSocialProfile(r *http.Request, profile domain.Social
 	if err != nil {
 		return err
 	}
-	var profiles []domain.SocialProfile
-	if user.SocialProfilesJSON != "" {
-		_ = json.Unmarshal([]byte(user.SocialProfilesJSON), &profiles)
-	}
+	profiles := identity.DecodeSocialProfiles(user.SocialProfilesJSON)
 
 	found := false
 	for i, existing := range profiles {
