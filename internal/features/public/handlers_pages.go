@@ -9,6 +9,7 @@ import (
 
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
+	"pin/internal/domain"
 	"pin/internal/features/domains"
 	"pin/internal/features/identity"
 	"pin/internal/features/identity/export"
@@ -20,6 +21,11 @@ import (
 // Index renders the root page (landing page or profile).
 func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
+		if handle, ok := profilePictureHandleFromPath(r.URL.Path); ok {
+			handler := h.profilePictureHandler()
+			handler.ProfilePictureByHandle(w, r, handle)
+			return
+		}
 		if ext := identity.ExtensionFromPath(r.URL.Path); ext != "" {
 			handler := export.NewHandler(identitySource{deps: h.deps})
 			switch ext {
@@ -50,7 +56,7 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/setup", http.StatusFound)
 		return
 	}
-	user, err := h.deps.GetOwnerUser(r.Context())
+	user, err := h.deps.GetOwnerIdentity(r.Context())
 	if err != nil {
 		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
 		return
@@ -71,7 +77,7 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	publicUser, customFields := identity.VisibleIdentity(user, false)
 	showLanding := landing.Mode != featuresettings.LandingModeProfile
-	profilePath := "/" + url.PathEscape(user.Username)
+	profilePath := "/" + url.PathEscape(user.Handle)
 	profilePictureAlt := profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user)
 
 	data := map[string]interface{}{
@@ -95,18 +101,26 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 		data["VerifiedDomains"] = verifiedDomains
 		data["ProfileURL"] = h.deps.BaseURL(r)
 		data["ExportBase"] = profilePath
+		data["ProfilePictureURL"] = "/" + url.PathEscape(user.Handle) + "/profile-picture"
 		updatedAt := user.UpdatedAt
 		if updatedAt.IsZero() {
 			updatedAt = time.Now().UTC()
 		}
 		data["UpdatedAt"] = updatedAt
+		if authUser, err := h.deps.GetUserByID(r.Context(), user.UserID); err == nil {
+			theme = settingsSvc.ThemeSettings(r.Context(), &authUser)
+		}
 	} else {
 		data["ProfilePath"] = profilePath
 		data["ProfileURL"] = h.deps.BaseURL(r) + profilePath
 		data["ExportBase"] = profilePath
-		data["ProfilePictureURL"] = "/profile-picture/" + url.PathEscape(user.Username) + "?s=160"
+		data["ProfilePictureURL"] = "/" + url.PathEscape(user.Handle) + "/profile-picture"
 		data["HasCustomLandingHTML"] = false
+		if authUser, err := h.deps.GetUserByID(r.Context(), user.UserID); err == nil {
+			theme = settingsSvc.ThemeSettings(r.Context(), &authUser)
+		}
 	}
+	data["Theme"] = theme
 
 	if err := h.deps.RenderTemplate(w, "index.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -122,7 +136,7 @@ func (h Handler) Landing(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/setup", http.StatusFound)
 		return
 	}
-	user, err := h.deps.GetOwnerUser(r.Context())
+	user, err := h.deps.GetOwnerIdentity(r.Context())
 	if err != nil {
 		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
 		return
@@ -142,7 +156,7 @@ func (h Handler) Landing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	publicUser, _ := identity.VisibleIdentity(user, false)
-	profilePath := "/" + url.PathEscape(user.Username)
+	profilePath := "/" + url.PathEscape(user.Handle)
 	profilePictureAlt := profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user)
 	data := map[string]interface{}{
 		"User":                 publicUser,
@@ -150,10 +164,14 @@ func (h Handler) Landing(w http.ResponseWriter, r *http.Request) {
 		"ProfileURL":           h.deps.BaseURL(r) + profilePath,
 		"ExportBase":           profilePath,
 		"ProfilePictureAlt":    profilePictureAlt,
-		"ProfilePictureURL":    "/profile-picture/" + url.PathEscape(user.Username) + "?s=160",
+		"ProfilePictureURL":    "/" + url.PathEscape(user.Handle) + "/profile-picture",
 		"HasCustomLandingHTML": false,
 		"Theme":                theme,
 		"ShowLanding":          true,
+	}
+	if authUser, err := h.deps.GetUserByID(r.Context(), user.UserID); err == nil {
+		theme = settingsSvc.ThemeSettings(r.Context(), &authUser)
+		data["Theme"] = theme
 	}
 	if err := h.deps.RenderTemplate(w, "index.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -163,9 +181,6 @@ func (h Handler) Landing(w http.ResponseWriter, r *http.Request) {
 // Profile renders a user's public profile page.
 func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	ident := strings.Trim(r.URL.Path, "/")
-	if strings.HasPrefix(ident, "u/") {
-		ident = strings.TrimPrefix(ident, "u/")
-	}
 	ident = strings.Trim(ident, "/")
 	if ident == "" {
 		http.NotFound(w, r)
@@ -188,26 +203,39 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		user, err := h.deps.FindUserByIdentifier(r.Context(), name)
+		user, err := h.deps.GetIdentityByHandle(r.Context(), name)
 		if err != nil {
 			http.NotFound(w, r)
 			return
 		}
 		publicUser, customFields := identity.VisibleIdentity(user, false)
-		profileURL := h.deps.BaseURL(r) + "/" + url.PathEscape(user.Username)
-		if err := handler.ServeIdentity(w, r, publicUser, customFields, profileURL, ext); err != nil {
+		profileURL := h.deps.BaseURL(r) + "/" + url.PathEscape(user.Handle)
+		if ext == "json" {
+			selfURL := h.deps.BaseURL(r) + r.URL.Path
+			if r.URL.RawQuery != "" {
+				selfURL += "?" + r.URL.RawQuery
+			}
+			if err := handler.ServePINCJSON(w, r, publicUser, customFields, "public", selfURL); err != nil {
+				http.Error(w, "Failed to load identity", http.StatusInternalServerError)
+			}
+			return
+		}
+		if err := handler.ServeIdentity(w, r, publicUser, customFields, profileURL, ext, false); err != nil {
 			http.Error(w, "Failed to load identity", http.StatusInternalServerError)
 		}
 		return
 	}
-	user, err := h.deps.FindUserByIdentifier(r.Context(), ident)
+	user, err := h.deps.GetIdentityByHandle(r.Context(), ident)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 
 	settingsSvc := featuresettings.NewService(h.deps)
-	theme := settingsSvc.ThemeSettings(r.Context(), &user)
+	theme := settingsSvc.DefaultThemeSettings(r.Context())
+	if authUser, err := h.deps.GetUserByID(r.Context(), user.UserID); err == nil {
+		theme = settingsSvc.ThemeSettings(r.Context(), &authUser)
+	}
 	publicUser, customFields := identity.VisibleIdentity(user, false)
 	links := identity.DecodeLinks(publicUser.LinksJSON)
 	socialProfiles := identity.DecodeSocialProfiles(publicUser.SocialProfilesJSON)
@@ -218,7 +246,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	if updatedAt.IsZero() {
 		updatedAt = time.Now().UTC()
 	}
-	profilePath := "/" + url.PathEscape(user.Username)
+	profilePath := "/" + url.PathEscape(user.Handle)
 	profileURL := h.deps.BaseURL(r) + profilePath
 	profilePictureAlt := profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user)
 	data := map[string]interface{}{
@@ -231,6 +259,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		"VerifiedDomains":   verifiedDomains,
 		"ProfileURL":        profileURL,
 		"ExportBase":        profilePath,
+		"ProfilePictureURL": "/" + url.PathEscape(user.Handle) + "/profile-picture",
 		"ProfilePictureAlt": profilePictureAlt,
 		"UpdatedAt":         updatedAt,
 		"Theme":             theme,
@@ -241,7 +270,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// PrivateIdentity serves a private profile view and private exports via /p/<usernamehash>/<token>.
+// PrivateIdentity serves a private profile view and private exports via /p/<handlehash>/<token>.
 func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/p/")
 	path = strings.Trim(path, "/")
@@ -249,8 +278,22 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	isProfilePicture := false
+	if strings.HasSuffix(path, "/profile-picture") {
+		isProfilePicture = true
+		path = strings.TrimSuffix(path, "/profile-picture")
+		path = strings.TrimSuffix(path, "/")
+		if path == "" {
+			http.NotFound(w, r)
+			return
+		}
+	}
 	name, ext := identity.FromIdent(path)
 	if ext != "" {
+		if isProfilePicture {
+			http.NotFound(w, r)
+			return
+		}
 		path = name
 	}
 	parts := strings.Split(path, "/")
@@ -258,27 +301,42 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	usernameHash := strings.TrimSpace(parts[0])
+	handleHash := strings.TrimSpace(parts[0])
 	token := strings.TrimSpace(parts[1])
-	if usernameHash == "" || token == "" {
+	if handleHash == "" || token == "" {
 		http.NotFound(w, r)
 		return
 	}
-	user, err := h.deps.GetUserByPrivateToken(r.Context(), token)
+	user, err := h.deps.GetIdentityByPrivateToken(r.Context(), token)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
-	expectedHash := core.ShortHash(strings.ToLower(strings.TrimSpace(user.Username)), 7)
-	if !strings.EqualFold(usernameHash, expectedHash) {
+	expectedHash := core.ShortHash(strings.ToLower(strings.TrimSpace(user.Handle)), 7)
+	if !strings.EqualFold(handleHash, expectedHash) {
 		http.NotFound(w, r)
+		return
+	}
+	if isProfilePicture {
+		handler := h.profilePictureHandler()
+		handler.ProfilePictureForUser(w, r, user)
 		return
 	}
 	privateUser, customFields := identity.VisibleIdentity(user, true)
 	if ext != "" {
 		handler := export.NewHandler(identitySource{deps: h.deps})
 		profileURL := h.deps.BaseURL(r) + "/p/" + url.PathEscape(expectedHash) + "/" + url.PathEscape(user.PrivateToken)
-		if err := handler.ServeIdentity(w, r, privateUser, customFields, profileURL, ext); err != nil {
+		if ext == "json" {
+			selfURL := h.deps.BaseURL(r) + r.URL.Path
+			if r.URL.RawQuery != "" {
+				selfURL += "?" + r.URL.RawQuery
+			}
+			if err := handler.ServePINCJSON(w, r, privateUser, customFields, "private", selfURL); err != nil {
+				http.Error(w, "Failed to load identity", http.StatusInternalServerError)
+			}
+			return
+		}
+		if err := handler.ServeIdentity(w, r, privateUser, customFields, profileURL, ext, true); err != nil {
 			http.Error(w, "Failed to load identity", http.StatusInternalServerError)
 		}
 		return
@@ -286,7 +344,10 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 
 	links := identity.DecodeLinks(privateUser.LinksJSON)
 	socialProfiles := identity.DecodeSocialProfiles(privateUser.SocialProfilesJSON)
-	theme := featuresettings.NewService(h.deps).ThemeSettings(r.Context(), &user)
+	theme := featuresettings.NewService(h.deps).DefaultThemeSettings(r.Context())
+	if authUser, err := h.deps.GetUserByID(r.Context(), user.UserID); err == nil {
+		theme = featuresettings.NewService(h.deps).ThemeSettings(r.Context(), &authUser)
+	}
 	updatedAt := user.UpdatedAt
 	if updatedAt.IsZero() {
 		updatedAt = time.Now().UTC()
@@ -303,6 +364,7 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 		"VerifiedDomains":   identity.VerifiedDomainsSliceToStructs(identity.DecodeStringSlice(privateUser.VerifiedDomainsJSON)),
 		"ProfileURL":        profileURL,
 		"ExportBase":        profilePath,
+		"ProfilePictureURL": profilePath + "/profile-picture",
 		"ProfilePictureAlt": profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user),
 		"IsPrivateIdentity": true,
 		"UpdatedAt":         updatedAt,
@@ -311,6 +373,35 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 	if err := h.deps.RenderTemplate(w, "index.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 	}
+}
+
+func (h Handler) profilePictureHandler() profilepicture.Handler {
+	cfg := h.deps.Config()
+	return profilepicture.NewHandler(profilepicture.Config{
+		ProfilePictureDir: cfg.ProfilePictureDir,
+		StaticDir:         cfg.StaticDir,
+		AllowedExts:       cfg.AllowedExts,
+		MaxUploadBytes:    cfg.MaxUploadBytes,
+		CacheAltFormats:   cfg.CacheAltFormats,
+	}, h.deps)
+}
+
+func profilePictureHandleFromPath(path string) (string, bool) {
+	path = strings.Trim(path, "/")
+	if path == "" {
+		return "", false
+	}
+	parts := strings.Split(path, "/")
+	if len(parts) != 2 {
+		return "", false
+	}
+	if parts[1] != "profile-picture" {
+		return "", false
+	}
+	if strings.TrimSpace(parts[0]) == "" {
+		return "", false
+	}
+	return parts[0], true
 }
 
 // Setup creates the first admin user when none exists.
@@ -353,14 +444,14 @@ func (h Handler) Setup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		username := strings.TrimSpace(r.FormValue("username"))
+		handle := strings.TrimSpace(r.FormValue("handle"))
 		email := strings.TrimSpace(r.FormValue("email"))
 		password := r.FormValue("password")
-		if username == "" || password == "" {
-			data["Error"] = "Username and password are required"
-		} else if identity.IsReservedIdentifier(username, h.deps.Reserved()) {
-			data["Error"] = "Username is reserved"
-		} else if err := identity.ValidateIdentifiers(r.Context(), username, nil, "", 0, h.deps.Reserved(), h.deps.CheckIdentifierCollisions); err != nil {
+		if handle == "" || password == "" {
+			data["Error"] = "Handle and password are required"
+		} else if identity.IsReservedIdentifier(handle, h.deps.Reserved()) {
+			data["Error"] = "Handle is reserved"
+		} else if err := identity.ValidateHandle(r.Context(), handle, 0, h.deps.Reserved(), h.deps.CheckHandleCollision); err != nil {
 			data["Error"] = err.Error()
 		} else {
 			hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -368,7 +459,7 @@ func (h Handler) Setup(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Failed to create account", http.StatusInternalServerError)
 				return
 			}
-			key, err := totp.Generate(totp.GenerateOpts{Issuer: "pin", AccountName: username})
+			key, err := totp.Generate(totp.GenerateOpts{Issuer: "pin", AccountName: handle})
 			if err != nil {
 				http.Error(w, "Failed to create account", http.StatusInternalServerError)
 				return
@@ -381,17 +472,37 @@ func (h Handler) Setup(w http.ResponseWriter, r *http.Request) {
 				defaultTheme = themeValue
 			}
 
-			h.deps.AuditAttempt(r.Context(), 0, "user.create", username, map[string]string{"source": "setup"})
+			h.deps.AuditAttempt(r.Context(), 0, "user.create", handle, map[string]string{"source": "setup"})
 			privateToken := core.RandomToken(32)
-			userID, err := h.deps.CreateUser(r.Context(), username, email, "owner", string(hash), secret, defaultTheme, privateToken)
+			userID, err := h.deps.CreateUser(r.Context(), "owner", string(hash), secret, defaultTheme)
 			if err != nil {
-				h.deps.AuditOutcome(r.Context(), 0, "user.create", username, err, map[string]string{"source": "setup"})
-				data["Error"] = "Username already exists"
+				h.deps.AuditOutcome(r.Context(), 0, "user.create", handle, err, map[string]string{"source": "setup"})
+				data["Error"] = "Failed to create account"
 				goto renderSetup
 			}
-			h.deps.AuditOutcome(r.Context(), 0, "user.create", username, nil, map[string]string{"source": "setup"})
-			_ = h.deps.UpsertUserIdentifiers(r.Context(), int(userID), username, nil, email)
-			domains.NewService(h.deps).EnsureServerDomainVerification(r.Context(), h.deps.Config().BaseURL, int(userID), h.deps, func() string {
+			identityRecord := domain.Identity{
+				UserID:              int(userID),
+				Handle:              handle,
+				Email:               email,
+				DisplayName:         handle,
+				CustomFieldsJSON:    "{}",
+				VisibilityJSON:      "{}",
+				PrivateToken:        privateToken,
+				LinksJSON:           "[]",
+				SocialProfilesJSON:  "[]",
+				WalletsJSON:         "{}",
+				PublicKeysJSON:      "{}",
+				VerifiedDomainsJSON: "[]",
+			}
+			identityID, err := h.deps.CreateIdentity(r.Context(), identityRecord)
+			if err != nil {
+				_ = h.deps.DeleteUser(r.Context(), int(userID))
+				h.deps.AuditOutcome(r.Context(), 0, "user.create", handle, err, map[string]string{"source": "setup"})
+				data["Error"] = "Handle already exists"
+				goto renderSetup
+			}
+			h.deps.AuditOutcome(r.Context(), 0, "user.create", handle, nil, map[string]string{"source": "setup"})
+			domains.NewService(h.deps).EnsureServerDomainVerification(r.Context(), h.deps.Config().BaseURL, int(identityID), h.deps, func() string {
 				return domains.RandomTokenURL(12)
 			})
 

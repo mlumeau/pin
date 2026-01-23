@@ -18,8 +18,8 @@
         {{ else }}
         <span class="meta">Verified</span>
         {{ end }}
-        {{ if .Username }}
-        <button type="button" class="ghost domain-atproto-handle" data-atproto-handle="{{ .Username }}.{{ .Domain }}">Use as AT handle</button>
+        {{ if .Handle }}
+        <button type="button" class="ghost domain-atproto-handle" data-atproto-handle="{{ .Handle }}.{{ .Domain }}">Use as AT handle</button>
         {{ end }}
         {{ else }}
         <button type="button" class="ghost domain-verify">Verify</button>

@@ -2,7 +2,6 @@ package export
 
 import (
 	"context"
-	"encoding/json"
 	"encoding/xml"
 	"net/http"
 	"net/url"
@@ -15,7 +14,7 @@ import (
 
 type identityExport struct {
 	XMLName       xml.Name               `xml:"identity" json:"-"`
-	Username      string                 `xml:"username" json:"username"`
+	Handle        string                 `xml:"handle" json:"handle"`
 	DisplayName   string                 `xml:"display_name" json:"display_name"`
 	Email         string                 `xml:"email,omitempty" json:"email,omitempty"`
 	Bio           string                 `xml:"bio,omitempty" json:"bio,omitempty"`
@@ -34,7 +33,6 @@ type identityExport struct {
 	ProfileURL    string                 `xml:"profile_url" json:"profile_url"`
 	ProfileImage  string                 `xml:"profile_image" json:"profile_image"`
 	ImageAltText  string                 `xml:"profile_image_alt,omitempty" json:"profile_image_alt,omitempty"`
-	Aliases       []string               `xml:"aliases>alias,omitempty" json:"aliases,omitempty"`
 	Links         []domain.Link          `xml:"links>link,omitempty" json:"links,omitempty"`
 	Social        []domain.SocialProfile `xml:"social>profile,omitempty" json:"social,omitempty"`
 	Wallets       map[string]string      `xml:"wallets,omitempty" json:"wallets,omitempty"`
@@ -52,9 +50,9 @@ type identityField struct {
 
 // Source provides identity data and helpers.
 type Source interface {
-	GetOwnerUser(ctx context.Context) (domain.User, error)
-	VisibleIdentity(user domain.User, isPrivate bool) (domain.User, map[string]string)
-	ActiveProfilePictureAlt(ctx context.Context, user domain.User) string
+	GetOwnerIdentity(ctx context.Context) (domain.Identity, error)
+	VisibleIdentity(user domain.Identity, isPrivate bool) (domain.Identity, map[string]string)
+	ActiveProfilePictureAlt(ctx context.Context, user domain.Identity) string
 	BaseURL(r *http.Request) string
 }
 
@@ -67,13 +65,12 @@ func NewHandler(source Source) Handler {
 }
 
 // Build constructs the identity export payload for a user.
-func (h Handler) Build(ctx context.Context, r *http.Request, user domain.User, customFields map[string]string, profileURL string) (identityExport, error) {
+func (h Handler) Build(ctx context.Context, r *http.Request, user domain.Identity, customFields map[string]string, profileURL string) (identityExport, error) {
 	links := identity.DecodeLinks(user.LinksJSON)
 	socialProfiles := identity.DecodeSocialProfiles(user.SocialProfilesJSON)
 	wallets := identity.DecodeStringMap(user.WalletsJSON)
 	publicKeys := identity.DecodeStringMap(user.PublicKeysJSON)
 	verifiedDomains := identity.DecodeStringSlice(user.VerifiedDomainsJSON)
-	aliases := identity.DecodeStringSlice(user.AliasesJSON)
 	customFields = identity.StripEmptyMap(customFields)
 	customList := []identityField{}
 	for key, value := range customFields {
@@ -91,8 +88,8 @@ func (h Handler) Build(ctx context.Context, r *http.Request, user domain.User, c
 		updatedAt = time.Now().UTC()
 	}
 	return identityExport{
-		Username:      user.Username,
-		DisplayName:   identity.FirstNonEmpty(user.DisplayName, user.Username),
+		Handle:        user.Handle,
+		DisplayName:   identity.FirstNonEmpty(user.DisplayName, user.Handle),
 		Email:         user.Email,
 		Bio:           user.Bio,
 		Organization:  user.Organization,
@@ -108,9 +105,8 @@ func (h Handler) Build(ctx context.Context, r *http.Request, user domain.User, c
 		CustomFields:  customFields,
 		CustomList:    customList,
 		ProfileURL:    profileURL,
-		ProfileImage:  profileURL + "/profile-picture/" + url.PathEscape(user.Username),
+		ProfileImage:  profileURL + "/profile-picture",
 		ImageAltText:  h.source.ActiveProfilePictureAlt(ctx, user),
-		Aliases:       aliases,
 		Links:         links,
 		Social:        socialProfiles,
 		Wallets:       wallets,
@@ -123,30 +119,30 @@ func (h Handler) Build(ctx context.Context, r *http.Request, user domain.User, c
 }
 
 func (h Handler) IdentityJSON(w http.ResponseWriter, r *http.Request) {
-	user, err := h.source.GetOwnerUser(r.Context())
+	user, err := h.source.GetOwnerIdentity(r.Context())
 	if err != nil {
 		http.Error(w, "Failed to load identity", http.StatusInternalServerError)
 		return
 	}
 	publicUser, customFields := h.source.VisibleIdentity(user, false)
-	identityExport, err := h.Build(r.Context(), r, publicUser, customFields, h.source.BaseURL(r)+"/"+url.PathEscape(user.Username))
-	if err != nil {
+	selfURL := h.source.BaseURL(r) + r.URL.Path
+	if r.URL.RawQuery != "" {
+		selfURL += "?" + r.URL.RawQuery
+	}
+	if err := h.ServePINCJSON(w, r, publicUser, customFields, "public", selfURL); err != nil {
 		http.Error(w, "Failed to load identity", http.StatusInternalServerError)
 		return
 	}
-	identity.WriteIdentityCacheHeaders(w)
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{"identity": identityExport})
 }
 
 func (h Handler) IdentityXML(w http.ResponseWriter, r *http.Request) {
-	user, err := h.source.GetOwnerUser(r.Context())
+	user, err := h.source.GetOwnerIdentity(r.Context())
 	if err != nil {
 		http.Error(w, "Failed to load identity", http.StatusInternalServerError)
 		return
 	}
 	publicUser, customFields := h.source.VisibleIdentity(user, false)
-	identityExport, err := h.Build(r.Context(), r, publicUser, customFields, h.source.BaseURL(r)+"/"+url.PathEscape(user.Username))
+	identityExport, err := h.Build(r.Context(), r, publicUser, customFields, h.source.BaseURL(r)+"/"+url.PathEscape(user.Handle))
 	if err != nil {
 		http.Error(w, "Failed to load identity", http.StatusInternalServerError)
 		return
@@ -162,13 +158,13 @@ func (h Handler) IdentityXML(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handler) IdentityTXT(w http.ResponseWriter, r *http.Request) {
-	user, err := h.source.GetOwnerUser(r.Context())
+	user, err := h.source.GetOwnerIdentity(r.Context())
 	if err != nil {
 		http.Error(w, "Failed to load identity", http.StatusInternalServerError)
 		return
 	}
 	publicUser, customFields := h.source.VisibleIdentity(user, false)
-	identityExport, err := h.Build(r.Context(), r, publicUser, customFields, h.source.BaseURL(r)+"/"+url.PathEscape(user.Username))
+	identityExport, err := h.Build(r.Context(), r, publicUser, customFields, h.source.BaseURL(r)+"/"+url.PathEscape(user.Handle))
 	if err != nil {
 		http.Error(w, "Failed to load identity", http.StatusInternalServerError)
 		return
@@ -176,7 +172,7 @@ func (h Handler) IdentityTXT(w http.ResponseWriter, r *http.Request) {
 	identity.WriteIdentityCacheHeaders(w)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	lines := []string{
-		"username: " + identityExport.Username,
+		"handle: " + identityExport.Handle,
 		"display_name: " + identityExport.DisplayName,
 	}
 	if identityExport.Email != "" {
@@ -266,13 +262,13 @@ func (h Handler) IdentityTXT(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handler) IdentityVCF(w http.ResponseWriter, r *http.Request) {
-	user, err := h.source.GetOwnerUser(r.Context())
+	user, err := h.source.GetOwnerIdentity(r.Context())
 	if err != nil {
 		http.Error(w, "Failed to load identity", http.StatusInternalServerError)
 		return
 	}
 	publicUser, customFields := h.source.VisibleIdentity(user, false)
-	identityExport, err := h.Build(r.Context(), r, publicUser, customFields, h.source.BaseURL(r)+"/"+url.PathEscape(user.Username))
+	identityExport, err := h.Build(r.Context(), r, publicUser, customFields, h.source.BaseURL(r)+"/"+url.PathEscape(user.Handle))
 	if err != nil {
 		http.Error(w, "Failed to load identity", http.StatusInternalServerError)
 		return
@@ -331,16 +327,17 @@ func (h Handler) IdentityVCF(w http.ResponseWriter, r *http.Request) {
 }
 
 // ServeIdentity renders an identity export for a given user and extension.
-func (h Handler) ServeIdentity(w http.ResponseWriter, r *http.Request, user domain.User, customFields map[string]string, profileURL string, ext string) error {
+func (h Handler) ServeIdentity(w http.ResponseWriter, r *http.Request, user domain.Identity, customFields map[string]string, profileURL string, ext string, isPrivate bool) error {
 	identityExport, err := h.Build(r.Context(), r, user, customFields, profileURL)
 	if err != nil {
 		return err
 	}
-	identity.WriteIdentityCacheHeaders(w)
+	if isPrivate {
+		identity.WritePrivateIdentityCacheHeaders(w)
+	} else {
+		identity.WriteIdentityCacheHeaders(w)
+	}
 	switch strings.ToLower(ext) {
-	case "json":
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		return json.NewEncoder(w).Encode(map[string]interface{}{"identity": identityExport})
 	case "xml":
 		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
 		enc := xml.NewEncoder(w)
@@ -352,7 +349,7 @@ func (h Handler) ServeIdentity(w http.ResponseWriter, r *http.Request, user doma
 	case "txt":
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		lines := []string{
-			"username: " + identityExport.Username,
+			"handle: " + identityExport.Handle,
 			"display_name: " + identityExport.DisplayName,
 		}
 		if identityExport.Email != "" {

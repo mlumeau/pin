@@ -37,9 +37,9 @@ func wantsJSON(r *http.Request) bool {
 	return strings.Contains(accept, "application/json") || strings.Contains(accept, "json")
 }
 
-func activePictureID(u domain.User) int64 {
-	if u.ProfilePictureID.Valid {
-		return u.ProfilePictureID.Int64
+func activePictureID(identity domain.Identity) int64 {
+	if identity.ProfilePictureID.Valid {
+		return identity.ProfilePictureID.Int64
 	}
 	return 0
 }

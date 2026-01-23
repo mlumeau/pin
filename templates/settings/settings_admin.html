@@ -123,13 +123,13 @@
                         <div class="user-controls-row">
                             <div class="user-controls-field">
                                 <label for="user_q">Search</label>
-                                <input type="text" id="user_q" name="user_q" value="{{ .UsersQuery }}" placeholder="Username, name, or email">
+                                <input type="text" id="user_q" name="user_q" value="{{ .UsersQuery }}" placeholder="Handle, name, or email">
                             </div>
                             <div class="user-controls-field">
                                 <label for="user_sort">Sort by</label>
                                 <select id="user_sort" name="user_sort">
                                     <option value="id" {{ if eq .UsersSort "id" }}selected{{ end }}>Newest</option>
-                                    <option value="username" {{ if eq .UsersSort "username" }}selected{{ end }}>Username</option>
+                                    <option value="handle" {{ if eq .UsersSort "handle" }}selected{{ end }}>Handle</option>
                                     <option value="display_name" {{ if eq .UsersSort "display_name" }}selected{{ end }}>Display name</option>
                                     <option value="email" {{ if eq .UsersSort "email" }}selected{{ end }}>Email</option>
                                     <option value="role" {{ if eq .UsersSort "role" }}selected{{ end }}>Role</option>
@@ -149,8 +149,8 @@
                         {{ range .Users }}
                         <div class="list-row">
                             <div>
-                                <strong>{{ if .DisplayName }}{{ .DisplayName }}{{ else }}{{ .Username }}{{ end }}</strong>
-                                <div class="meta">{{ .Username }} · {{ .Email }} · {{ .Role }}</div>
+                                <strong>{{ if .DisplayName }}{{ .DisplayName }}{{ else }}{{ .Handle }}{{ end }}</strong>
+                                <div class="meta">{{ .Handle }} · {{ .Email }} · {{ .Role }}</div>
                             </div>
                             <div class="link-actions">
                                 <a href="/settings/admin/users/{{ .ID }}/edit">Edit</a>

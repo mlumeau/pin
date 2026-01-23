@@ -46,6 +46,10 @@ func WriteIdentityCacheHeaders(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=300")
 }
 
+func WritePrivateIdentityCacheHeaders(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "private, no-store")
+}
+
 // FirstNonEmpty returns the first non-empty, trimmed string.
 func FirstNonEmpty(values ...string) string {
 	for _, value := range values {

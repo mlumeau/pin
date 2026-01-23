@@ -7,24 +7,24 @@ import (
 )
 
 // Domains.
-func (d Deps) ListDomainVerifications(ctx context.Context, userID int) ([]domain.DomainVerification, error) {
-	return d.repos.Domains.ListDomainVerifications(ctx, userID)
+func (d Deps) ListDomainVerifications(ctx context.Context, identityID int) ([]domain.DomainVerification, error) {
+	return d.repos.Domains.ListDomainVerifications(ctx, identityID)
 }
 
-func (d Deps) UpsertDomainVerification(ctx context.Context, userID int, domainName, token string) error {
-	return d.repos.Domains.UpsertDomainVerification(ctx, userID, domainName, token)
+func (d Deps) UpsertDomainVerification(ctx context.Context, identityID int, domainName, token string) error {
+	return d.repos.Domains.UpsertDomainVerification(ctx, identityID, domainName, token)
 }
 
-func (d Deps) DeleteDomainVerification(ctx context.Context, userID int, domainName string) error {
-	return d.repos.Domains.DeleteDomainVerification(ctx, userID, domainName)
+func (d Deps) DeleteDomainVerification(ctx context.Context, identityID int, domainName string) error {
+	return d.repos.Domains.DeleteDomainVerification(ctx, identityID, domainName)
 }
 
-func (d Deps) MarkDomainVerified(ctx context.Context, userID int, domainName string) error {
-	return d.repos.Domains.MarkDomainVerified(ctx, userID, domainName)
+func (d Deps) MarkDomainVerified(ctx context.Context, identityID int, domainName string) error {
+	return d.repos.Domains.MarkDomainVerified(ctx, identityID, domainName)
 }
 
-func (d Deps) HasDomainVerification(ctx context.Context, userID int, domainName string) (bool, error) {
-	return d.repos.Domains.HasDomainVerification(ctx, userID, domainName)
+func (d Deps) HasDomainVerification(ctx context.Context, identityID int, domainName string) (bool, error) {
+	return d.repos.Domains.HasDomainVerification(ctx, identityID, domainName)
 }
 
 func (d Deps) ProtectedDomain(ctx context.Context) string {

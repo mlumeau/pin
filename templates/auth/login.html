@@ -17,8 +17,8 @@
         <div class="error" id="passkey-error" style="display:none;"></div>
         <form method="post" action="/login?next={{ .Next }}">
             <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required>
+            <label for="handle">Handle</label>
+            <input type="text" id="handle" name="handle" required>
 
             <label for="password">Password</label>
             <input type="password" id="password" name="password" required>
@@ -33,7 +33,7 @@
     <script src="/static/js/passkeys.js"></script>
     <script>
         initPasskeyLogin({
-            usernameInputId: "username",
+            usernameInputId: "handle",
             buttonId: "passkey-login",
             errorId: "passkey-error",
             next: "{{ .Next }}",

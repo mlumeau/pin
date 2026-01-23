@@ -18,35 +18,19 @@ func NewRepos(db *sql.DB) contracts.Repos {
 	r := repos{db: db}
 	return contracts.Repos{
 		Users:           r,
+		Identities:      r,
 		Invites:         r,
 		Passkeys:        r,
 		Audit:           r,
 		Domains:         r,
-		Identifiers:     r,
 		ProfilePictures: r,
 		Settings:        r,
 	}
 }
 
 // UsersStore
-func (r repos) LoadUser(ctx context.Context) (domain.User, error) {
-	return LoadUser(ctx, r.db)
-}
-
-func (r repos) UpdateUser(ctx context.Context, u domain.User) error {
-	return UpdateUser(ctx, r.db, u)
-}
-
 func (r repos) GetUserByID(ctx context.Context, id int) (domain.User, error) {
 	return GetUserByID(ctx, r.db, id)
-}
-
-func (r repos) GetUserByUsername(ctx context.Context, username string) (domain.User, error) {
-	return GetUserByUsername(ctx, r.db, username)
-}
-
-func (r repos) GetUserByPrivateToken(ctx context.Context, token string) (domain.User, error) {
-	return GetUserByPrivateToken(ctx, r.db, token)
 }
 
 func (r repos) GetOwnerUser(ctx context.Context) (domain.User, error) {
@@ -61,20 +45,20 @@ func (r repos) ListUsersPaged(ctx context.Context, query, sort, dir string, limi
 	return ListUsersPaged(ctx, r.db, query, sort, dir, limit, offset)
 }
 
-func (r repos) UpdatePrivateToken(ctx context.Context, userID int, token string) error {
-	return UpdatePrivateToken(ctx, r.db, userID, token)
-}
-
 func (r repos) HasUser(ctx context.Context) (bool, error) {
 	return HasUser(ctx, r.db)
 }
 
-func (r repos) CreateUser(ctx context.Context, username, email, role, passwordHash, totpSecret, themeProfile, privateToken string) (int64, error) {
-	return CreateUser(ctx, r.db, username, email, role, passwordHash, totpSecret, themeProfile, privateToken)
+func (r repos) CreateUser(ctx context.Context, role, passwordHash, totpSecret, themeProfile string) (int64, error) {
+	return CreateUser(ctx, r.db, role, passwordHash, totpSecret, themeProfile)
 }
 
 func (r repos) DeleteUser(ctx context.Context, userID int) error {
 	return DeleteUser(ctx, r.db, userID)
+}
+
+func (r repos) UpdateUser(ctx context.Context, u domain.User) error {
+	return UpdateUser(ctx, r.db, u)
 }
 
 func (r repos) ResetAllUserThemes(ctx context.Context, themeValue string) error {
@@ -83,6 +67,55 @@ func (r repos) ResetAllUserThemes(ctx context.Context, themeValue string) error 
 
 func (r repos) UpdateUserTheme(ctx context.Context, userID int, themeProfile, customCSSPath, customCSSInline string) error {
 	return UpdateUserTheme(ctx, r.db, userID, themeProfile, customCSSPath, customCSSInline)
+}
+
+// IdentitiesStore
+func (r repos) GetIdentityByID(ctx context.Context, id int) (domain.Identity, error) {
+	return GetIdentityByID(ctx, r.db, id)
+}
+
+func (r repos) GetIdentityByHandle(ctx context.Context, handle string) (domain.Identity, error) {
+	return GetIdentityByHandle(ctx, r.db, handle)
+}
+
+func (r repos) GetIdentityByPrivateToken(ctx context.Context, token string) (domain.Identity, error) {
+	return GetIdentityByPrivateToken(ctx, r.db, token)
+}
+
+func (r repos) GetIdentityByUserID(ctx context.Context, userID int) (domain.Identity, error) {
+	return GetIdentityByUserID(ctx, r.db, userID)
+}
+
+func (r repos) GetOwnerIdentity(ctx context.Context) (domain.Identity, error) {
+	return GetOwnerIdentity(ctx, r.db)
+}
+
+func (r repos) ListIdentities(ctx context.Context) ([]domain.Identity, error) {
+	return ListIdentities(ctx, r.db)
+}
+
+func (r repos) ListIdentitiesPaged(ctx context.Context, query, sort, dir string, limit, offset int) ([]domain.Identity, int, error) {
+	return ListIdentitiesPaged(ctx, r.db, query, sort, dir, limit, offset)
+}
+
+func (r repos) CreateIdentity(ctx context.Context, identity domain.Identity) (int64, error) {
+	return CreateIdentity(ctx, r.db, identity)
+}
+
+func (r repos) UpdateIdentity(ctx context.Context, identity domain.Identity) error {
+	return UpdateIdentity(ctx, r.db, identity)
+}
+
+func (r repos) UpdatePrivateToken(ctx context.Context, identityID int, token string) error {
+	return UpdatePrivateToken(ctx, r.db, identityID, token)
+}
+
+func (r repos) CheckHandleCollision(ctx context.Context, handle string, excludeID int) error {
+	return CheckHandleCollision(ctx, r.db, handle, excludeID)
+}
+
+func (r repos) DeleteIdentity(ctx context.Context, identityID int) error {
+	return DeleteIdentity(ctx, r.db, identityID)
 }
 
 // InvitesStore
@@ -145,32 +178,32 @@ func (r repos) ListAllAuditLogs(ctx context.Context) ([]domain.AuditLog, error) 
 }
 
 // DomainsStore
-func (r repos) ListDomainVerifications(ctx context.Context, userID int) ([]domain.DomainVerification, error) {
-	return ListDomainVerifications(ctx, r.db, userID)
+func (r repos) ListDomainVerifications(ctx context.Context, identityID int) ([]domain.DomainVerification, error) {
+	return ListDomainVerifications(ctx, r.db, identityID)
 }
 
-func (r repos) ListVerifiedDomains(ctx context.Context, userID int) ([]string, error) {
-	return ListVerifiedDomains(ctx, r.db, userID)
+func (r repos) ListVerifiedDomains(ctx context.Context, identityID int) ([]string, error) {
+	return ListVerifiedDomains(ctx, r.db, identityID)
 }
 
-func (r repos) UpsertDomainVerification(ctx context.Context, userID int, domain, token string) error {
-	return UpsertDomainVerification(ctx, r.db, userID, domain, token)
+func (r repos) UpsertDomainVerification(ctx context.Context, identityID int, domain, token string) error {
+	return UpsertDomainVerification(ctx, r.db, identityID, domain, token)
 }
 
-func (r repos) DeleteDomainVerification(ctx context.Context, userID int, domain string) error {
-	return DeleteDomainVerification(ctx, r.db, userID, domain)
+func (r repos) DeleteDomainVerification(ctx context.Context, identityID int, domain string) error {
+	return DeleteDomainVerification(ctx, r.db, identityID, domain)
 }
 
-func (r repos) MarkDomainVerified(ctx context.Context, userID int, domain string) error {
-	return MarkDomainVerified(ctx, r.db, userID, domain)
+func (r repos) MarkDomainVerified(ctx context.Context, identityID int, domain string) error {
+	return MarkDomainVerified(ctx, r.db, identityID, domain)
 }
 
-func (r repos) UpdateUserVerifiedDomains(ctx context.Context, userID int, domains []string) error {
-	return UpdateUserVerifiedDomains(ctx, r.db, userID, domains)
+func (r repos) UpdateIdentityVerifiedDomains(ctx context.Context, identityID int, domains []string) error {
+	return UpdateIdentityVerifiedDomains(ctx, r.db, identityID, domains)
 }
 
-func (r repos) HasDomainVerification(ctx context.Context, userID int, domain string) (bool, error) {
-	return HasDomainVerification(ctx, r.db, userID, domain)
+func (r repos) HasDomainVerification(ctx context.Context, identityID int, domain string) (bool, error) {
+	return HasDomainVerification(ctx, r.db, identityID, domain)
 }
 
 func (r repos) ProtectedDomain(ctx context.Context) string {
@@ -184,50 +217,37 @@ func (r repos) SetProtectedDomain(ctx context.Context, domain string) error {
 	return r.SetSetting(ctx, "protected_domain", domain)
 }
 
-// IdentifiersStore
-func (r repos) CheckIdentifierCollisions(ctx context.Context, identifiers []string, excludeID int) error {
-	return CheckIdentifierCollisions(ctx, r.db, identifiers, excludeID)
-}
-
-func (r repos) UpsertUserIdentifiers(ctx context.Context, userID int, username string, aliases []string, email string) error {
-	return UpsertUserIdentifiers(ctx, r.db, userID, username, aliases, email)
-}
-
-func (r repos) FindUserByIdentifier(ctx context.Context, identifier string) (domain.User, error) {
-	return FindUserByIdentifier(ctx, r.db, identifier)
-}
-
 // ProfilePicturesStore
-func (r repos) ListProfilePictures(ctx context.Context, userID int) ([]domain.ProfilePicture, error) {
-	return ListProfilePictures(ctx, r.db, userID)
+func (r repos) ListProfilePictures(ctx context.Context, identityID int) ([]domain.ProfilePicture, error) {
+	return ListProfilePictures(ctx, r.db, identityID)
 }
 
-func (r repos) CreateProfilePicture(ctx context.Context, userID int, filename, alt string) (int64, error) {
-	return CreateProfilePicture(ctx, r.db, userID, filename, alt)
+func (r repos) CreateProfilePicture(ctx context.Context, identityID int, filename, alt string) (int64, error) {
+	return CreateProfilePicture(ctx, r.db, identityID, filename, alt)
 }
 
-func (r repos) SetActiveProfilePicture(ctx context.Context, userID int, pictureID int64) error {
-	return SetActiveProfilePicture(ctx, r.db, userID, pictureID)
+func (r repos) SetActiveProfilePicture(ctx context.Context, identityID int, pictureID int64) error {
+	return SetActiveProfilePicture(ctx, r.db, identityID, pictureID)
 }
 
-func (r repos) DeleteProfilePicture(ctx context.Context, userID int, pictureID int64) (string, error) {
-	return DeleteProfilePicture(ctx, r.db, userID, pictureID)
+func (r repos) DeleteProfilePicture(ctx context.Context, identityID int, pictureID int64) (string, error) {
+	return DeleteProfilePicture(ctx, r.db, identityID, pictureID)
 }
 
-func (r repos) UpdateProfilePictureAlt(ctx context.Context, userID int, pictureID int64, alt string) error {
-	return UpdateProfilePictureAlt(ctx, r.db, userID, pictureID, alt)
+func (r repos) UpdateProfilePictureAlt(ctx context.Context, identityID int, pictureID int64, alt string) error {
+	return UpdateProfilePictureAlt(ctx, r.db, identityID, pictureID, alt)
 }
 
-func (r repos) ClearProfilePictureSelection(ctx context.Context, userID int) error {
-	return ClearProfilePictureSelection(ctx, r.db, userID)
+func (r repos) ClearProfilePictureSelection(ctx context.Context, identityID int) error {
+	return ClearProfilePictureSelection(ctx, r.db, identityID)
 }
 
-func (r repos) GetProfilePictureFilename(ctx context.Context, userID int, pictureID int64) (string, error) {
-	return GetProfilePictureFilename(ctx, r.db, userID, pictureID)
+func (r repos) GetProfilePictureFilename(ctx context.Context, identityID int, pictureID int64) (string, error) {
+	return GetProfilePictureFilename(ctx, r.db, identityID, pictureID)
 }
 
-func (r repos) GetProfilePictureAlt(ctx context.Context, userID int, pictureID int64) (string, error) {
-	return GetProfilePictureAlt(ctx, r.db, userID, pictureID)
+func (r repos) GetProfilePictureAlt(ctx context.Context, identityID int, pictureID int64) (string, error) {
+	return GetProfilePictureAlt(ctx, r.db, identityID, pictureID)
 }
 
 // SettingsStore

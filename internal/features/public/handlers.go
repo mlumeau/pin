@@ -19,19 +19,23 @@ type Dependencies interface {
 	profilepicture.Store
 	Config() config.Config
 	HasUser(ctx context.Context) (bool, error)
-	GetOwnerUser(ctx context.Context) (domain.User, error)
-	FindUserByIdentifier(ctx context.Context, identifier string) (domain.User, error)
-	GetUserByPrivateToken(ctx context.Context, token string) (domain.User, error)
+	GetUserByID(ctx context.Context, id int) (domain.User, error)
+	GetOwnerIdentity(ctx context.Context) (domain.Identity, error)
+	GetIdentityByHandle(ctx context.Context, handle string) (domain.Identity, error)
+	GetIdentityByPrivateToken(ctx context.Context, token string) (domain.Identity, error)
 	Reserved() map[string]struct{}
 	RenderTemplate(w http.ResponseWriter, name string, data interface{}) error
 	BaseURL(r *http.Request) string
 	GetSession(r *http.Request, name string) (*sessions.Session, error)
+	CurrentUser(r *http.Request) (domain.User, error)
+	CurrentIdentity(r *http.Request) (domain.Identity, error)
 	EnsureCSRF(session *sessions.Session) string
 	ValidateCSRF(session *sessions.Session, token string) bool
-	CheckIdentifierCollisions(ctx context.Context, identifiers []string, excludeID int) error
-	CreateUser(ctx context.Context, username, email, role, passwordHash, totpSecret, themeProfile, privateToken string) (int64, error)
-	UpdatePrivateToken(ctx context.Context, userID int, token string) error
-	UpsertUserIdentifiers(ctx context.Context, userID int, username string, aliases []string, email string) error
+	CheckHandleCollision(ctx context.Context, handle string, excludeID int) error
+	CreateUser(ctx context.Context, role, passwordHash, totpSecret, themeProfile string) (int64, error)
+	CreateIdentity(ctx context.Context, identity domain.Identity) (int64, error)
+	UpdateIdentityPrivateToken(ctx context.Context, identityID int, token string) error
+	DeleteUser(ctx context.Context, userID int) error
 	AuditAttempt(ctx context.Context, actorID int, action, target string, meta map[string]string)
 	AuditOutcome(ctx context.Context, actorID int, action, target string, err error, meta map[string]string)
 }

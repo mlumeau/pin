@@ -92,7 +92,6 @@ PIN explicitly does not aim to:
 If a feature does not strengthen identity clarity or portability, it likely does not belong here.
 
 ## Roadmap
-- implement full compliance with RFC-PINC
 
 ## License
 

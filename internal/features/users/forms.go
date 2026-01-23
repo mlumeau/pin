@@ -319,29 +319,6 @@ func ParseWalletForm(labels, addresses, visibilities []string) (map[string]strin
 	return out, visibility, nil
 }
 
-func ParseAliasesText(input string) []string {
-	var aliases []string
-	for _, line := range strings.Split(strings.TrimSpace(input), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		aliases = append(aliases, line)
-	}
-	return aliases
-}
-
-func AliasesToText(jsonStr string) string {
-	var aliases []string
-	if jsonStr == "" {
-		return ""
-	}
-	if err := json.Unmarshal([]byte(jsonStr), &aliases); err != nil {
-		return ""
-	}
-	return strings.Join(aliases, "\n")
-}
-
 func ParseVerifiedDomainsText(input string) []string {
 	var domains []string
 	for _, line := range strings.Split(strings.TrimSpace(input), "\n") {

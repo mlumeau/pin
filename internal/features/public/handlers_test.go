@@ -18,14 +18,17 @@ type publicDeps struct {
 
 func (d publicDeps) Config() config.Config                     { return config.Config{} }
 func (d publicDeps) HasUser(ctx context.Context) (bool, error) { return d.hasUser, nil }
-func (d publicDeps) GetOwnerUser(ctx context.Context) (domain.User, error) {
-	return domain.User{}, errors.New("no user")
-}
-func (publicDeps) FindUserByIdentifier(ctx context.Context, identifier string) (domain.User, error) {
+func (d publicDeps) GetUserByID(ctx context.Context, id int) (domain.User, error) {
 	return domain.User{}, errors.New("not found")
 }
-func (publicDeps) GetUserByPrivateToken(ctx context.Context, token string) (domain.User, error) {
-	return domain.User{}, errors.New("not found")
+func (d publicDeps) GetOwnerIdentity(ctx context.Context) (domain.Identity, error) {
+	return domain.Identity{}, errors.New("no identity")
+}
+func (publicDeps) GetIdentityByHandle(ctx context.Context, handle string) (domain.Identity, error) {
+	return domain.Identity{}, errors.New("not found")
+}
+func (publicDeps) GetIdentityByPrivateToken(ctx context.Context, token string) (domain.Identity, error) {
+	return domain.Identity{}, errors.New("not found")
 }
 func (publicDeps) Reserved() map[string]struct{} { return map[string]struct{}{} }
 func (publicDeps) RenderTemplate(w http.ResponseWriter, name string, data interface{}) error {
@@ -37,18 +40,27 @@ func (publicDeps) GetSession(r *http.Request, name string) (*sessions.Session, e
 	store := sessions.NewCookieStore([]byte("test-secret"))
 	return store.Get(r, name)
 }
+func (publicDeps) CurrentUser(r *http.Request) (domain.User, error) {
+	return domain.User{}, errors.New("no user")
+}
+func (publicDeps) CurrentIdentity(r *http.Request) (domain.Identity, error) {
+	return domain.Identity{}, errors.New("no identity")
+}
 func (publicDeps) EnsureCSRF(session *sessions.Session) string               { return "token" }
 func (publicDeps) ValidateCSRF(session *sessions.Session, token string) bool { return true }
-func (publicDeps) CheckIdentifierCollisions(ctx context.Context, identifiers []string, excludeID int) error {
+func (publicDeps) CheckHandleCollision(ctx context.Context, handle string, excludeID int) error {
 	return nil
 }
-func (publicDeps) CreateUser(ctx context.Context, username, email, role, passwordHash, totpSecret, themeProfile, privateToken string) (int64, error) {
+func (publicDeps) CreateUser(ctx context.Context, role, passwordHash, totpSecret, themeProfile string) (int64, error) {
 	return 0, nil
 }
-func (publicDeps) UpdatePrivateToken(ctx context.Context, userID int, token string) error { return nil }
-func (publicDeps) UpsertUserIdentifiers(ctx context.Context, userID int, username string, aliases []string, email string) error {
+func (publicDeps) CreateIdentity(ctx context.Context, identity domain.Identity) (int64, error) {
+	return 0, nil
+}
+func (publicDeps) UpdateIdentityPrivateToken(ctx context.Context, identityID int, token string) error {
 	return nil
 }
+func (publicDeps) DeleteUser(ctx context.Context, userID int) error { return nil }
 func (publicDeps) AuditAttempt(ctx context.Context, actorID int, action, target string, meta map[string]string) {
 }
 func (publicDeps) AuditOutcome(ctx context.Context, actorID int, action, target string, err error, meta map[string]string) {
@@ -67,49 +79,52 @@ func (publicDeps) DeleteSetting(ctx context.Context, key string) error          
 func (publicDeps) UpdateUserTheme(ctx context.Context, userID int, themeProfile, customCSSPath, customCSSInline string) error {
 	return nil
 }
+func (publicDeps) GetOwnerUser(ctx context.Context) (domain.User, error) {
+	return domain.User{}, errors.New("no user")
+}
 
 // domains.Store
-func (publicDeps) ListDomainVerifications(ctx context.Context, userID int) ([]domain.DomainVerification, error) {
+func (publicDeps) ListDomainVerifications(ctx context.Context, identityID int) ([]domain.DomainVerification, error) {
 	return nil, nil
 }
-func (publicDeps) UpsertDomainVerification(ctx context.Context, userID int, domain, token string) error {
+func (publicDeps) UpsertDomainVerification(ctx context.Context, identityID int, domain, token string) error {
 	return nil
 }
-func (publicDeps) DeleteDomainVerification(ctx context.Context, userID int, domain string) error {
+func (publicDeps) DeleteDomainVerification(ctx context.Context, identityID int, domain string) error {
 	return nil
 }
-func (publicDeps) MarkDomainVerified(ctx context.Context, userID int, domain string) error {
+func (publicDeps) MarkDomainVerified(ctx context.Context, identityID int, domain string) error {
 	return nil
 }
 
 // domains.Protector
-func (publicDeps) HasDomainVerification(ctx context.Context, userID int, domain string) (bool, error) {
+func (publicDeps) HasDomainVerification(ctx context.Context, identityID int, domain string) (bool, error) {
 	return false, nil
 }
 func (publicDeps) ProtectedDomain(ctx context.Context) string                  { return "" }
 func (publicDeps) SetProtectedDomain(ctx context.Context, domain string) error { return nil }
 
 // profilepicture.Store
-func (publicDeps) ListProfilePictures(ctx context.Context, userID int) ([]domain.ProfilePicture, error) {
+func (publicDeps) ListProfilePictures(ctx context.Context, identityID int) ([]domain.ProfilePicture, error) {
 	return nil, nil
 }
-func (publicDeps) CreateProfilePicture(ctx context.Context, userID int, filename, alt string) (int64, error) {
+func (publicDeps) CreateProfilePicture(ctx context.Context, identityID int, filename, alt string) (int64, error) {
 	return 0, nil
 }
-func (publicDeps) SetActiveProfilePicture(ctx context.Context, userID int, pictureID int64) error {
+func (publicDeps) SetActiveProfilePicture(ctx context.Context, identityID int, pictureID int64) error {
 	return nil
 }
-func (publicDeps) DeleteProfilePicture(ctx context.Context, userID int, pictureID int64) (string, error) {
+func (publicDeps) DeleteProfilePicture(ctx context.Context, identityID int, pictureID int64) (string, error) {
 	return "", nil
 }
-func (publicDeps) UpdateProfilePictureAlt(ctx context.Context, userID int, pictureID int64, alt string) error {
+func (publicDeps) UpdateProfilePictureAlt(ctx context.Context, identityID int, pictureID int64, alt string) error {
 	return nil
 }
-func (publicDeps) ClearProfilePictureSelection(ctx context.Context, userID int) error { return nil }
-func (publicDeps) GetProfilePictureFilename(ctx context.Context, userID int, pictureID int64) (string, error) {
+func (publicDeps) ClearProfilePictureSelection(ctx context.Context, identityID int) error { return nil }
+func (publicDeps) GetProfilePictureFilename(ctx context.Context, identityID int, pictureID int64) (string, error) {
 	return "", nil
 }
-func (publicDeps) GetProfilePictureAlt(ctx context.Context, userID int, pictureID int64) (string, error) {
+func (publicDeps) GetProfilePictureAlt(ctx context.Context, identityID int, pictureID int64) (string, error) {
 	return "", nil
 }
 

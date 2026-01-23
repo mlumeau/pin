@@ -2,7 +2,6 @@ package identity
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 
@@ -32,67 +31,28 @@ func IsReservedIdentifier(identifier string, reserved map[string]struct{}) bool 
 	return ok
 }
 
-// ValidateIdentifiers checks for reserved names and collisions.
-func ValidateIdentifiers(ctx context.Context, username string, aliases []string, email string, excludeID int, reserved map[string]struct{}, checkCollisions func(context.Context, []string, int) error) error {
-	name := strings.ToLower(strings.TrimSpace(username))
-	if name == "" {
-		return errors.New("Username is required")
+// ValidateHandle checks for reserved names and collisions.
+func ValidateHandle(ctx context.Context, handle string, excludeID int, reserved map[string]struct{}, checkCollision func(context.Context, string, int) error) error {
+	normalized := strings.ToLower(strings.TrimSpace(handle))
+	if normalized == "" {
+		return errors.New("Handle is required")
 	}
-	if IsReservedIdentifier(name, reserved) {
-		return errors.New("Username is reserved")
+	if IsReservedIdentifier(normalized, reserved) {
+		return errors.New("Handle is reserved")
 	}
-	for _, alias := range aliases {
-		if IsReservedIdentifier(alias, reserved) {
-			return errors.New("Alias is reserved")
-		}
-	}
-	identifiers := BuildIdentifiers(name, aliases, email)
-	if err := checkCollisions(ctx, identifiers, excludeID); err != nil {
-		return errors.New("Identifier already exists")
+	if err := checkCollision(ctx, normalized, excludeID); err != nil {
+		return errors.New("Handle already exists")
 	}
 	return nil
 }
 
-// MatchesIdentity checks an identifier against user identifiers (including hashed).
-func MatchesIdentity(user domain.User, identifier string) bool {
+// MatchesIdentity checks whether the identifier matches the user's handle.
+func MatchesIdentity(identity domain.Identity, identifier string) bool {
 	needle := strings.ToLower(strings.TrimSpace(identifier))
 	if needle == "" {
 		return false
 	}
-
-	if strings.EqualFold(user.Username, needle) {
-		return true
-	}
-	if strings.EqualFold(user.Email, needle) {
-		return true
-	}
-
-	if user.Email != "" {
-		email := strings.ToLower(strings.TrimSpace(user.Email))
-		if needle == Sha256Hex(email) {
-			return true
-		}
-	}
-	if user.Username != "" {
-		name := strings.ToLower(strings.TrimSpace(user.Username))
-		if needle == Sha256Hex(name) {
-			return true
-		}
-	}
-
-	var aliases []string
-	if user.AliasesJSON != "" {
-		_ = json.Unmarshal([]byte(user.AliasesJSON), &aliases)
-	}
-	for _, alias := range aliases {
-		if strings.EqualFold(alias, needle) {
-			return true
-		}
-		if needle == Sha256Hex(strings.ToLower(strings.TrimSpace(alias))) {
-			return true
-		}
-	}
-	return false
+	return strings.EqualFold(identity.Handle, needle)
 }
 
 // RouteSegment returns the first path segment (lowercased).

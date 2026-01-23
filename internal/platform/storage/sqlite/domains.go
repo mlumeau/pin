@@ -10,8 +10,8 @@ import (
 	"pin/internal/domain"
 )
 
-func ListDomainVerifications(ctx context.Context, db *sql.DB, userID int) ([]domain.DomainVerification, error) {
-	rows, err := db.QueryContext(ctx, "SELECT id, user_id, domain, token, verified_at, created_at FROM domain_verification WHERE user_id = ? ORDER BY domain", userID)
+func ListDomainVerifications(ctx context.Context, db *sql.DB, identityID int) ([]domain.DomainVerification, error) {
+	rows, err := db.QueryContext(ctx, "SELECT id, identity_id, domain, token, verified_at, created_at FROM domain_verification WHERE identity_id = ? ORDER BY domain", identityID)
 	if err != nil {
 		return nil, err
 	}
@@ -22,7 +22,7 @@ func ListDomainVerifications(ctx context.Context, db *sql.DB, userID int) ([]dom
 		var row domain.DomainVerification
 		var verified sql.NullString
 		var created string
-		if err := rows.Scan(&row.ID, &row.UserID, &row.Domain, &row.Token, &verified, &created); err != nil {
+		if err := rows.Scan(&row.ID, &row.IdentityID, &row.Domain, &row.Token, &verified, &created); err != nil {
 			return nil, err
 		}
 		if verified.Valid {
@@ -36,27 +36,27 @@ func ListDomainVerifications(ctx context.Context, db *sql.DB, userID int) ([]dom
 	return out, nil
 }
 
-func UpsertDomainVerification(ctx context.Context, db *sql.DB, userID int, domain, token string) error {
+func UpsertDomainVerification(ctx context.Context, db *sql.DB, identityID int, domain, token string) error {
 	_, err := db.ExecContext(
 		ctx,
-		"INSERT INTO domain_verification (user_id, domain, token, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, domain) DO UPDATE SET token = excluded.token",
-		userID, domain, token, time.Now().UTC().Format(time.RFC3339),
+		"INSERT INTO domain_verification (identity_id, domain, token, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(identity_id, domain) DO UPDATE SET token = excluded.token",
+		identityID, domain, token, time.Now().UTC().Format(time.RFC3339),
 	)
 	return err
 }
 
-func DeleteDomainVerification(ctx context.Context, db *sql.DB, userID int, domain string) error {
-	_, err := db.ExecContext(ctx, "DELETE FROM domain_verification WHERE user_id = ? AND domain = ?", userID, domain)
+func DeleteDomainVerification(ctx context.Context, db *sql.DB, identityID int, domain string) error {
+	_, err := db.ExecContext(ctx, "DELETE FROM domain_verification WHERE identity_id = ? AND domain = ?", identityID, domain)
 	return err
 }
 
-func MarkDomainVerified(ctx context.Context, db *sql.DB, userID int, domain string) error {
-	_, err := db.ExecContext(ctx, "UPDATE domain_verification SET verified_at = ? WHERE user_id = ? AND domain = ?", time.Now().UTC().Format(time.RFC3339), userID, domain)
+func MarkDomainVerified(ctx context.Context, db *sql.DB, identityID int, domain string) error {
+	_, err := db.ExecContext(ctx, "UPDATE domain_verification SET verified_at = ? WHERE identity_id = ? AND domain = ?", time.Now().UTC().Format(time.RFC3339), identityID, domain)
 	return err
 }
 
-func ListVerifiedDomains(ctx context.Context, db *sql.DB, userID int) ([]string, error) {
-	rows, err := db.QueryContext(ctx, "SELECT domain FROM domain_verification WHERE user_id = ? AND verified_at IS NOT NULL", userID)
+func ListVerifiedDomains(ctx context.Context, db *sql.DB, identityID int) ([]string, error) {
+	rows, err := db.QueryContext(ctx, "SELECT domain FROM domain_verification WHERE identity_id = ? AND verified_at IS NOT NULL", identityID)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +75,8 @@ func ListVerifiedDomains(ctx context.Context, db *sql.DB, userID int) ([]string,
 	return out, nil
 }
 
-func HasDomainVerification(ctx context.Context, db *sql.DB, userID int, domain string) (bool, error) {
-	row := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM domain_verification WHERE user_id = ? AND domain = ?", userID, domain)
+func HasDomainVerification(ctx context.Context, db *sql.DB, identityID int, domain string) (bool, error) {
+	row := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM domain_verification WHERE identity_id = ? AND domain = ?", identityID, domain)
 	var count int
 	if err := row.Scan(&count); err != nil {
 		return false, err
@@ -84,11 +84,11 @@ func HasDomainVerification(ctx context.Context, db *sql.DB, userID int, domain s
 	return count > 0, nil
 }
 
-func UpdateUserVerifiedDomains(ctx context.Context, db *sql.DB, userID int, domains []string) error {
+func UpdateIdentityVerifiedDomains(ctx context.Context, db *sql.DB, identityID int, domains []string) error {
 	raw, err := json.Marshal(domains)
 	if err != nil {
 		return err
 	}
-	_, err = db.ExecContext(ctx, "UPDATE user SET verified_domains = ?, updated_at = ? WHERE id = ?", string(raw), time.Now().UTC().Format(time.RFC3339), userID)
+	_, err = db.ExecContext(ctx, "UPDATE identity SET verified_domains = ?, updated_at = ? WHERE id = ?", string(raw), time.Now().UTC().Format(time.RFC3339), identityID)
 	return err
 }

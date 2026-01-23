@@ -92,9 +92,9 @@
         return finishRes.json();
     }
 
-    async function startLogin(username, next) {
+    async function startLogin(handle, next) {
         const url = new URL("/passkeys/login/options", window.location.origin);
-        url.searchParams.set("username", username);
+        url.searchParams.set("handle", handle);
         if (next) {
             url.searchParams.set("next", next);
         }
@@ -202,14 +202,14 @@
                 updateError(errorEl, "Passkeys are not supported in this browser.");
                 return;
             }
-            const username = usernameInput ? usernameInput.value.trim() : "";
-            if (!username) {
-                updateError(errorEl, "Enter your username first.");
+            const handle = usernameInput ? usernameInput.value.trim() : "";
+            if (!handle) {
+                updateError(errorEl, "Enter your handle first.");
                 return;
             }
             button.disabled = true;
             try {
-                const result = await startLogin(username, config.next);
+                const result = await startLogin(handle, config.next);
                 if (result && result.redirect) {
                     window.location.assign(result.redirect);
                 } else {

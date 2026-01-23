@@ -13,15 +13,15 @@ type identitySource struct {
 	deps Dependencies
 }
 
-func (s identitySource) GetOwnerUser(ctx context.Context) (domain.User, error) {
-	return s.deps.GetOwnerUser(ctx)
+func (s identitySource) GetOwnerIdentity(ctx context.Context) (domain.Identity, error) {
+	return s.deps.GetOwnerIdentity(ctx)
 }
 
-func (s identitySource) VisibleIdentity(user domain.User, isPrivate bool) (domain.User, map[string]string) {
+func (s identitySource) VisibleIdentity(user domain.Identity, isPrivate bool) (domain.Identity, map[string]string) {
 	return identity.VisibleIdentity(user, isPrivate)
 }
 
-func (s identitySource) ActiveProfilePictureAlt(ctx context.Context, user domain.User) string {
+func (s identitySource) ActiveProfilePictureAlt(ctx context.Context, user domain.Identity) string {
 	return profilepicture.NewService(s.deps).ActiveAlt(ctx, user)
 }
 

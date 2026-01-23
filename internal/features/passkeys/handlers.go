@@ -32,7 +32,10 @@ type Dependencies interface {
 	GetSession(r *http.Request, name string) (*sessions.Session, error)
 	ValidateCSRF(session *sessions.Session, token string) bool
 	CurrentUser(r *http.Request) (domain.User, error)
-	GetUserByUsername(ctx context.Context, username string) (domain.User, error)
+	CurrentIdentity(r *http.Request) (domain.Identity, error)
+	GetIdentityByHandle(ctx context.Context, handle string) (domain.Identity, error)
+	GetIdentityByUserID(ctx context.Context, userID int) (domain.Identity, error)
+	GetUserByID(ctx context.Context, id int) (domain.User, error)
 	LoadPasskeyCredentials(ctx context.Context, userID int) ([]webauthn.Credential, error)
 	InsertPasskey(ctx context.Context, userID int, name string, credential webauthn.Credential) error
 	UpdatePasskeyCredential(ctx context.Context, userID int, credentialID string, credential webauthn.Credential) error
@@ -51,6 +54,7 @@ func NewHandler(deps Dependencies) Handler {
 
 type passkeyUser struct {
 	user        domain.User
+	identity    domain.Identity
 	credentials []webauthn.Credential
 }
 
@@ -59,11 +63,11 @@ func (u passkeyUser) WebAuthnID() []byte {
 }
 
 func (u passkeyUser) WebAuthnName() string {
-	return u.user.Username
+	return u.identity.Handle
 }
 
 func (u passkeyUser) WebAuthnDisplayName() string {
-	return core.FirstNonEmpty(u.user.DisplayName, u.user.Username)
+	return core.FirstNonEmpty(u.identity.DisplayName, u.identity.Handle)
 }
 
 func (u passkeyUser) WebAuthnIcon() string {
@@ -98,6 +102,11 @@ func (h Handler) RegisterOptions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	creds, err := h.deps.LoadPasskeyCredentials(r.Context(), current.ID)
 	if err != nil {
 		http.Error(w, "Failed to load passkeys", http.StatusInternalServerError)
@@ -108,7 +117,7 @@ func (h Handler) RegisterOptions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Passkey unavailable", http.StatusInternalServerError)
 		return
 	}
-	user := passkeyUser{user: current, credentials: creds}
+	user := passkeyUser{user: current, identity: currentIdentity, credentials: creds}
 	options, sessionData, err := wa.BeginRegistration(
 		user,
 		webauthn.WithAuthenticatorSelection(protocol.AuthenticatorSelection{
@@ -144,6 +153,11 @@ func (h Handler) RegisterFinish(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	sessionData, err := loadWebauthnSession(session, passkeyRegisterSessionKey)
 	if err != nil {
 		http.Error(w, "Passkey session expired", http.StatusBadRequest)
@@ -159,7 +173,7 @@ func (h Handler) RegisterFinish(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Passkey unavailable", http.StatusInternalServerError)
 		return
 	}
-	user := passkeyUser{user: current, credentials: creds}
+	user := passkeyUser{user: current, identity: currentIdentity, credentials: creds}
 	credential, err := wa.FinishRegistration(user, *sessionData, r)
 	if err != nil {
 		http.Error(w, "Passkey registration failed", http.StatusBadRequest)
@@ -187,12 +201,17 @@ func (h Handler) LoginOptions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	username := strings.TrimSpace(r.URL.Query().Get("username"))
-	if username == "" {
-		http.Error(w, "Username required", http.StatusBadRequest)
+	handle := strings.TrimSpace(r.URL.Query().Get("handle"))
+	if handle == "" {
+		http.Error(w, "Handle required", http.StatusBadRequest)
 		return
 	}
-	user, err := h.deps.GetUserByUsername(r.Context(), username)
+	identityRecord, err := h.deps.GetIdentityByHandle(r.Context(), handle)
+	if err != nil {
+		http.Error(w, "Unknown user", http.StatusBadRequest)
+		return
+	}
+	user, err := h.deps.GetUserByID(r.Context(), identityRecord.UserID)
 	if err != nil {
 		http.Error(w, "Unknown user", http.StatusBadRequest)
 		return
@@ -207,7 +226,7 @@ func (h Handler) LoginOptions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Passkey unavailable", http.StatusInternalServerError)
 		return
 	}
-	pkUser := passkeyUser{user: user, credentials: creds}
+	pkUser := passkeyUser{user: user, identity: identityRecord, credentials: creds}
 	options, sessionData, err := wa.BeginLogin(pkUser)
 	if err != nil {
 		http.Error(w, "Failed to start passkey login", http.StatusBadRequest)
@@ -219,7 +238,7 @@ func (h Handler) LoginOptions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Session error", http.StatusInternalServerError)
 		return
 	}
-	session.Values[passkeyLoginUserKey] = user.Username
+	session.Values[passkeyLoginUserKey] = user.ID
 	next := r.URL.Query().Get("next")
 	if next == "" {
 		next = "/settings"
@@ -246,12 +265,27 @@ func (h Handler) LoginFinish(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Passkey session expired", http.StatusBadRequest)
 		return
 	}
-	username, _ := session.Values[passkeyLoginUserKey].(string)
-	if strings.TrimSpace(username) == "" {
+	userID := 0
+	switch value := session.Values[passkeyLoginUserKey].(type) {
+	case int:
+		userID = value
+	case int64:
+		userID = int(value)
+	case float64:
+		userID = int(value)
+	case string:
+		userID, _ = strconv.Atoi(strings.TrimSpace(value))
+	}
+	if userID <= 0 {
 		http.Error(w, "Passkey session expired", http.StatusBadRequest)
 		return
 	}
-	user, err := h.deps.GetUserByUsername(r.Context(), username)
+	user, err := h.deps.GetUserByID(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "Unknown user", http.StatusBadRequest)
+		return
+	}
+	identityRecord, err := h.deps.GetIdentityByUserID(r.Context(), user.ID)
 	if err != nil {
 		http.Error(w, "Unknown user", http.StatusBadRequest)
 		return
@@ -266,7 +300,7 @@ func (h Handler) LoginFinish(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Passkey unavailable", http.StatusInternalServerError)
 		return
 	}
-	pkUser := passkeyUser{user: user, credentials: creds}
+	pkUser := passkeyUser{user: user, identity: identityRecord, credentials: creds}
 	credential, err := wa.FinishLogin(pkUser, *sessionData, r)
 	if err != nil {
 		http.Error(w, "Passkey login failed", http.StatusBadRequest)

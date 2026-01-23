@@ -62,7 +62,7 @@ Most of these require a session.
 - `/.well-known/webfinger`
 - `/.well-known/atproto-did`
 - `/.well-known/pin-verify`
-- `/users/{username}` - ActivityPub actor
+- `/users/{handle}` - ActivityPub actor
 
 ## MCP
 - `/mcp` - MCP JSON-RPC endpoint (when enabled)

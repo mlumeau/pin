@@ -2134,12 +2134,12 @@ body {
     border-radius: var(--radius-avatar);
     border: 4px solid var(--card);
     box-shadow: var(--shadow-soft);
-    padding: 12px;
     box-sizing: border-box;
 }
 .qr {
     width: 112px;
     height: 112px;
+    padding: 12px;
 }
 .profile-picture-back .qr {
     width: 100%;

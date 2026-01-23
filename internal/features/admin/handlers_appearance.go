@@ -21,6 +21,11 @@ func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 
 	settingsSvc := featuresettings.NewService(h.deps)
 	theme := settingsSvc.ThemeSettings(r.Context(), &current)
@@ -38,7 +43,7 @@ func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 	cfg := h.deps.Config()
 	message := ""
 	data := map[string]interface{}{
-		"User":                 current,
+		"User":                 currentIdentity,
 		"IsAdmin":              isAdminUser,
 		"Themes":               featuresettings.ThemeOptions(),
 		"Theme":                theme,
@@ -135,14 +140,14 @@ func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 		meta := map[string]string{
 			"profile_theme": profileTheme,
 		}
-		h.deps.AuditAttempt(r.Context(), current.ID, "appearance.update", current.Username, meta)
+		h.deps.AuditAttempt(r.Context(), current.ID, "appearance.update", currentIdentity.Handle, meta)
 		if err := settingsSvc.SaveThemeSettings(r.Context(), current.ID, updated); err != nil {
-			h.deps.AuditOutcome(r.Context(), current.ID, "appearance.update", current.Username, err, meta)
+			h.deps.AuditOutcome(r.Context(), current.ID, "appearance.update", currentIdentity.Handle, err, meta)
 			http.Error(w, "Failed to save appearance settings", http.StatusInternalServerError)
 			return
 		}
 		meta["has_custom_css"] = strconv.FormatBool(updated.CustomCSSPath != "")
-		h.deps.AuditOutcome(r.Context(), current.ID, "appearance.update", current.Username, nil, meta)
+		h.deps.AuditOutcome(r.Context(), current.ID, "appearance.update", currentIdentity.Handle, nil, meta)
 
 		current.ThemeProfile = updated.ProfileTheme
 		current.ThemeCustomCSSPath = updated.CustomCSSPath

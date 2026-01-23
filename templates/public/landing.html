@@ -31,10 +31,10 @@
                     </div>
                     <div class="landing-profile-content">
                         <div class="landing-profile-avatar">
-                            <img src="{{ .ProfilePictureURL }}" alt="{{ if .ProfilePictureAlt }}{{ .ProfilePictureAlt }}{{ else }}Profile picture{{ end }}">
+                            <img src="{{ .ProfilePictureURL }}?s=160" alt="{{ if .ProfilePictureAlt }}{{ .ProfilePictureAlt }}{{ else }}Profile picture{{ end }}">
                         </div>
                         <div class="landing-profile-info">
-                            <h3>{{ if .User.DisplayName }}{{ .User.DisplayName }}{{ else }}{{ .User.Username }}{{ end }}</h3>
+                            <h3>{{ if .User.DisplayName }}{{ .User.DisplayName }}{{ else }}{{ .User.Handle }}{{ end }}</h3>
                             {{ if .User.Bio }}<div class="bio">{{ .User.Bio }}</div>{{ end }}
                         </div>
                     </div>

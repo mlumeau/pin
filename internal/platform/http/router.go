@@ -31,7 +31,7 @@ func Routes(s *pinserver.Server) http.Handler {
 	register("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
 
 	public.Register(mux, s, deps)
-	federation.Register(mux, s, deps, deps, federation.NewExportSource(deps, deps), cfg)
+	federation.Register(mux, s, deps, deps, cfg)
 	health.Register(mux, s, cfg)
 	profilepicture.Register(mux, s, deps, cfg)
 	auth.Register(mux, s, deps)

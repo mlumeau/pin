@@ -10,7 +10,7 @@ import (
 )
 
 // VisibleIdentity filters fields based on visibility flags and private mode.
-func VisibleIdentity(user domain.User, isPrivate bool) (domain.User, map[string]string) {
+func VisibleIdentity(user domain.Identity, isPrivate bool) (domain.Identity, map[string]string) {
 	customFields := StripEmptyMap(DecodeStringMap(user.CustomFieldsJSON))
 	if isPrivate {
 		if len(customFields) == 0 {
@@ -303,24 +303,6 @@ func EncodeVerifiedDomains(values []domain.VerifiedDomain) string {
 	return ""
 }
 
-func DecodeAliases(jsonStr string) []domain.Alias {
-	var out []domain.Alias
-	if jsonStr == "" {
-		return out
-	}
-	_ = json.Unmarshal([]byte(jsonStr), &out)
-	return out
-}
-
-func EncodeAliases(values []domain.Alias) string {
-	if len(values) == 0 {
-		return ""
-	}
-	if data, err := json.Marshal(values); err == nil {
-		return string(data)
-	}
-	return ""
-}
 
 // DecodeLinks decodes LinksJSON to []domain.Link
 func DecodeLinks(jsonStr string) []domain.Link {
@@ -417,21 +399,6 @@ func VerifiedDomainsSliceToStructs(domains []string) []domain.VerifiedDomain {
 	return out
 }
 
-// AliasesSliceToStructs converts []string to []domain.Alias
-func AliasesSliceToStructs(aliases []string) []domain.Alias {
-	if len(aliases) == 0 {
-		return nil
-	}
-	var out []domain.Alias
-	for _, alias := range aliases {
-		if strings.TrimSpace(alias) == "" {
-			continue
-		}
-		out = append(out, domain.Alias{Name: alias})
-	}
-	return out
-}
-
 func StripEmptyMap(values map[string]string) map[string]string {
 	out := map[string]string{}
 	for k, v := range values {
@@ -444,7 +411,7 @@ func StripEmptyMap(values map[string]string) map[string]string {
 	return out
 }
 
-func BuildAttachments(user domain.User, wallets, keys map[string]string, domains []string, social []domain.SocialProfile) []map[string]string {
+func BuildAttachments(user domain.Identity, wallets, keys map[string]string, domains []string, social []domain.SocialProfile) []map[string]string {
 	var attachments []map[string]string
 	add := func(name, value string) {
 		if strings.TrimSpace(value) == "" {

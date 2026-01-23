@@ -18,10 +18,15 @@ func (h Handler) Security(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
 		return
 	}
-	if current.PrivateToken == "" {
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
+		return
+	}
+	if currentIdentity.PrivateToken == "" {
 		token := core.RandomTokenURL(32)
-		if err := h.deps.UpdatePrivateToken(r.Context(), current.ID, token); err == nil {
-			current.PrivateToken = token
+		if err := h.deps.UpdateIdentityPrivateToken(r.Context(), currentIdentity.ID, token); err == nil {
+			currentIdentity.PrivateToken = token
 		}
 	}
 
@@ -32,13 +37,13 @@ func (h Handler) Security(w http.ResponseWriter, r *http.Request) {
 	showAppearanceNav := isAdminUser || settingsSvc.ServerThemePolicy(r.Context()).AllowUserTheme
 	message := ""
 	data := map[string]interface{}{
-		"User":               current,
+		"User":               currentIdentity,
 		"IsAdmin":            isAdminUser,
 		"Passkeys":           passkeys,
 		"Title":              "Settings - Privacy & security",
 		"Message":            message,
 		"CSRFToken":          h.deps.EnsureCSRF(session),
-		"PrivateIdentityURL": h.deps.BaseURL(r) + "/p/" + url.PathEscape(core.ShortHash(strings.ToLower(current.Username), 7)) + "/" + url.PathEscape(current.PrivateToken),
+		"PrivateIdentityURL": h.deps.BaseURL(r) + "/p/" + url.PathEscape(core.ShortHash(strings.ToLower(currentIdentity.Handle), 7)) + "/" + url.PathEscape(currentIdentity.PrivateToken),
 		"Theme":              theme,
 		"ShowAppearanceNav":  showAppearanceNav,
 	}
@@ -64,13 +69,13 @@ func (h Handler) Security(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			current.PasswordHash = string(hash)
-			h.deps.AuditAttempt(r.Context(), current.ID, "password.update", current.Username, nil)
+			h.deps.AuditAttempt(r.Context(), current.ID, "password.update", currentIdentity.Handle, nil)
 			if err := h.deps.UpdateUser(r.Context(), current); err != nil {
-				h.deps.AuditOutcome(r.Context(), current.ID, "password.update", current.Username, err, nil)
+				h.deps.AuditOutcome(r.Context(), current.ID, "password.update", currentIdentity.Handle, err, nil)
 				http.Error(w, "Failed to update password", http.StatusInternalServerError)
 				return
 			}
-			h.deps.AuditOutcome(r.Context(), current.ID, "password.update", current.Username, nil, nil)
+			h.deps.AuditOutcome(r.Context(), current.ID, "password.update", currentIdentity.Handle, nil, nil)
 			data["Message"] = "Password updated successfully."
 		} else {
 			data["Message"] = "Enter a new password to update."
@@ -106,13 +111,18 @@ func (h Handler) PrivateIdentityRegenerate(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-	h.deps.AuditAttempt(r.Context(), current.ID, "private_identity.regenerate", current.Username, nil)
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	h.deps.AuditAttempt(r.Context(), current.ID, "private_identity.regenerate", currentIdentity.Handle, nil)
 	token := core.RandomTokenURL(32)
-	if err := h.deps.UpdatePrivateToken(r.Context(), current.ID, token); err != nil {
-		h.deps.AuditOutcome(r.Context(), current.ID, "private_identity.regenerate", current.Username, err, nil)
+	if err := h.deps.UpdateIdentityPrivateToken(r.Context(), currentIdentity.ID, token); err != nil {
+		h.deps.AuditOutcome(r.Context(), current.ID, "private_identity.regenerate", currentIdentity.Handle, err, nil)
 		http.Error(w, "Failed to update private identity", http.StatusInternalServerError)
 		return
 	}
-	h.deps.AuditOutcome(r.Context(), current.ID, "private_identity.regenerate", current.Username, nil, nil)
+	h.deps.AuditOutcome(r.Context(), current.ID, "private_identity.regenerate", currentIdentity.Handle, nil, nil)
 	http.Redirect(w, r, "/settings/security?toast=Private%20link%20regenerated#section-private-identity", http.StatusFound)
 }

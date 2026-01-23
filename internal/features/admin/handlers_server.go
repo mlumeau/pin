@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -31,7 +32,15 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 	isAdminUser := isAdmin(current)
 	landing := settingsSvc.LandingSettings(r.Context())
 	message := r.URL.Query().Get("toast")
-	var users []domain.User
+	type userSummary struct {
+		ID          int
+		Handle      string
+		DisplayName string
+		Email       string
+		Role        string
+		UpdatedAt   time.Time
+	}
+	var users []userSummary
 	var invites []domain.Invite
 	var auditLogs []domain.AuditLog
 	usedInvitesCount := 0
@@ -85,7 +94,7 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 		}
 		switch action {
 		case "export-users":
-			users, err := h.deps.ListUsers(r.Context())
+			identities, err := h.deps.ListIdentities(r.Context())
 			if err != nil {
 				http.Error(w, "Failed to export users", http.StatusInternalServerError)
 				return
@@ -93,14 +102,18 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 			w.Header().Set("Content-Disposition", "attachment; filename=users.csv")
 			writer := csv.NewWriter(w)
-			_ = writer.Write([]string{"id", "username", "email", "role", "updated_at"})
-			for _, user := range users {
+			_ = writer.Write([]string{"id", "handle", "email", "role", "updated_at"})
+			for _, identityRecord := range identities {
+				role := ""
+				if authUser, err := h.deps.GetUserByID(r.Context(), identityRecord.UserID); err == nil {
+					role = authUser.Role
+				}
 				_ = writer.Write([]string{
-					strconv.Itoa(user.ID),
-					user.Username,
-					user.Email,
-					user.Role,
-					user.UpdatedAt.Format(time.RFC3339),
+					strconv.Itoa(identityRecord.ID),
+					identityRecord.Handle,
+					identityRecord.Email,
+					role,
+					identityRecord.UpdatedAt.Format(time.RFC3339),
 				})
 			}
 			writer.Flush()
@@ -245,7 +258,7 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 		userDir = dir
 		userDirOverride = true
 	}
-	if sort := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("sort"))); sort == "username" || sort == "email" || sort == "role" || sort == "updated" {
+	if sort := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("sort"))); sort == "handle" || sort == "email" || sort == "role" || sort == "updated" {
 		userSort = sort
 		if !userDirOverride {
 			userDir = "asc"
@@ -254,10 +267,75 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 	if page, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && page > 0 {
 		userPage = page
 	}
-	users, total, err := h.deps.ListUsersPaged(r.Context(), userQuery, userSort, userDir, 10, (userPage-1)*10)
-	if err != nil {
-		http.Error(w, "Failed to load users", http.StatusInternalServerError)
-		return
+	total := 0
+	if strings.EqualFold(userSort, "role") {
+		identities, err := h.deps.ListIdentities(r.Context())
+		if err != nil {
+			http.Error(w, "Failed to load users", http.StatusInternalServerError)
+			return
+		}
+		for _, identityRecord := range identities {
+			role := ""
+			if authUser, err := h.deps.GetUserByID(r.Context(), identityRecord.UserID); err == nil {
+				role = authUser.Role
+			}
+			users = append(users, userSummary{
+				ID:          identityRecord.ID,
+				Handle:      identityRecord.Handle,
+				DisplayName: identityRecord.DisplayName,
+				Email:       identityRecord.Email,
+				Role:        role,
+				UpdatedAt:   identityRecord.UpdatedAt,
+			})
+		}
+		sort.Slice(users, func(i, j int) bool {
+			left := strings.ToLower(users[i].Role)
+			right := strings.ToLower(users[j].Role)
+			if left == right {
+				if strings.EqualFold(userDir, "desc") {
+					return strings.ToLower(users[i].Handle) > strings.ToLower(users[j].Handle)
+				}
+				return strings.ToLower(users[i].Handle) < strings.ToLower(users[j].Handle)
+			}
+			if strings.EqualFold(userDir, "desc") {
+				return left > right
+			}
+			return left < right
+		})
+		total = len(users)
+		start := (userPage - 1) * 10
+		if start < 0 {
+			start = 0
+		}
+		end := start + 10
+		if start > len(users) {
+			start = len(users)
+		}
+		if end > len(users) {
+			end = len(users)
+		}
+		users = users[start:end]
+	} else {
+		identities, totalCount, err := h.deps.ListIdentitiesPaged(r.Context(), userQuery, userSort, userDir, 10, (userPage-1)*10)
+		if err != nil {
+			http.Error(w, "Failed to load users", http.StatusInternalServerError)
+			return
+		}
+		total = totalCount
+		for _, identityRecord := range identities {
+			role := ""
+			if authUser, err := h.deps.GetUserByID(r.Context(), identityRecord.UserID); err == nil {
+				role = authUser.Role
+			}
+			users = append(users, userSummary{
+				ID:          identityRecord.ID,
+				Handle:      identityRecord.Handle,
+				DisplayName: identityRecord.DisplayName,
+				Email:       identityRecord.Email,
+				Role:        role,
+				UpdatedAt:   identityRecord.UpdatedAt,
+			})
+		}
 	}
 	if total > 10 {
 		userTotalPages = (total + 9) / 10

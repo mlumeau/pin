@@ -6,6 +6,10 @@
                         <h2>Basics</h2>
                         <div class="inline-row">
                             <div>
+                                <label for="handle">Handle</label>
+                                <input type="text" id="handle" name="handle" value="{{ .User.Handle }}" required>
+                            </div>
+                            <div>
                                 <label for="display_name">Display name</label>
                                 <input type="text" id="display_name" name="display_name" value="{{ .User.DisplayName }}" required>
                             </div>
@@ -19,11 +23,11 @@
                             <h2>Profile picture</h2>
                             <button type="button" class="ghost" id="open-upload-modal">Upload new</button>
                         </div>
-                        <div class="profile-picture-gallery" id="profile-picture-gallery" data-active="{{ .ActiveProfilePictureID }}" data-user="{{ .User.Username }}">
+                        <div class="profile-picture-gallery" id="profile-picture-gallery" data-active="{{ .ActiveProfilePictureID }}" data-user="{{ .User.Handle }}">
                             {{ if .ProfilePictures }}
                             {{ range .ProfilePictures }}
                             <div class="profile-picture-card {{ if eq $.ActiveProfilePictureID .ID }}is-selected{{ end }}" data-picture-id="{{ .ID }}">
-                                <img src="/profile-picture/{{ $.User.Username }}?s=160&picture_id={{ .ID }}&v={{ .Filename }}" alt="Profile picture">
+                                <img src="/{{ $.User.Handle }}/profile-picture?s=160&picture_id={{ .ID }}&v={{ .Filename }}" alt="Profile picture">
                                 <div class="profile-picture-meta">
                                     <span class="badge">{{ if eq $.ActiveProfilePictureID .ID }}Active{{ end }}</span>
                                     <button type="button" class="profile-picture-alt edit-picture" data-picture-id="{{ .ID }}">Edit alt text</button>
@@ -415,15 +419,9 @@
                         </div>
                         <div class="domain-verify-list" id="domain-verify-list">
                             {{ range .DomainVerifications }}
-                            {{ template "domain_row" (dict "Domain" .Domain "Token" .Token "VerifiedAt" .VerifiedAt "Username" $.User.Username "IsProtected" (eq .Domain $.ProtectedDomain) "Visibility" (index $.DomainVisibility .Domain)) }}
+                            {{ template "domain_row" (dict "Domain" .Domain "Token" .Token "VerifiedAt" .VerifiedAt "Handle" $.User.Handle "IsProtected" (eq .Domain $.ProtectedDomain) "Visibility" (index $.DomainVisibility .Domain)) }}
                             {{ end }}
                         </div>
-                    </div>
-
-                    <div class="section" id="section-aliases">
-                        <h2>Aliases</h2>
-                        <label for="aliases">One per line</label>
-                        <textarea id="aliases" name="aliases" rows="3">{{ .Aliases }}</textarea>
                     </div>
                 </form>
 
@@ -503,7 +501,7 @@
         window.__PROFILE_PICTURES__ = {{ .ProfilePictures | toJSON }};
         window.__PROFILE_ACTIVE_PICTURE__ = {{ .ActiveProfilePictureID }};
         window.__PROFILE_CSRF__ = "{{ .CSRFToken }}";
-        window.__PROFILE_USER__ = "{{ .User.Username }}";
+        window.__PROFILE_USER__ = "{{ .User.Handle }}";
     </script>
     <template id="custom-field-template">
         {{ template "custom_field_row" (dict "Key" "" "Value" "" "Visibility" "public") }}

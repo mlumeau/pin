@@ -38,6 +38,15 @@ func (s *Server) CurrentUser(r *http.Request) (domain.User, error) {
 	return s.repos.Users.GetUserByID(r.Context(), id)
 }
 
+func (s *Server) CurrentIdentity(r *http.Request) (domain.Identity, error) {
+	session, _ := s.store.Get(r, "pin_session")
+	id, ok := core.SessionUserID(session)
+	if !ok {
+		return domain.Identity{}, errNotLoggedIn
+	}
+	return s.repos.Identities.GetIdentityByUserID(r.Context(), id)
+}
+
 func (s *Server) AuditAttempt(ctx context.Context, actorID int, action, target string, meta map[string]string) {
 	s.auditAttempt(ctx, actorID, action, target, meta)
 }

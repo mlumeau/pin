@@ -15,8 +15,8 @@ import (
 )
 
 type Dependencies interface {
-	FindUserByIdentifier(ctx context.Context, identifier string) (domain.User, error)
-	GetOwnerUser(ctx context.Context) (domain.User, error)
+	GetIdentityByHandle(ctx context.Context, handle string) (domain.Identity, error)
+	GetOwnerIdentity(ctx context.Context) (domain.Identity, error)
 }
 
 // Handler hosts federation and well-known endpoints.
@@ -52,22 +52,22 @@ func (h Handler) Actor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username := strings.Trim(path, "/")
-	user, err := h.deps.FindUserByIdentifier(r.Context(), username)
+	handle := strings.Trim(path, "/")
+	user, err := h.deps.GetIdentityByHandle(r.Context(), handle)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
-	if !identity.MatchesIdentity(user, username) {
+	if !identity.MatchesIdentity(user, handle) {
 		http.NotFound(w, r)
 		return
 	}
 
 	publicUser, _ := identity.VisibleIdentity(user, false)
 	baseURL := core.BaseURL(r)
-	actorURL := baseURL + "/users/" + publicUser.Username
-	inboxURL := baseURL + "/users/" + publicUser.Username + "/inbox"
-	profilePictureURL := baseURL + "/profile-picture/" + publicUser.Username
+	actorURL := baseURL + "/users/" + publicUser.Handle
+	inboxURL := baseURL + "/users/" + publicUser.Handle + "/inbox"
+	profilePictureURL := baseURL + "/" + publicUser.Handle + "/profile-picture"
 
 	response := map[string]interface{}{
 		"@context": []string{
@@ -76,8 +76,8 @@ func (h Handler) Actor(w http.ResponseWriter, r *http.Request) {
 		},
 		"id":                actorURL,
 		"type":              "Person",
-		"preferredUsername": publicUser.Username,
-		"name":              identity.FirstNonEmpty(publicUser.DisplayName, publicUser.Username),
+		"preferredUsername": publicUser.Handle,
+		"name":              identity.FirstNonEmpty(publicUser.DisplayName, publicUser.Handle),
 		"summary":           publicUser.Bio,
 		"inbox":             inboxURL,
 		"url":               baseURL,
@@ -130,20 +130,20 @@ func (h Handler) Webfinger(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid resource", http.StatusBadRequest)
 		return
 	}
-	username := parts[0]
+	handle := parts[0]
 
-	user, err := h.deps.FindUserByIdentifier(r.Context(), username)
+	user, err := h.deps.GetIdentityByHandle(r.Context(), handle)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
-	if !identity.MatchesIdentity(user, username) {
+	if !identity.MatchesIdentity(user, handle) {
 		http.NotFound(w, r)
 		return
 	}
 
 	baseURL := core.BaseURL(r)
-	actorURL := baseURL + "/users/" + user.Username
+	actorURL := baseURL + "/users/" + user.Handle
 	profileURL := baseURL
 
 	response := map[string]interface{}{
@@ -169,7 +169,7 @@ func (h Handler) Webfinger(w http.ResponseWriter, r *http.Request) {
 
 // AtprotoDID returns the configured atproto DID if present.
 func (h Handler) AtprotoDID(w http.ResponseWriter, r *http.Request) {
-	user, err := h.deps.GetOwnerUser(r.Context())
+	user, err := h.deps.GetOwnerIdentity(r.Context())
 	if err != nil {
 		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
 		return
@@ -183,87 +183,57 @@ func (h Handler) AtprotoDID(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(did))
 }
 
-// IdentitySchema returns the JSON schema for the identity export.
-func (h Handler) IdentitySchema(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/schema+json; charset=utf-8")
-	identity.WriteIdentityCacheHeaders(w)
+// PincCapability serves the PINC capability document.
+func (h Handler) PincCapability(w http.ResponseWriter, r *http.Request) {
+	base := core.BaseURL(r)
+	payload := map[string]interface{}{
+		"pinc_version":   identity.PincVersion,
+		"base_url":       base,
+		"export_formats": []string{"json", "xml", "txt", "vcf"},
+		"views":          []string{"public", "private"},
+		"media_formats":  []string{"webp", "png", "jpeg"},
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+// PincIdentitySchema returns the JSON schema for the PINC canonical identity.
+func (h Handler) PincIdentitySchema(w http.ResponseWriter, r *http.Request) {
 	base := core.BaseURL(r)
 	schema := map[string]interface{}{
 		"$schema": "https://json-schema.org/draft/2020-12/schema",
-		"$id":     base + "/identity.schema.json",
-		"title":   "PIN Identity",
+		"$id":     base + "/.well-known/pinc/identity",
+		"title":   "PINC Canonical Identity",
 		"type":    "object",
 		"properties": map[string]interface{}{
+			"meta": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"version":  map[string]interface{}{"type": "string"},
+					"base_url": map[string]interface{}{"type": "string"},
+					"view": map[string]interface{}{
+						"type": "string",
+						"enum": []string{"public", "private"},
+					},
+					"subject": map[string]interface{}{"type": "string"},
+					"rev":     map[string]interface{}{"type": "string"},
+					"self":    map[string]interface{}{"type": "string"},
+				},
+				"required": []string{"version", "base_url", "view", "subject", "rev"},
+			},
 			"identity": map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
-					"username":     map[string]interface{}{"type": "string"},
+					"handle":       map[string]interface{}{"type": "string"},
 					"display_name": map[string]interface{}{"type": "string"},
-					"email":        map[string]interface{}{"type": "string"},
-					"bio":          map[string]interface{}{"type": "string"},
-					"organization": map[string]interface{}{"type": "string"},
-					"job_title":    map[string]interface{}{"type": "string"},
-					"birthdate":    map[string]interface{}{"type": "string"},
-					"languages":    map[string]interface{}{"type": "string"},
-					"phone":        map[string]interface{}{"type": "string"},
-					"address":      map[string]interface{}{"type": "string"},
-					"location":     map[string]interface{}{"type": "string"},
-					"website":      map[string]interface{}{"type": "string"},
-					"pronouns":     map[string]interface{}{"type": "string"},
-					"timezone":     map[string]interface{}{"type": "string"},
-					"custom_fields": map[string]interface{}{
-						"type":                 "object",
-						"additionalProperties": map[string]interface{}{"type": "string"},
-					},
-					"profile_url":       map[string]interface{}{"type": "string"},
-					"profile_image":     map[string]interface{}{"type": "string"},
-					"profile_image_alt": map[string]interface{}{"type": "string"},
-					"aliases": map[string]interface{}{
-						"type":  "array",
-						"items": map[string]interface{}{"type": "string"},
-					},
-					"links": map[string]interface{}{
-						"type": "array",
-						"items": map[string]interface{}{
-							"type": "object",
-							"properties": map[string]interface{}{
-								"label": map[string]interface{}{"type": "string"},
-								"url":   map[string]interface{}{"type": "string"},
-							},
-						},
-					},
-					"social": map[string]interface{}{
-						"type": "array",
-						"items": map[string]interface{}{
-							"type": "object",
-							"properties": map[string]interface{}{
-								"label":    map[string]interface{}{"type": "string"},
-								"url":      map[string]interface{}{"type": "string"},
-								"provider": map[string]interface{}{"type": "string"},
-								"verified": map[string]interface{}{"type": "boolean"},
-							},
-						},
-					},
-					"wallets": map[string]interface{}{
-						"type":                 "object",
-						"additionalProperties": map[string]interface{}{"type": "string"},
-					},
-					"public_keys": map[string]interface{}{
-						"type":                 "object",
-						"additionalProperties": map[string]interface{}{"type": "string"},
-					},
-					"verified_domains": map[string]interface{}{
-						"type":  "array",
-						"items": map[string]interface{}{"type": "string"},
-					},
-					"atproto_handle": map[string]interface{}{"type": "string"},
-					"atproto_did":    map[string]interface{}{"type": "string"},
-					"updated_at":     map[string]interface{}{"type": "string"},
+					"url":          map[string]interface{}{"type": "string"},
+					"updated_at":   map[string]interface{}{"type": "string"},
 				},
-				"required": []string{"username", "display_name", "profile_url", "profile_image"},
+				"required": []string{"handle", "display_name", "url", "updated_at"},
 			},
 		},
-		"required": []string{"identity"},
+		"required": []string{"meta", "identity"},
 	}
+	w.Header().Set("Content-Type", "application/schema+json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(schema)
 }

@@ -34,6 +34,10 @@ func (d Deps) CurrentUser(r *http.Request) (domain.User, error) {
 	return d.srv.CurrentUser(r)
 }
 
+func (d Deps) CurrentIdentity(r *http.Request) (domain.Identity, error) {
+	return d.srv.CurrentIdentity(r)
+}
+
 func (d Deps) AuditAttempt(ctx context.Context, actorID int, action, target string, meta map[string]string) {
 	d.srv.AuditAttempt(ctx, actorID, action, target, meta)
 }

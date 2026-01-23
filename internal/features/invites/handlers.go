@@ -21,10 +21,10 @@ type Dependencies interface {
 	GetSession(r *http.Request, name string) (*sessions.Session, error)
 	EnsureCSRF(session *sessions.Session) string
 	ValidateCSRF(session *sessions.Session, token string) bool
-	CreateUser(ctx context.Context, username, email, role, passwordHash, totpSecret, themeProfile, privateToken string) (int64, error)
-	UpdatePrivateToken(ctx context.Context, userID int, token string) error
-	UpsertUserIdentifiers(ctx context.Context, userID int, username string, aliases []string, email string) error
-	CheckIdentifierCollisions(ctx context.Context, identifiers []string, excludeID int) error
+	CreateUser(ctx context.Context, role, passwordHash, totpSecret, themeProfile string) (int64, error)
+	CreateIdentity(ctx context.Context, identity domain.Identity) (int64, error)
+	DeleteUser(ctx context.Context, userID int) error
+	CheckHandleCollision(ctx context.Context, handle string, excludeID int) error
 	Reserved() map[string]struct{}
 	GetInviteByToken(ctx context.Context, token string) (domain.Invite, error)
 	MarkInviteUsed(ctx context.Context, id int, usedBy int) error
@@ -86,14 +86,14 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		username := strings.TrimSpace(r.FormValue("username"))
+		handle := strings.TrimSpace(r.FormValue("handle"))
 		email := strings.TrimSpace(r.FormValue("email"))
 		password := r.FormValue("password")
-		if username == "" || password == "" {
-			data["Error"] = "Username and password are required"
-		} else if identity.IsReservedIdentifier(username, h.deps.Reserved()) {
-			data["Error"] = "Username is reserved"
-		} else if err := identity.ValidateIdentifiers(r.Context(), username, nil, "", 0, h.deps.Reserved(), h.deps.CheckIdentifierCollisions); err != nil {
+		if handle == "" || password == "" {
+			data["Error"] = "Handle and password are required"
+		} else if identity.IsReservedIdentifier(handle, h.deps.Reserved()) {
+			data["Error"] = "Handle is reserved"
+		} else if err := identity.ValidateHandle(r.Context(), handle, 0, h.deps.Reserved(), h.deps.CheckHandleCollision); err != nil {
 			data["Error"] = err.Error()
 		} else {
 			hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -101,7 +101,7 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Failed to create account", http.StatusInternalServerError)
 				return
 			}
-			key, err := totp.Generate(totp.GenerateOpts{Issuer: "pin", AccountName: username})
+			key, err := totp.Generate(totp.GenerateOpts{Issuer: "pin", AccountName: handle})
 			if err != nil {
 				http.Error(w, "Failed to create account", http.StatusInternalServerError)
 				return
@@ -114,18 +114,36 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 				defaultTheme = themeValue
 			}
 
-			h.deps.AuditAttempt(r.Context(), 0, "user.create", username, map[string]string{"source": "invite"})
+			h.deps.AuditAttempt(r.Context(), 0, "user.create", handle, map[string]string{"source": "invite"})
 			privateToken := core.RandomToken(32)
-			userID, err := h.deps.CreateUser(r.Context(), username, email, invite.Role, string(hash), secret, defaultTheme, privateToken)
+			userID, err := h.deps.CreateUser(r.Context(), invite.Role, string(hash), secret, defaultTheme)
 			if err != nil {
-				h.deps.AuditOutcome(r.Context(), 0, "user.create", username, err, map[string]string{"source": "invite"})
+				h.deps.AuditOutcome(r.Context(), 0, "user.create", handle, err, map[string]string{"source": "invite"})
 				http.Error(w, "Failed to create account", http.StatusInternalServerError)
 				return
 			}
-			_ = h.deps.UpsertUserIdentifiers(r.Context(), int(userID), username, nil, "")
-			_ = h.deps.UpdatePrivateToken(r.Context(), int(userID), privateToken)
+			identityRecord := domain.Identity{
+				UserID:              int(userID),
+				Handle:              handle,
+				Email:               email,
+				DisplayName:         handle,
+				CustomFieldsJSON:    "{}",
+				VisibilityJSON:      "{}",
+				PrivateToken:        privateToken,
+				LinksJSON:           "[]",
+				SocialProfilesJSON:  "[]",
+				WalletsJSON:         "{}",
+				PublicKeysJSON:      "{}",
+				VerifiedDomainsJSON: "[]",
+			}
+			if _, err := h.deps.CreateIdentity(r.Context(), identityRecord); err != nil {
+				_ = h.deps.DeleteUser(r.Context(), int(userID))
+				h.deps.AuditOutcome(r.Context(), 0, "user.create", handle, err, map[string]string{"source": "invite"})
+				http.Error(w, "Failed to create account", http.StatusInternalServerError)
+				return
+			}
 			_ = h.deps.MarkInviteUsed(r.Context(), invite.ID, int(userID))
-			h.deps.AuditOutcome(r.Context(), int(userID), "user.create", username, nil, map[string]string{"source": "invite"})
+			h.deps.AuditOutcome(r.Context(), int(userID), "user.create", handle, nil, map[string]string{"source": "invite"})
 			data["Success"] = true
 			data["TOTP"] = secret
 			data["TOTPURL"] = otpURL

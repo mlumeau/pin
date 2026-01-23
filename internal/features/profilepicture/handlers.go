@@ -33,8 +33,9 @@ type Dependencies interface {
 	GetSession(r *http.Request, name string) (*sessions.Session, error)
 	ValidateCSRF(session *sessions.Session, token string) bool
 	CurrentUser(r *http.Request) (domain.User, error)
-	FindUserByIdentifier(ctx context.Context, identifier string) (domain.User, error)
-	GetOwnerUser(ctx context.Context) (domain.User, error)
+	CurrentIdentity(r *http.Request) (domain.Identity, error)
+	GetIdentityByHandle(ctx context.Context, handle string) (domain.Identity, error)
+	GetOwnerIdentity(ctx context.Context) (domain.Identity, error)
 	AuditAttempt(ctx context.Context, actorID int, action, target string, meta map[string]string)
 	AuditOutcome(ctx context.Context, actorID int, action, target string, err error, meta map[string]string)
 }
@@ -55,21 +56,35 @@ func (h Handler) ProfilePicture(w http.ResponseWriter, r *http.Request) {
 		h.ProfilePictureRoot(w, r)
 		return
 	}
-	username := strings.TrimPrefix(r.URL.Path, "/profile-picture/")
-	if username == "" {
+	handle := strings.TrimPrefix(r.URL.Path, "/profile-picture/")
+	h.ProfilePictureByHandle(w, r, handle)
+}
+
+// ProfilePictureByHandle serves a profile picture for a handle.
+func (h Handler) ProfilePictureByHandle(w http.ResponseWriter, r *http.Request, handle string) {
+	handle = strings.TrimSpace(handle)
+	if handle == "" {
 		http.NotFound(w, r)
 		return
 	}
-
-	user, err := h.deps.FindUserByIdentifier(r.Context(), username)
+	user, err := h.deps.GetIdentityByHandle(r.Context(), handle)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
-	if !identity.MatchesIdentity(user, username) {
+	if !identity.MatchesIdentity(user, handle) {
 		http.NotFound(w, r)
 		return
 	}
+	h.profilePictureForUser(w, r, user)
+}
+
+// ProfilePictureForUser serves a profile picture for a specific user.
+func (h Handler) ProfilePictureForUser(w http.ResponseWriter, r *http.Request, user domain.Identity) {
+	h.profilePictureForUser(w, r, user)
+}
+
+func (h Handler) profilePictureForUser(w http.ResponseWriter, r *http.Request, user domain.Identity) {
 
 	size := parseProfilePictureSize(r)
 	format := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("format")))
@@ -139,12 +154,12 @@ func (h Handler) ProfilePictureRoot(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	user, err := h.deps.GetOwnerUser(r.Context())
+	user, err := h.deps.GetOwnerIdentity(r.Context())
 	if err != nil {
 		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
 		return
 	}
-	target := "/profile-picture/" + url.PathEscape(user.Username)
+	target := "/profile-picture/" + url.PathEscape(user.Handle)
 	if r.URL.RawQuery != "" {
 		target += "?" + r.URL.RawQuery
 	}
@@ -170,13 +185,18 @@ func (h Handler) Select(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	picID, err := strconv.ParseInt(strings.TrimSpace(r.FormValue("profile_picture_id")), 10, 64)
 	if err != nil || picID <= 0 {
 		http.Error(w, "Invalid profile picture", http.StatusBadRequest)
 		return
 	}
 	h.deps.AuditAttempt(r.Context(), current.ID, "profile_picture.select", strconv.FormatInt(picID, 10), nil)
-	if err := h.svc.Select(r.Context(), current.ID, picID); err != nil {
+	if err := h.svc.Select(r.Context(), currentIdentity.ID, picID); err != nil {
 		h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.select", strconv.FormatInt(picID, 10), err, nil)
 		http.Error(w, "Failed to select profile picture", http.StatusInternalServerError)
 		return
@@ -186,7 +206,7 @@ func (h Handler) Select(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]interface{}{
 			"ok":       true,
 			"active":   picID,
-			"pictures": h.mustListProfilePictures(r.Context(), current.ID),
+			"pictures": h.mustListProfilePictures(r.Context(), currentIdentity.ID),
 		})
 		return
 	}
@@ -212,13 +232,18 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	picID, err := strconv.ParseInt(strings.TrimSpace(r.FormValue("profile_picture_id")), 10, 64)
 	if err != nil || picID <= 0 {
 		http.Error(w, "Invalid profile picture", http.StatusBadRequest)
 		return
 	}
 	h.deps.AuditAttempt(r.Context(), current.ID, "profile_picture.delete", strconv.FormatInt(picID, 10), nil)
-	filename, err := h.svc.Delete(r.Context(), current.ID, picID)
+	filename, err := h.svc.Delete(r.Context(), currentIdentity.ID, picID)
 	if err != nil {
 		h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.delete", strconv.FormatInt(picID, 10), err, nil)
 		http.Error(w, "Failed to delete profile picture", http.StatusInternalServerError)
@@ -227,23 +252,23 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	if filename != "" {
 		_ = os.Remove(filepath.Join(h.cfg.ProfilePictureDir, filename))
 	}
-	if current.ProfilePictureID.Valid && current.ProfilePictureID.Int64 == picID {
-		pics := h.mustListProfilePictures(r.Context(), current.ID)
+	if currentIdentity.ProfilePictureID.Valid && currentIdentity.ProfilePictureID.Int64 == picID {
+		pics := h.mustListProfilePictures(r.Context(), currentIdentity.ID)
 		if len(pics) > 0 {
-			if err := h.svc.Select(r.Context(), current.ID, pics[0].ID); err == nil {
-				current.ProfilePictureID = sql.NullInt64{Int64: pics[0].ID, Valid: true}
+			if err := h.svc.Select(r.Context(), currentIdentity.ID, pics[0].ID); err == nil {
+				currentIdentity.ProfilePictureID = sql.NullInt64{Int64: pics[0].ID, Valid: true}
 			}
 		} else {
-			_ = h.svc.ClearSelection(r.Context(), current.ID)
-			current.ProfilePictureID = sql.NullInt64{}
+			_ = h.svc.ClearSelection(r.Context(), currentIdentity.ID)
+			currentIdentity.ProfilePictureID = sql.NullInt64{}
 		}
 	}
 	h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.delete", strconv.FormatInt(picID, 10), nil, map[string]string{"filename": filename})
 	if wantsJSON(r) {
 		writeJSON(w, map[string]interface{}{
 			"ok":       true,
-			"active":   activePictureID(current),
-			"pictures": h.mustListProfilePictures(r.Context(), current.ID),
+			"active":   activePictureID(currentIdentity),
+			"pictures": h.mustListProfilePictures(r.Context(), currentIdentity.ID),
 		})
 		return
 	}
@@ -269,6 +294,11 @@ func (h Handler) UpdateAlt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	picID, err := strconv.ParseInt(strings.TrimSpace(r.FormValue("profile_picture_id")), 10, 64)
 	if err != nil || picID <= 0 {
 		http.Error(w, "Invalid profile picture", http.StatusBadRequest)
@@ -276,7 +306,7 @@ func (h Handler) UpdateAlt(w http.ResponseWriter, r *http.Request) {
 	}
 	alt := strings.TrimSpace(r.FormValue("profile_picture_alt"))
 	h.deps.AuditAttempt(r.Context(), current.ID, "profile_picture.alt", strconv.FormatInt(picID, 10), nil)
-	if err := h.svc.UpdateAlt(r.Context(), current.ID, picID, alt); err != nil {
+	if err := h.svc.UpdateAlt(r.Context(), currentIdentity.ID, picID, alt); err != nil {
 		h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.alt", strconv.FormatInt(picID, 10), err, nil)
 		http.Error(w, "Failed to update profile picture", http.StatusInternalServerError)
 		return
@@ -285,8 +315,8 @@ func (h Handler) UpdateAlt(w http.ResponseWriter, r *http.Request) {
 	if wantsJSON(r) {
 		writeJSON(w, map[string]interface{}{
 			"ok":       true,
-			"active":   activePictureID(current),
-			"pictures": h.mustListProfilePictures(r.Context(), current.ID),
+			"active":   activePictureID(currentIdentity),
+			"pictures": h.mustListProfilePictures(r.Context(), currentIdentity.ID),
 		})
 		return
 	}
@@ -309,6 +339,11 @@ func (h Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	current, err := h.deps.CurrentUser(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	currentIdentity, err := h.deps.CurrentIdentity(r)
 	if err != nil {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
@@ -336,7 +371,7 @@ func (h Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	altText := strings.TrimSpace(r.FormValue("profile_picture_alt"))
 	meta := map[string]string{"filename": filename}
 	h.deps.AuditAttempt(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(int64(current.ID), 10), meta)
-	picID, err := h.svc.Create(r.Context(), current.ID, filename, altText)
+	picID, err := h.svc.Create(r.Context(), currentIdentity.ID, filename, altText)
 	if err != nil {
 		h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(int64(current.ID), 10), err, meta)
 		http.Error(w, "Failed to save profile picture", http.StatusInternalServerError)
@@ -344,25 +379,25 @@ func (h Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 	h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(picID, 10), nil, meta)
 	h.deps.AuditAttempt(r.Context(), current.ID, "profile_picture.select", strconv.FormatInt(picID, 10), nil)
-	err = h.svc.Select(r.Context(), current.ID, picID)
+	err = h.svc.Select(r.Context(), currentIdentity.ID, picID)
 	h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.select", strconv.FormatInt(picID, 10), err, nil)
 	if wantsJSON(r) {
 		writeJSON(w, map[string]interface{}{
 			"ok":       err == nil,
 			"active":   picID,
-			"pictures": h.mustListProfilePictures(r.Context(), current.ID),
+			"pictures": h.mustListProfilePictures(r.Context(), currentIdentity.ID),
 		})
 		return
 	}
 	http.Redirect(w, r, "/settings/profile", http.StatusFound)
 }
 
-func (h Handler) ActiveAlt(ctx context.Context, user domain.User) string {
+func (h Handler) ActiveAlt(ctx context.Context, user domain.Identity) string {
 	return h.svc.ActiveAlt(ctx, user)
 }
 
-func (h Handler) mustListProfilePictures(ctx context.Context, userID int) []domain.ProfilePicture {
-	pics, err := h.svc.List(ctx, userID)
+func (h Handler) mustListProfilePictures(ctx context.Context, identityID int) []domain.ProfilePicture {
+	pics, err := h.svc.List(ctx, identityID)
 	if err != nil {
 		return []domain.ProfilePicture{}
 	}

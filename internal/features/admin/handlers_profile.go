@@ -34,10 +34,15 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
 		return
 	}
-	if current.PrivateToken == "" {
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
+		return
+	}
+	if currentIdentity.PrivateToken == "" {
 		token := core.RandomTokenURL(32)
-		if err := h.deps.UpdatePrivateToken(r.Context(), current.ID, token); err == nil {
-			current.PrivateToken = token
+		if err := h.deps.UpdateIdentityPrivateToken(r.Context(), currentIdentity.ID, token); err == nil {
+			currentIdentity.PrivateToken = token
 		}
 	}
 
@@ -47,32 +52,38 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	showAppearanceNav := isAdminUser || settingsSvc.ServerThemePolicy(r.Context()).AllowUserTheme
 
 	var links []domain.Link
-	if current.LinksJSON != "" {
-		links = identity.DecodeLinks(current.LinksJSON)
+	if currentIdentity.LinksJSON != "" {
+		links = identity.DecodeLinks(currentIdentity.LinksJSON)
 	}
 	var socialProfiles []domain.SocialProfile
-	if current.SocialProfilesJSON != "" {
-		socialProfiles = identity.DecodeSocialProfiles(current.SocialProfilesJSON)
+	if currentIdentity.SocialProfilesJSON != "" {
+		socialProfiles = identity.DecodeSocialProfiles(currentIdentity.SocialProfilesJSON)
 	}
 
 	cfg := h.deps.Config()
-	visibility := identity.DecodeVisibilityMap(current.VisibilityJSON)
-	wallets := identity.DecodeStringMap(current.WalletsJSON)
-	publicKeys := identity.DecodeStringMap(current.PublicKeysJSON)
+	visibility := identity.DecodeVisibilityMap(currentIdentity.VisibilityJSON)
+	wallets := identity.DecodeStringMap(currentIdentity.WalletsJSON)
+	publicKeys := identity.DecodeStringMap(currentIdentity.PublicKeysJSON)
 	message := ""
+	userView := struct {
+		domain.Identity
+		Role string
+	}{
+		Identity: currentIdentity,
+		Role:     current.Role,
+	}
 	data := map[string]interface{}{
-		"User":                   current,
+		"User":                   userView,
 		"Links":                  users.BuildLinkEntries(links, visibility),
 		"SocialProfiles":         users.BuildSocialEntries(socialProfiles, visibility),
-		"CustomFields":           identity.DecodeStringMap(current.CustomFieldsJSON),
+		"CustomFields":           identity.DecodeStringMap(currentIdentity.CustomFieldsJSON),
 		"FieldVisibility":        visibility,
 		"CustomFieldVisibility":  users.VisibilityCustomMap(visibility),
 		"Wallets":                wallets,
 		"WalletEntries":          users.BuildWalletEntries(wallets, visibility),
 		"PublicKeys":             publicKeys,
-		"VerifiedDomains":        users.VerifiedDomainsToText(current.VerifiedDomainsJSON),
+		"VerifiedDomains":        users.VerifiedDomainsToText(currentIdentity.VerifiedDomainsJSON),
 		"DomainVerifications":    []domain.DomainVerification{},
-		"Aliases":                users.AliasesToText(current.AliasesJSON),
 		"GitHubOAuthEnabled":     cfg.GitHubClientID != "" && cfg.GitHubClientSecret != "" && cfg.BaseURL != "",
 		"RedditOAuthEnabled":     cfg.RedditClientID != "" && cfg.RedditClientSecret != "" && cfg.BaseURL != "",
 		"BlueskyEnabled":         cfg.BlueskyPDS != "",
@@ -84,7 +95,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		"Title":                  "Settings - Profile",
 		"Message":                message,
 		"CSRFToken":              h.deps.EnsureCSRF(session),
-		"PrivateIdentityURL":     h.deps.BaseURL(r) + "/p/" + url.PathEscape(core.ShortHash(strings.ToLower(current.Username), 7)) + "/" + url.PathEscape(current.PrivateToken),
+		"PrivateIdentityURL":     h.deps.BaseURL(r) + "/p/" + url.PathEscape(core.ShortHash(strings.ToLower(currentIdentity.Handle), 7)) + "/" + url.PathEscape(currentIdentity.PrivateToken),
 		"Theme":                  theme,
 		"ShowAppearanceNav":      showAppearanceNav,
 		"ProtectedDomain":        h.deps.ProtectedDomain(r.Context()),
@@ -94,22 +105,22 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		message = toast
 		data["Message"] = message
 	}
-	if pics, err := h.deps.ListProfilePictures(r.Context(), current.ID); err == nil {
+	if pics, err := h.deps.ListProfilePictures(r.Context(), currentIdentity.ID); err == nil {
 		data["ProfilePictures"] = pics
 	}
-	if current.ProfilePictureID.Valid {
-		data["ActiveProfilePictureID"] = current.ProfilePictureID.Int64
+	if currentIdentity.ProfilePictureID.Valid {
+		data["ActiveProfilePictureID"] = currentIdentity.ProfilePictureID.Int64
 	}
-	rows, err := h.deps.ListDomainVerifications(r.Context(), current.ID)
+	rows, err := h.deps.ListDomainVerifications(r.Context(), currentIdentity.ID)
 	if err == nil && len(rows) == 0 {
-		rows = domains.NewService(h.deps).SeedDomains(r.Context(), current.ID, identity.DecodeStringSlice(current.VerifiedDomainsJSON), func() string {
+		rows = domains.NewService(h.deps).SeedDomains(r.Context(), currentIdentity.ID, identity.DecodeStringSlice(currentIdentity.VerifiedDomainsJSON), func() string {
 			return domains.RandomTokenURL(12)
 		})
 	}
 	if err == nil {
 		data["DomainVerifications"] = rows
 		data["VerifiedDomains"] = identity.DomainsToText(rows)
-		data["ATProtoHandleVerified"] = identity.IsATProtoHandleVerified(current.ATProtoHandle, identity.VerifiedDomains(rows))
+		data["ATProtoHandleVerified"] = identity.IsATProtoHandleVerified(currentIdentity.ATProtoHandle, identity.VerifiedDomains(rows))
 	}
 
 	if r.Method == http.MethodPost {
@@ -123,6 +134,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		handle := strings.TrimSpace(r.FormValue("handle"))
 		displayName := strings.TrimSpace(r.FormValue("display_name"))
 		email := strings.TrimSpace(r.FormValue("email"))
 		bio := strings.TrimSpace(r.FormValue("bio"))
@@ -150,9 +162,8 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		customVisibility := users.ParseCustomVisibilityForm(r.Form["custom_key"], r.Form["custom_value"], r.Form["custom_visibility"])
 		social, socialVisibility := identity.ParseSocialForm(r.Form["social_label"], r.Form["social_url"], r.Form["social_visibility"])
 		social = identity.MergeSocialProfiles(social, socialProfiles)
-		aliases := users.ParseAliasesText(r.FormValue("aliases"))
-		if err := identity.ValidateIdentifiers(r.Context(), current.Username, aliases, current.Email, current.ID, h.deps.Reserved(), h.deps.CheckIdentifierCollisions); err != nil {
-			h.deps.AuditOutcome(r.Context(), current.ID, "profile.update", current.Username, err, nil)
+		if err := identity.ValidateHandle(r.Context(), handle, currentIdentity.ID, h.deps.Reserved(), h.deps.CheckHandleCollision); err != nil {
+			h.deps.AuditOutcome(r.Context(), current.ID, "profile.update", currentIdentity.Handle, err, nil)
 			data["Message"] = err.Error()
 			goto renderProfile
 		}
@@ -172,16 +183,16 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		}
 		verifiedDomains := users.ParseVerifiedDomainsText(r.FormValue("verified_domains"))
 		domainVisibility := users.ParseVerifiedDomainVisibilityForm(r.Form["verified_domain"], r.Form["verified_domain_visibility"])
-		h.deps.AuditAttempt(r.Context(), current.ID, "domain.sync", current.Username, nil)
-		domainRows, verified, err := domains.NewService(h.deps).CreateDomains(r.Context(), current.ID, verifiedDomains, func() string {
+		h.deps.AuditAttempt(r.Context(), current.ID, "domain.sync", currentIdentity.Handle, nil)
+		domainRows, verified, err := domains.NewService(h.deps).CreateDomains(r.Context(), currentIdentity.ID, verifiedDomains, func() string {
 			return domains.RandomTokenURL(12)
 		})
 		if err != nil {
-			h.deps.AuditOutcome(r.Context(), current.ID, "domain.sync", current.Username, err, nil)
+			h.deps.AuditOutcome(r.Context(), current.ID, "domain.sync", currentIdentity.Handle, err, nil)
 			http.Error(w, "Failed to update verified domains", http.StatusInternalServerError)
 			return
 		}
-		h.deps.AuditOutcome(r.Context(), current.ID, "domain.sync", current.Username, nil, nil)
+		h.deps.AuditOutcome(r.Context(), current.ID, "domain.sync", currentIdentity.Handle, nil, nil)
 
 		profilePictureFile, profilePictureHeader, err := r.FormFile("profile_picture")
 		if err == nil && profilePictureHeader != nil && profilePictureHeader.Filename != "" {
@@ -208,36 +219,37 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 				}
 				altText := strings.TrimSpace(r.FormValue("profile_picture_alt"))
 				meta := map[string]string{"filename": filename}
-				h.deps.AuditAttempt(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(int64(current.ID), 10), meta)
-				picID, err := h.deps.CreateProfilePicture(r.Context(), current.ID, filename, altText)
+				h.deps.AuditAttempt(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(int64(currentIdentity.ID), 10), meta)
+				picID, err := h.deps.CreateProfilePicture(r.Context(), currentIdentity.ID, filename, altText)
 				if err != nil {
-					h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(int64(current.ID), 10), err, meta)
+					h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(int64(currentIdentity.ID), 10), err, meta)
 					http.Error(w, "Failed to save profile picture", http.StatusInternalServerError)
 					return
 				}
 				h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(picID, 10), nil, meta)
-				current.ProfilePictureID = sql.NullInt64{Int64: picID, Valid: true}
+				currentIdentity.ProfilePictureID = sql.NullInt64{Int64: picID, Valid: true}
 			}
 		}
 
-		current.DisplayName = displayName
-		current.Email = email
-		current.Bio = bio
-		current.Organization = strings.TrimSpace(r.FormValue("organization"))
-		current.JobTitle = strings.TrimSpace(r.FormValue("job_title"))
-		current.Birthdate = strings.TrimSpace(r.FormValue("birthdate"))
-		current.Languages = strings.TrimSpace(r.FormValue("languages"))
-		current.Phone = strings.TrimSpace(r.FormValue("phone"))
-		current.Address = strings.TrimSpace(r.FormValue("address"))
-		current.Location = strings.TrimSpace(r.FormValue("location"))
-		current.Website = strings.TrimSpace(r.FormValue("website"))
-		current.Pronouns = strings.TrimSpace(r.FormValue("pronouns"))
-		current.Timezone = strings.TrimSpace(r.FormValue("timezone"))
-		current.ATProtoHandle = strings.TrimSpace(r.FormValue("atproto_handle"))
-		current.ATProtoDID = strings.TrimSpace(r.FormValue("atproto_did"))
-		current.LinksJSON = identity.EncodeLinks(links)
+		currentIdentity.Handle = handle
+		currentIdentity.DisplayName = displayName
+		currentIdentity.Email = email
+		currentIdentity.Bio = bio
+		currentIdentity.Organization = strings.TrimSpace(r.FormValue("organization"))
+		currentIdentity.JobTitle = strings.TrimSpace(r.FormValue("job_title"))
+		currentIdentity.Birthdate = strings.TrimSpace(r.FormValue("birthdate"))
+		currentIdentity.Languages = strings.TrimSpace(r.FormValue("languages"))
+		currentIdentity.Phone = strings.TrimSpace(r.FormValue("phone"))
+		currentIdentity.Address = strings.TrimSpace(r.FormValue("address"))
+		currentIdentity.Location = strings.TrimSpace(r.FormValue("location"))
+		currentIdentity.Website = strings.TrimSpace(r.FormValue("website"))
+		currentIdentity.Pronouns = strings.TrimSpace(r.FormValue("pronouns"))
+		currentIdentity.Timezone = strings.TrimSpace(r.FormValue("timezone"))
+		currentIdentity.ATProtoHandle = strings.TrimSpace(r.FormValue("atproto_handle"))
+		currentIdentity.ATProtoDID = strings.TrimSpace(r.FormValue("atproto_did"))
+		currentIdentity.LinksJSON = identity.EncodeLinks(links)
 		if customJSON, err := json.Marshal(customFields); err == nil {
-			current.CustomFieldsJSON = string(customJSON)
+			currentIdentity.CustomFieldsJSON = string(customJSON)
 		}
 		visibility := users.BuildVisibilityMap(fieldVisibility, users.FilterCustomVisibility(customFields, customVisibility))
 		for domain, vis := range domainVisibility {
@@ -249,31 +261,23 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		for key, value := range socialVisibility {
 			visibility[key] = value
 		}
-		current.VisibilityJSON = identity.EncodeVisibilityMap(visibility)
-		current.SocialProfilesJSON = identity.EncodeSocialProfiles(social)
+		currentIdentity.VisibilityJSON = identity.EncodeVisibilityMap(visibility)
+		currentIdentity.SocialProfilesJSON = identity.EncodeSocialProfiles(social)
 		if walletsJSON, err := json.Marshal(identity.StripEmptyMap(wallets)); err == nil {
-			current.WalletsJSON = string(walletsJSON)
+			currentIdentity.WalletsJSON = string(walletsJSON)
 		}
 		if keysJSON, err := json.Marshal(identity.StripEmptyMap(publicKeys)); err == nil {
-			current.PublicKeysJSON = string(keysJSON)
+			currentIdentity.PublicKeysJSON = string(keysJSON)
 		}
 		if domainsJSON, err := json.Marshal(verified); err == nil {
-			current.VerifiedDomainsJSON = string(domainsJSON)
+			currentIdentity.VerifiedDomainsJSON = string(domainsJSON)
 		}
-		if aliasesJSON, err := json.Marshal(aliases); err == nil {
-			current.AliasesJSON = string(aliasesJSON)
-		}
-
-		if err := h.deps.UpsertUserIdentifiers(r.Context(), current.ID, current.Username, aliases, current.Email); err != nil {
-			data["Message"] = "Identifier already exists"
-			goto renderProfile
-		}
-		if err := h.deps.UpdateUser(r.Context(), current); err != nil {
-			h.deps.AuditOutcome(r.Context(), current.ID, "profile.update", current.Username, err, nil)
+		if err := h.deps.UpdateIdentity(r.Context(), currentIdentity); err != nil {
+			h.deps.AuditOutcome(r.Context(), current.ID, "profile.update", currentIdentity.Handle, err, nil)
 			http.Error(w, "Failed to update profile", http.StatusInternalServerError)
 			return
 		}
-		h.deps.AuditOutcome(r.Context(), current.ID, "profile.update", current.Username, nil, nil)
+		h.deps.AuditOutcome(r.Context(), current.ID, "profile.update", currentIdentity.Handle, nil, nil)
 
 		data["Message"] = core.FirstNonEmpty(data["Message"].(string), "Profile updated successfully.")
 		data["User"] = current
@@ -282,13 +286,12 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		data["FieldVisibility"] = fieldVisibility
 		data["CustomFieldVisibility"] = users.FilterCustomVisibility(customFields, customVisibility)
 		data["SocialProfiles"] = users.BuildSocialEntries(social, visibility)
-		data["Wallets"] = identity.DecodeStringMap(current.WalletsJSON)
-		data["PublicKeys"] = identity.DecodeStringMap(current.PublicKeysJSON)
+		data["Wallets"] = identity.DecodeStringMap(currentIdentity.WalletsJSON)
+		data["PublicKeys"] = identity.DecodeStringMap(currentIdentity.PublicKeysJSON)
 		data["DomainVerifications"] = domainRows
 		data["VerifiedDomains"] = identity.DomainsToText(domainRows)
-		data["ATProtoHandleVerified"] = identity.IsATProtoHandleVerified(current.ATProtoHandle, identity.VerifiedDomains(domainRows))
-		data["DomainVisibility"] = users.DomainVisibilityMap(identity.DecodeVisibilityMap(current.VisibilityJSON))
-		data["Aliases"] = users.AliasesToText(current.AliasesJSON)
+		data["ATProtoHandleVerified"] = identity.IsATProtoHandleVerified(currentIdentity.ATProtoHandle, identity.VerifiedDomains(domainRows))
+		data["DomainVisibility"] = users.DomainVisibilityMap(identity.DecodeVisibilityMap(currentIdentity.VisibilityJSON))
 	}
 
 renderProfile:

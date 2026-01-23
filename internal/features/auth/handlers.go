@@ -19,7 +19,8 @@ type Dependencies interface {
 	GetSession(r *http.Request, name string) (*sessions.Session, error)
 	EnsureCSRF(session *sessions.Session) string
 	ValidateCSRF(session *sessions.Session, token string) bool
-	GetUserByUsername(ctx context.Context, username string) (domain.User, error)
+	GetIdentityByHandle(ctx context.Context, handle string) (domain.Identity, error)
+	GetUserByID(ctx context.Context, id int) (domain.User, error)
 	RenderTemplate(w http.ResponseWriter, name string, data interface{}) error
 }
 
@@ -66,10 +67,15 @@ func (h Handler) Login(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid CSRF token", http.StatusBadRequest)
 			return
 		}
-		username := strings.TrimSpace(r.FormValue("username"))
-		user, err := h.deps.GetUserByUsername(r.Context(), username)
+		handle := strings.TrimSpace(r.FormValue("handle"))
+		identityRecord, err := h.deps.GetIdentityByHandle(r.Context(), handle)
 		if err != nil {
-			data["Error"] = "Invalid username"
+			data["Error"] = "Invalid handle"
+			goto render
+		}
+		user, err := h.deps.GetUserByID(r.Context(), identityRecord.UserID)
+		if err != nil {
+			data["Error"] = "Invalid handle"
 			goto render
 		}
 		password := r.FormValue("password")

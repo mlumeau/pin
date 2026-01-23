@@ -25,10 +25,10 @@ type Config struct {
 
 type Dependencies interface {
 	profilepicture.Store
-	ListUsers(ctx context.Context) ([]domain.User, error)
-	FindUserByIdentifier(ctx context.Context, identifier string) (domain.User, error)
+	ListIdentities(ctx context.Context) ([]domain.Identity, error)
+	GetIdentityByHandle(ctx context.Context, handle string) (domain.Identity, error)
 	BaseURL(r *http.Request) string
-	GetOwnerUser(ctx context.Context) (domain.User, error)
+	GetOwnerIdentity(ctx context.Context) (domain.Identity, error)
 }
 
 type Handler struct {
@@ -137,26 +137,26 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handler) listIdentityResources(r *http.Request) ([]resource, error) {
-	users, err := h.deps.ListUsers(r.Context())
+	users, err := h.deps.ListIdentities(r.Context())
 	if err != nil {
 		return nil, err
 	}
 	var resources []resource
 	for _, user := range users {
-		if user.Username == "" {
+		if user.Handle == "" {
 			continue
 		}
-		base := "identity://" + user.Username
+		base := "identity://" + user.Handle
 		resources = append(resources, resource{
 			URI:         base,
-			Name:        user.Username,
-			Description: "Identity export for " + user.Username,
+			Name:        user.Handle,
+			Description: "Identity export for " + user.Handle,
 			MimeType:    "application/json",
 		})
 		resources = append(resources, resource{
 			URI:         base + "/profile-picture",
-			Name:        user.Username + " profile picture",
-			Description: "Active profile picture for " + user.Username,
+			Name:        user.Handle + " profile picture",
+			Description: "Active profile picture for " + user.Handle,
 			MimeType:    "application/json",
 		})
 	}
@@ -168,7 +168,7 @@ func (h Handler) readIdentityResource(r *http.Request, uri string) ([]map[string
 	if err != nil {
 		return nil, err
 	}
-	user, err := h.deps.FindUserByIdentifier(r.Context(), target.Ident)
+	user, err := h.deps.GetIdentityByHandle(r.Context(), target.Ident)
 	if err != nil || !identity.MatchesIdentity(user, target.Ident) {
 		return nil, errors.New("Identity not found")
 	}
@@ -188,12 +188,11 @@ func (h Handler) readIdentityResource(r *http.Request, uri string) ([]map[string
 	}
 	publicUser, customFields := identity.VisibleIdentity(user, false)
 	handler := export.NewHandler(source{deps: h.deps})
-	identityExport, err := handler.Build(r.Context(), r, publicUser, customFields, h.deps.BaseURL(r)+"/"+url.PathEscape(user.Username))
+	payload, err := handler.BuildPINC(r.Context(), r, publicUser, customFields, "public", "")
 	if err != nil {
 		return nil, errors.New("Failed to load identity")
 	}
-	wrapped := map[string]interface{}{"identity": identityExport}
-	raw, _ := json.Marshal(wrapped)
+	raw, _ := json.Marshal(payload)
 	return []map[string]interface{}{
 		{
 			"uri":      uri,
@@ -227,8 +226,8 @@ func parseIdentityURI(uri string) (identityResourceTarget, error) {
 	return identityResourceTarget{Ident: ident}, nil
 }
 
-func (h Handler) profilePictureURL(r *http.Request, user domain.User) string {
-	return h.deps.BaseURL(r) + "/profile-picture/" + url.PathEscape(user.Username)
+func (h Handler) profilePictureURL(r *http.Request, user domain.Identity) string {
+	return h.deps.BaseURL(r) + "/" + url.PathEscape(user.Handle) + "/profile-picture"
 }
 
 func (h Handler) writeResult(w http.ResponseWriter, id interface{}, result interface{}) {
@@ -275,15 +274,15 @@ type source struct {
 	deps Dependencies
 }
 
-func (s source) GetOwnerUser(ctx context.Context) (domain.User, error) {
-	return s.deps.GetOwnerUser(ctx)
+func (s source) GetOwnerIdentity(ctx context.Context) (domain.Identity, error) {
+	return s.deps.GetOwnerIdentity(ctx)
 }
 
-func (s source) VisibleIdentity(user domain.User, isPrivate bool) (domain.User, map[string]string) {
+func (s source) VisibleIdentity(user domain.Identity, isPrivate bool) (domain.Identity, map[string]string) {
 	return identity.VisibleIdentity(user, isPrivate)
 }
 
-func (s source) ActiveProfilePictureAlt(ctx context.Context, user domain.User) string {
+func (s source) ActiveProfilePictureAlt(ctx context.Context, user domain.Identity) string {
 	return profilepicture.NewService(s.deps).ActiveAlt(ctx, user)
 }
 

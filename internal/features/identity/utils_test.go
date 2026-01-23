@@ -1,6 +1,10 @@
 package identity
 
-import "testing"
+import (
+	"testing"
+
+	"pin/internal/domain"
+)
 
 func TestFromIdent(t *testing.T) {
 	name, ext := FromIdent("alice.json")
@@ -52,5 +56,17 @@ func TestEscapeVCard(t *testing.T) {
 func TestSanitizeVCardKey(t *testing.T) {
 	if got := SanitizeVCardKey(" Foo:Bar.Baz "); got != "FOO_BAR_BAZ" {
 		t.Fatalf("unexpected key: %q", got)
+	}
+}
+
+func TestSubjectForIdentityNormalizesHandle(t *testing.T) {
+	first := SubjectForIdentity(domain.Identity{ID: 12, Handle: "Alice"})
+	second := SubjectForIdentity(domain.Identity{ID: 12, Handle: " alice "})
+	if first != second {
+		t.Fatalf("expected normalized subject, got %q and %q", first, second)
+	}
+	third := SubjectForIdentity(domain.Identity{ID: 13, Handle: "alice"})
+	if first == third {
+		t.Fatalf("expected different subject for different ID")
 	}
 }

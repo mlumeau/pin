@@ -30,15 +30,16 @@ type Dependencies interface {
 	ValidateCSRF(session *sessions.Session, token string) bool
 	CurrentUser(r *http.Request) (domain.User, error)
 	GetUserByID(ctx context.Context, id int) (domain.User, error)
+	GetIdentityByUserID(ctx context.Context, userID int) (domain.Identity, error)
 	DeleteUser(ctx context.Context, userID int) error
 	UpdateUser(ctx context.Context, user domain.User) error
-	UpsertUserIdentifiers(ctx context.Context, userID int, username string, aliases []string, email string) error
-	CheckIdentifierCollisions(ctx context.Context, identifiers []string, excludeID int) error
+	UpdateIdentity(ctx context.Context, identity domain.Identity) error
+	CheckHandleCollision(ctx context.Context, handle string, excludeID int) error
 	Reserved() map[string]struct{}
-	ListDomainVerifications(ctx context.Context, userID int) ([]domain.DomainVerification, error)
-	UpsertDomainVerification(ctx context.Context, userID int, domainName, token string) error
-	DeleteDomainVerification(ctx context.Context, userID int, domainName string) error
-	MarkDomainVerified(ctx context.Context, userID int, domainName string) error
+	ListDomainVerifications(ctx context.Context, identityID int) ([]domain.DomainVerification, error)
+	UpsertDomainVerification(ctx context.Context, identityID int, domainName, token string) error
+	DeleteDomainVerification(ctx context.Context, identityID int, domainName string) error
+	MarkDomainVerified(ctx context.Context, identityID int, domainName string) error
 	ProtectedDomain(ctx context.Context) string
 	RenderTemplate(w http.ResponseWriter, name string, data interface{}) error
 	AuditAttempt(ctx context.Context, actorID int, action, target string, meta map[string]string)
@@ -71,8 +72,13 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 	if strings.HasSuffix(path, "/delete") {
 		idStr := strings.TrimSuffix(path, "/delete")
 		id, _ := strconv.Atoi(strings.Trim(idStr, "/"))
-		target, err := h.deps.GetUserByID(r.Context(), id)
-		if err != nil || target.Role == "owner" || target.ID == current.ID {
+		targetUser, err := h.deps.GetUserByID(r.Context(), id)
+		if err != nil || targetUser.Role == "owner" || targetUser.ID == current.ID {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		targetIdentity, err := h.deps.GetIdentityByUserID(r.Context(), targetUser.ID)
+		if err != nil {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
@@ -80,20 +86,25 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		h.deps.AuditAttempt(r.Context(), current.ID, "user.delete", target.Username, map[string]string{"role": target.Role})
-		if err := h.deps.DeleteUser(r.Context(), target.ID); err != nil {
-			h.deps.AuditOutcome(r.Context(), current.ID, "user.delete", target.Username, err, map[string]string{"role": target.Role})
+		h.deps.AuditAttempt(r.Context(), current.ID, "user.delete", targetIdentity.Handle, map[string]string{"role": targetUser.Role})
+		if err := h.deps.DeleteUser(r.Context(), targetUser.ID); err != nil {
+			h.deps.AuditOutcome(r.Context(), current.ID, "user.delete", targetIdentity.Handle, err, map[string]string{"role": targetUser.Role})
 			http.Error(w, "Failed to delete user", http.StatusInternalServerError)
 			return
 		}
-		h.deps.AuditOutcome(r.Context(), current.ID, "user.delete", target.Username, nil, map[string]string{"role": target.Role})
+		h.deps.AuditOutcome(r.Context(), current.ID, "user.delete", targetIdentity.Handle, nil, map[string]string{"role": targetUser.Role})
 		http.Redirect(w, r, "/settings/admin/server#section-users", http.StatusFound)
 		return
 	}
 	if strings.HasSuffix(path, "/edit") {
 		idStr := strings.TrimSuffix(path, "/edit")
 		id, _ := strconv.Atoi(strings.Trim(idStr, "/"))
-		target, err := h.deps.GetUserByID(r.Context(), id)
+		targetUser, err := h.deps.GetUserByID(r.Context(), id)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		targetIdentity, err := h.deps.GetIdentityByUserID(r.Context(), targetUser.ID)
 		if err != nil {
 			http.NotFound(w, r)
 			return
@@ -101,39 +112,45 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 
 		session, _ := h.deps.GetSession(r, "pin_session")
 		var links []domain.Link
-		if target.LinksJSON != "" {
-			links = identity.DecodeLinks(target.LinksJSON)
+		if targetIdentity.LinksJSON != "" {
+			links = identity.DecodeLinks(targetIdentity.LinksJSON)
 		}
 		var socialProfiles []domain.SocialProfile
-		if target.SocialProfilesJSON != "" {
-			socialProfiles = identity.DecodeSocialProfiles(target.SocialProfilesJSON)
+		if targetIdentity.SocialProfilesJSON != "" {
+			socialProfiles = identity.DecodeSocialProfiles(targetIdentity.SocialProfilesJSON)
 		}
-		visibility := identity.DecodeVisibilityMap(target.VisibilityJSON)
+		visibility := identity.DecodeVisibilityMap(targetIdentity.VisibilityJSON)
 
 		settingsSvc := featuresettings.NewService(h.deps)
 		theme := settingsSvc.ThemeSettings(r.Context(), &current)
 		showAppearanceNav := isAdmin(current)
+		userView := struct {
+			domain.Identity
+			Role string
+		}{
+			Identity: targetIdentity,
+			Role:     targetUser.Role,
+		}
 		data := map[string]interface{}{
-			"User":                  target,
+			"User":                  userView,
 			"Links":                 BuildLinkEntries(links, visibility),
 			"SocialProfiles":        BuildSocialEntries(socialProfiles, visibility),
-			"CustomFields":          identity.DecodeStringMap(target.CustomFieldsJSON),
+			"CustomFields":          identity.DecodeStringMap(targetIdentity.CustomFieldsJSON),
 			"FieldVisibility":       visibility,
 			"CustomFieldVisibility": VisibilityCustomMap(visibility),
-			"Wallets":               identity.DecodeStringMap(target.WalletsJSON),
-			"WalletEntries":         BuildWalletEntries(identity.DecodeStringMap(target.WalletsJSON), visibility),
-			"PublicKeys":            identity.DecodeStringMap(target.PublicKeysJSON),
-			"VerifiedDomains":       VerifiedDomainsToText(target.VerifiedDomainsJSON),
+			"Wallets":               identity.DecodeStringMap(targetIdentity.WalletsJSON),
+			"WalletEntries":         BuildWalletEntries(identity.DecodeStringMap(targetIdentity.WalletsJSON), visibility),
+			"PublicKeys":            identity.DecodeStringMap(targetIdentity.PublicKeysJSON),
+			"VerifiedDomains":       VerifiedDomainsToText(targetIdentity.VerifiedDomainsJSON),
 			"DomainVerifications":   []domain.DomainVerification{},
-			"Aliases":               AliasesToText(target.AliasesJSON),
 			"GitHubOAuthEnabled":    false,
 			"RedditOAuthEnabled":    false,
 			"BlueskyEnabled":        false,
 			"IsAdmin":               true,
-			"IsOwner":               target.Role == "owner",
+			"IsOwner":               targetUser.Role == "owner",
 			"IsSelf":                false,
-			"FormAction":            "/settings/admin/users/" + strconv.Itoa(target.ID) + "/edit",
-			"CanEditRole":           target.Role != "owner",
+			"FormAction":            "/settings/admin/users/" + strconv.Itoa(targetUser.ID) + "/edit",
+			"CanEditRole":           targetUser.Role != "owner",
 			"Title":                 "Settings - Edit User",
 			"Message":               "",
 			"CSRFToken":             h.deps.EnsureCSRF(session),
@@ -142,15 +159,15 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 			"ProtectedDomain":       h.deps.ProtectedDomain(r.Context()),
 			"DomainVisibility":      DomainVisibilityMap(visibility),
 		}
-		if rows, err := h.deps.ListDomainVerifications(r.Context(), target.ID); err == nil {
+		if rows, err := h.deps.ListDomainVerifications(r.Context(), targetIdentity.ID); err == nil {
 			if len(rows) == 0 {
-				rows = domains.NewService(h.deps).SeedDomains(r.Context(), target.ID, identity.DecodeStringSlice(target.VerifiedDomainsJSON), func() string {
+				rows = domains.NewService(h.deps).SeedDomains(r.Context(), targetIdentity.ID, identity.DecodeStringSlice(targetIdentity.VerifiedDomainsJSON), func() string {
 					return domains.RandomTokenURL(12)
 				})
 			}
 			data["DomainVerifications"] = rows
 			data["VerifiedDomains"] = identity.DomainsToText(rows)
-			data["ATProtoHandleVerified"] = identity.IsATProtoHandleVerified(target.ATProtoHandle, identity.VerifiedDomains(rows))
+			data["ATProtoHandleVerified"] = identity.IsATProtoHandleVerified(targetIdentity.ATProtoHandle, identity.VerifiedDomains(rows))
 		}
 
 		if r.Method == http.MethodPost {
@@ -190,8 +207,8 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 			customVisibility := ParseCustomVisibilityForm(r.Form["custom_key"], r.Form["custom_value"], r.Form["custom_visibility"])
 			social, socialVisibility := identity.ParseSocialForm(r.Form["social_label"], r.Form["social_url"], r.Form["social_visibility"])
 			social = identity.MergeSocialProfiles(social, socialProfiles)
-			aliases := ParseAliasesText(r.FormValue("aliases"))
-			if err := identity.ValidateIdentifiers(r.Context(), target.Username, aliases, target.Email, target.ID, h.deps.Reserved(), h.deps.CheckIdentifierCollisions); err != nil {
+			handle := strings.TrimSpace(r.FormValue("handle"))
+			if err := identity.ValidateHandle(r.Context(), handle, targetIdentity.ID, h.deps.Reserved(), h.deps.CheckHandleCollision); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -211,16 +228,16 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 			}
 			verifiedDomains := ParseVerifiedDomainsText(r.FormValue("verified_domains"))
 			domainVisibility := ParseVerifiedDomainVisibilityForm(r.Form["verified_domain"], r.Form["verified_domain_visibility"])
-			h.deps.AuditAttempt(r.Context(), current.ID, "domain.sync", target.Username, nil)
-			_, verified, err := domains.NewService(h.deps).CreateDomains(r.Context(), target.ID, verifiedDomains, func() string {
+			h.deps.AuditAttempt(r.Context(), current.ID, "domain.sync", targetIdentity.Handle, nil)
+			_, verified, err := domains.NewService(h.deps).CreateDomains(r.Context(), targetIdentity.ID, verifiedDomains, func() string {
 				return domains.RandomTokenURL(12)
 			})
 			if err != nil {
-				h.deps.AuditOutcome(r.Context(), current.ID, "domain.sync", target.Username, err, nil)
+				h.deps.AuditOutcome(r.Context(), current.ID, "domain.sync", targetIdentity.Handle, err, nil)
 				http.Error(w, "Failed to update verified domains", http.StatusInternalServerError)
 				return
 			}
-			h.deps.AuditOutcome(r.Context(), current.ID, "domain.sync", target.Username, nil, nil)
+			h.deps.AuditOutcome(r.Context(), current.ID, "domain.sync", targetIdentity.Handle, nil, nil)
 
 			profilePictureFile, profilePictureHeader, err := r.FormFile("profile_picture")
 			if err == nil && profilePictureHeader != nil && profilePictureHeader.Filename != "" {
@@ -254,27 +271,28 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "Failed to update password", http.StatusInternalServerError)
 					return
 				}
-				target.PasswordHash = string(hash)
+				targetUser.PasswordHash = string(hash)
 			}
 
-			target.DisplayName = displayName
-			target.Email = email
-			target.Bio = bio
-			target.Organization = strings.TrimSpace(r.FormValue("organization"))
-			target.JobTitle = strings.TrimSpace(r.FormValue("job_title"))
-			target.Birthdate = strings.TrimSpace(r.FormValue("birthdate"))
-			target.Languages = strings.TrimSpace(r.FormValue("languages"))
-			target.Phone = strings.TrimSpace(r.FormValue("phone"))
-			target.Address = strings.TrimSpace(r.FormValue("address"))
-			target.Location = strings.TrimSpace(r.FormValue("location"))
-			target.Website = strings.TrimSpace(r.FormValue("website"))
-			target.Pronouns = strings.TrimSpace(r.FormValue("pronouns"))
-			target.Timezone = strings.TrimSpace(r.FormValue("timezone"))
-			target.ATProtoHandle = strings.TrimSpace(r.FormValue("atproto_handle"))
-			target.ATProtoDID = strings.TrimSpace(r.FormValue("atproto_did"))
-			target.LinksJSON = identity.EncodeLinks(links)
+			targetIdentity.Handle = handle
+			targetIdentity.DisplayName = displayName
+			targetIdentity.Email = email
+			targetIdentity.Bio = bio
+			targetIdentity.Organization = strings.TrimSpace(r.FormValue("organization"))
+			targetIdentity.JobTitle = strings.TrimSpace(r.FormValue("job_title"))
+			targetIdentity.Birthdate = strings.TrimSpace(r.FormValue("birthdate"))
+			targetIdentity.Languages = strings.TrimSpace(r.FormValue("languages"))
+			targetIdentity.Phone = strings.TrimSpace(r.FormValue("phone"))
+			targetIdentity.Address = strings.TrimSpace(r.FormValue("address"))
+			targetIdentity.Location = strings.TrimSpace(r.FormValue("location"))
+			targetIdentity.Website = strings.TrimSpace(r.FormValue("website"))
+			targetIdentity.Pronouns = strings.TrimSpace(r.FormValue("pronouns"))
+			targetIdentity.Timezone = strings.TrimSpace(r.FormValue("timezone"))
+			targetIdentity.ATProtoHandle = strings.TrimSpace(r.FormValue("atproto_handle"))
+			targetIdentity.ATProtoDID = strings.TrimSpace(r.FormValue("atproto_did"))
+			targetIdentity.LinksJSON = identity.EncodeLinks(links)
 			if customJSON, err := json.Marshal(customFields); err == nil {
-				target.CustomFieldsJSON = string(customJSON)
+				targetIdentity.CustomFieldsJSON = string(customJSON)
 			}
 			visibility := BuildVisibilityMap(fieldVisibility, FilterCustomVisibility(customFields, customVisibility))
 			for domain, vis := range domainVisibility {
@@ -286,35 +304,33 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 			for key, value := range socialVisibility {
 				visibility[key] = value
 			}
-			target.VisibilityJSON = identity.EncodeVisibilityMap(visibility)
-			target.SocialProfilesJSON = identity.EncodeSocialProfiles(social)
+			targetIdentity.VisibilityJSON = identity.EncodeVisibilityMap(visibility)
+			targetIdentity.SocialProfilesJSON = identity.EncodeSocialProfiles(social)
 			if walletsJSON, err := json.Marshal(identity.StripEmptyMap(wallets)); err == nil {
-				target.WalletsJSON = string(walletsJSON)
+				targetIdentity.WalletsJSON = string(walletsJSON)
 			}
 			if keysJSON, err := json.Marshal(identity.StripEmptyMap(publicKeys)); err == nil {
-				target.PublicKeysJSON = string(keysJSON)
+				targetIdentity.PublicKeysJSON = string(keysJSON)
 			}
 			if domainsJSON, err := json.Marshal(verified); err == nil {
-				target.VerifiedDomainsJSON = string(domainsJSON)
+				targetIdentity.VerifiedDomainsJSON = string(domainsJSON)
 			}
-			if aliasesJSON, err := json.Marshal(aliases); err == nil {
-				target.AliasesJSON = string(aliasesJSON)
-			}
-			if role := strings.TrimSpace(r.FormValue("role")); target.Role != "owner" && (role == "admin" || role == "user") {
-				target.Role = role
+			if role := strings.TrimSpace(r.FormValue("role")); targetUser.Role != "owner" && (role == "admin" || role == "user") {
+				targetUser.Role = role
 			}
 
-			if err := h.deps.UpsertUserIdentifiers(r.Context(), target.ID, target.Username, aliases, target.Email); err != nil {
-				http.Error(w, "Identifier already exists", http.StatusBadRequest)
-				return
-			}
-			h.deps.AuditAttempt(r.Context(), current.ID, "user.update", target.Username, nil)
-			if err := h.deps.UpdateUser(r.Context(), target); err != nil {
-				h.deps.AuditOutcome(r.Context(), current.ID, "user.update", target.Username, err, nil)
+			h.deps.AuditAttempt(r.Context(), current.ID, "user.update", targetIdentity.Handle, nil)
+			if err := h.deps.UpdateUser(r.Context(), targetUser); err != nil {
+				h.deps.AuditOutcome(r.Context(), current.ID, "user.update", targetIdentity.Handle, err, nil)
 				http.Error(w, "Failed to update profile", http.StatusInternalServerError)
 				return
 			}
-			h.deps.AuditOutcome(r.Context(), current.ID, "user.update", target.Username, nil, nil)
+			if err := h.deps.UpdateIdentity(r.Context(), targetIdentity); err != nil {
+				h.deps.AuditOutcome(r.Context(), current.ID, "user.update", targetIdentity.Handle, err, nil)
+				http.Error(w, "Failed to update profile", http.StatusInternalServerError)
+				return
+			}
+			h.deps.AuditOutcome(r.Context(), current.ID, "user.update", targetIdentity.Handle, nil, nil)
 			http.Redirect(w, r, "/settings/admin/server#section-users", http.StatusFound)
 			return
 		}

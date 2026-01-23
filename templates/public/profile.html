@@ -8,8 +8,8 @@
                 <div class="profile-picture-inner">
                     <div class="profile-picture-face profile-picture-front">
                         <picture>
-                            <source type="image/webp" srcset="/profile-picture/{{ .User.Username }}?s=128&format=webp">
-                            <img class="profile-picture" src="/profile-picture/{{ .User.Username }}?s=128" alt="{{ if .ProfilePictureAlt }}{{ .ProfilePictureAlt }}{{ else }}Profile picture{{ end }}">
+                            <source type="image/webp" srcset="{{ .ProfilePictureURL }}?s=128&format=webp">
+                            <img class="profile-picture" src="{{ .ProfilePictureURL }}?s=128" alt="{{ if .ProfilePictureAlt }}{{ .ProfilePictureAlt }}{{ else }}Profile picture{{ end }}">
                         </picture>
                     </div>
                     <div class="profile-picture-face profile-picture-back">
@@ -18,7 +18,7 @@
                 </div>
                 <span class="profile-picture-tooltip" role="status">Tap to reveal QR</span>
             </button>
-            <h1>{{ if .User.DisplayName }}{{ .User.DisplayName }}{{ else }}{{ .User.Username }}{{ end }}</h1>
+            <h1>{{ if .User.DisplayName }}{{ .User.DisplayName }}{{ else }}{{ .User.Handle }}{{ end }}</h1>
             {{ if .User.Pronouns }}<div class="pill">{{ .User.Pronouns }}</div>{{ end }}
             {{ if .User.Bio }}
             <p class="lead">{{ .User.Bio }}</p>

@@ -8,8 +8,8 @@ import (
 	"pin/internal/domain"
 )
 
-func ListProfilePictures(ctx context.Context, db *sql.DB, userID int) ([]domain.ProfilePicture, error) {
-	rows, err := db.QueryContext(ctx, "SELECT id, user_id, filename, COALESCE(alt_text,''), created_at FROM profile_picture WHERE user_id = ? ORDER BY created_at DESC", userID)
+func ListProfilePictures(ctx context.Context, db *sql.DB, identityID int) ([]domain.ProfilePicture, error) {
+	rows, err := db.QueryContext(ctx, "SELECT id, identity_id, filename, COALESCE(alt_text,''), created_at FROM profile_picture WHERE identity_id = ? ORDER BY created_at DESC", identityID)
 	if err != nil {
 		return nil, err
 	}
@@ -19,7 +19,7 @@ func ListProfilePictures(ctx context.Context, db *sql.DB, userID int) ([]domain.
 	for rows.Next() {
 		var pic domain.ProfilePicture
 		var created string
-		if err := rows.Scan(&pic.ID, &pic.UserID, &pic.Filename, &pic.AltText, &created); err != nil {
+		if err := rows.Scan(&pic.ID, &pic.IdentityID, &pic.Filename, &pic.AltText, &created); err != nil {
 			return nil, err
 		}
 		pic.CreatedAt, _ = time.Parse(time.RFC3339, created)
@@ -28,43 +28,43 @@ func ListProfilePictures(ctx context.Context, db *sql.DB, userID int) ([]domain.
 	return pics, nil
 }
 
-func CreateProfilePicture(ctx context.Context, db *sql.DB, userID int, filename, alt string) (int64, error) {
-	res, err := db.ExecContext(ctx, "INSERT INTO profile_picture (user_id, filename, alt_text, created_at) VALUES (?, ?, ?, ?)", userID, filename, alt, time.Now().UTC().Format(time.RFC3339))
+func CreateProfilePicture(ctx context.Context, db *sql.DB, identityID int, filename, alt string) (int64, error) {
+	res, err := db.ExecContext(ctx, "INSERT INTO profile_picture (identity_id, filename, alt_text, created_at) VALUES (?, ?, ?, ?)", identityID, filename, alt, time.Now().UTC().Format(time.RFC3339))
 	if err != nil {
 		return 0, err
 	}
 	return res.LastInsertId()
 }
 
-func SetActiveProfilePicture(ctx context.Context, db *sql.DB, userID int, pictureID int64) error {
-	_, err := db.ExecContext(ctx, "UPDATE user SET profile_picture_id = ?, updated_at = ? WHERE id = ?", pictureID, time.Now().UTC().Format(time.RFC3339), userID)
+func SetActiveProfilePicture(ctx context.Context, db *sql.DB, identityID int, pictureID int64) error {
+	_, err := db.ExecContext(ctx, "UPDATE identity SET profile_picture_id = ?, updated_at = ? WHERE id = ?", pictureID, time.Now().UTC().Format(time.RFC3339), identityID)
 	return err
 }
 
-func DeleteProfilePicture(ctx context.Context, db *sql.DB, userID int, pictureID int64) (string, error) {
-	row := db.QueryRowContext(ctx, "SELECT filename FROM profile_picture WHERE id = ? AND user_id = ?", pictureID, userID)
+func DeleteProfilePicture(ctx context.Context, db *sql.DB, identityID int, pictureID int64) (string, error) {
+	row := db.QueryRowContext(ctx, "SELECT filename FROM profile_picture WHERE id = ? AND identity_id = ?", pictureID, identityID)
 	var filename string
 	if err := row.Scan(&filename); err != nil {
 		return "", err
 	}
-	if _, err := db.ExecContext(ctx, "DELETE FROM profile_picture WHERE id = ? AND user_id = ?", pictureID, userID); err != nil {
+	if _, err := db.ExecContext(ctx, "DELETE FROM profile_picture WHERE id = ? AND identity_id = ?", pictureID, identityID); err != nil {
 		return "", err
 	}
 	return filename, nil
 }
 
-func UpdateProfilePictureAlt(ctx context.Context, db *sql.DB, userID int, pictureID int64, alt string) error {
-	_, err := db.ExecContext(ctx, "UPDATE profile_picture SET alt_text = ? WHERE id = ? AND user_id = ?", alt, pictureID, userID)
+func UpdateProfilePictureAlt(ctx context.Context, db *sql.DB, identityID int, pictureID int64, alt string) error {
+	_, err := db.ExecContext(ctx, "UPDATE profile_picture SET alt_text = ? WHERE id = ? AND identity_id = ?", alt, pictureID, identityID)
 	return err
 }
 
-func ClearProfilePictureSelection(ctx context.Context, db *sql.DB, userID int) error {
-	_, err := db.ExecContext(ctx, "UPDATE user SET profile_picture_id = NULL, updated_at = ? WHERE id = ?", time.Now().UTC().Format(time.RFC3339), userID)
+func ClearProfilePictureSelection(ctx context.Context, db *sql.DB, identityID int) error {
+	_, err := db.ExecContext(ctx, "UPDATE identity SET profile_picture_id = NULL, updated_at = ? WHERE id = ?", time.Now().UTC().Format(time.RFC3339), identityID)
 	return err
 }
 
-func GetProfilePictureFilename(ctx context.Context, db *sql.DB, userID int, pictureID int64) (string, error) {
-	row := db.QueryRowContext(ctx, "SELECT filename FROM profile_picture WHERE id = ? AND user_id = ?", pictureID, userID)
+func GetProfilePictureFilename(ctx context.Context, db *sql.DB, identityID int, pictureID int64) (string, error) {
+	row := db.QueryRowContext(ctx, "SELECT filename FROM profile_picture WHERE id = ? AND identity_id = ?", pictureID, identityID)
 	var filename string
 	if err := row.Scan(&filename); err != nil {
 		return "", err
@@ -72,8 +72,8 @@ func GetProfilePictureFilename(ctx context.Context, db *sql.DB, userID int, pict
 	return filename, nil
 }
 
-func GetProfilePictureAlt(ctx context.Context, db *sql.DB, userID int, pictureID int64) (string, error) {
-	row := db.QueryRowContext(ctx, "SELECT COALESCE(alt_text,'') FROM profile_picture WHERE id = ? AND user_id = ?", pictureID, userID)
+func GetProfilePictureAlt(ctx context.Context, db *sql.DB, identityID int, pictureID int64) (string, error) {
+	row := db.QueryRowContext(ctx, "SELECT COALESCE(alt_text,'') FROM profile_picture WHERE id = ? AND identity_id = ?", pictureID, identityID)
 	var alt string
 	if err := row.Scan(&alt); err != nil {
 		return "", err

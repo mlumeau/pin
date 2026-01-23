@@ -16,7 +16,8 @@ type Dependencies interface {
 	GetSession(r *http.Request, name string) (*sessions.Session, error)
 	ValidateCSRF(session *sessions.Session, token string) bool
 	CurrentUser(r *http.Request) (domain.User, error)
-	UpdateUser(ctx context.Context, user domain.User) error
+	CurrentIdentity(r *http.Request) (domain.Identity, error)
+	UpdateIdentity(ctx context.Context, identity domain.Identity) error
 	AuditAttempt(ctx context.Context, actorID int, action, target string, meta map[string]string)
 	AuditOutcome(ctx context.Context, actorID int, action, target string, err error, meta map[string]string)
 }
@@ -49,13 +50,18 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	domainList := parseDomains(r.FormValue("domains"))
 	if len(domainList) == 0 {
 		http.Error(w, "No domains provided", http.StatusBadRequest)
 		return
 	}
 	h.deps.AuditAttempt(r.Context(), current.ID, "domain.create", strings.Join(domainList, ","), nil)
-	rows, verified, err := h.svc.CreateDomains(r.Context(), current.ID, domainList, func() string {
+	rows, verified, err := h.svc.CreateDomains(r.Context(), currentIdentity.ID, domainList, func() string {
 		return RandomTokenURL(12)
 	})
 	if err != nil {
@@ -65,8 +71,8 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	domainsJSON := identity.EncodeStringSlice(verified)
 	meta := map[string]string{"verified_domains": domainsJSON}
-	current.VerifiedDomainsJSON = domainsJSON
-	if err := h.deps.UpdateUser(r.Context(), current); err != nil {
+	currentIdentity.VerifiedDomainsJSON = domainsJSON
+	if err := h.deps.UpdateIdentity(r.Context(), currentIdentity); err != nil {
 		h.deps.AuditOutcome(r.Context(), current.ID, "domain.create", strings.Join(domainList, ","), err, meta)
 		http.Error(w, "Failed to save profile", http.StatusInternalServerError)
 		return
@@ -102,13 +108,18 @@ func (h Handler) Verify(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	domain := normalizeDomain(r.FormValue("domain"))
 	if domain == "" {
 		http.Error(w, "Invalid domain", http.StatusBadRequest)
 		return
 	}
 	h.deps.AuditAttempt(r.Context(), current.ID, "domain.verify", domain, nil)
-	rows, verified, err := h.svc.VerifyDomain(r.Context(), current.ID, domain)
+	rows, verified, err := h.svc.VerifyDomain(r.Context(), currentIdentity.ID, domain)
 	if err != nil {
 		h.deps.AuditOutcome(r.Context(), current.ID, "domain.verify", domain, err, nil)
 		if err.Error() == "domain not found" {
@@ -124,8 +135,8 @@ func (h Handler) Verify(w http.ResponseWriter, r *http.Request) {
 	}
 	var updateErr error
 	if domainsJSON, err := json.Marshal(verified); err == nil {
-		current.VerifiedDomainsJSON = string(domainsJSON)
-		updateErr = h.deps.UpdateUser(r.Context(), current)
+		currentIdentity.VerifiedDomainsJSON = string(domainsJSON)
+		updateErr = h.deps.UpdateIdentity(r.Context(), currentIdentity)
 	} else {
 		updateErr = err
 	}
@@ -165,20 +176,25 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	currentIdentity, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	domain := normalizeDomain(r.FormValue("domain"))
 	if domain == "" {
 		http.Error(w, "Invalid domain", http.StatusBadRequest)
 		return
 	}
 	h.deps.AuditAttempt(r.Context(), current.ID, "domain.delete", domain, nil)
-	rows, remaining, err := h.svc.DeleteDomain(r.Context(), current.ID, domain)
+	rows, remaining, err := h.svc.DeleteDomain(r.Context(), currentIdentity.ID, domain)
 	if err != nil {
 		h.deps.AuditOutcome(r.Context(), current.ID, "domain.delete", domain, err, nil)
 		http.Error(w, "Failed to delete domain", http.StatusInternalServerError)
 		return
 	}
-	current.VerifiedDomainsJSON = identity.EncodeStringSlice(remaining)
-	if err := h.deps.UpdateUser(r.Context(), current); err != nil {
+	currentIdentity.VerifiedDomainsJSON = identity.EncodeStringSlice(remaining)
+	if err := h.deps.UpdateIdentity(r.Context(), currentIdentity); err != nil {
 		h.deps.AuditOutcome(r.Context(), current.ID, "domain.delete", domain, err, nil)
 		http.Error(w, "Failed to save profile", http.StatusInternalServerError)
 		return

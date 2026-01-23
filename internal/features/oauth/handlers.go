@@ -29,7 +29,8 @@ type Dependencies interface {
 	GetSession(r *http.Request, name string) (*sessions.Session, error)
 	ValidateCSRF(session *sessions.Session, token string) bool
 	CurrentUser(r *http.Request) (domain.User, error)
-	UpdateUser(ctx context.Context, user domain.User) error
+	CurrentIdentity(r *http.Request) (domain.Identity, error)
+	UpdateIdentity(ctx context.Context, identity domain.Identity) error
 	AuditAttempt(ctx context.Context, actorID int, action, target string, meta map[string]string)
 	AuditOutcome(ctx context.Context, actorID int, action, target string, err error, meta map[string]string)
 }
@@ -369,20 +370,24 @@ func (h Handler) updateATProtoProfile(r *http.Request, handle, did string) error
 	if err != nil {
 		return err
 	}
+	identityRecord, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		return err
+	}
 	handle = strings.TrimSpace(handle)
 	did = strings.TrimSpace(did)
 	if handle != "" {
-		current.ATProtoHandle = handle
+		identityRecord.ATProtoHandle = handle
 	}
 	if did != "" {
-		current.ATProtoDID = did
+		identityRecord.ATProtoDID = did
 	}
-	target := current.ATProtoHandle
+	target := identityRecord.ATProtoHandle
 	if target == "" {
-		target = current.Username
+		target = identityRecord.Handle
 	}
 	h.deps.AuditAttempt(r.Context(), current.ID, "atproto.update", target, nil)
-	err = h.deps.UpdateUser(r.Context(), current)
+	err = h.deps.UpdateIdentity(r.Context(), identityRecord)
 	h.deps.AuditOutcome(r.Context(), current.ID, "atproto.update", target, err, nil)
 	return err
 }
@@ -392,7 +397,11 @@ func (h Handler) addOrUpdateSocialProfile(r *http.Request, profile domain.Social
 	if err != nil {
 		return err
 	}
-	profiles := identity.DecodeSocialProfiles(user.SocialProfilesJSON)
+	identityRecord, err := h.deps.CurrentIdentity(r)
+	if err != nil {
+		return err
+	}
+	profiles := identity.DecodeSocialProfiles(identityRecord.SocialProfilesJSON)
 
 	found := false
 	for i, existing := range profiles {
@@ -415,13 +424,13 @@ func (h Handler) addOrUpdateSocialProfile(r *http.Request, profile domain.Social
 	if err != nil {
 		return err
 	}
-	user.SocialProfilesJSON = string(payload)
+	identityRecord.SocialProfilesJSON = string(payload)
 	target := profile.Provider
 	if strings.TrimSpace(target) == "" {
 		target = profile.URL
 	}
 	h.deps.AuditAttempt(r.Context(), user.ID, "social.update", target, nil)
-	err = h.deps.UpdateUser(r.Context(), user)
+	err = h.deps.UpdateIdentity(r.Context(), identityRecord)
 	h.deps.AuditOutcome(r.Context(), user.ID, "social.update", target, err, nil)
 	return err
 }

@@ -9,7 +9,18 @@ func InitDB(db *sql.DB) error {
 	stmts := []string{
 		`CREATE TABLE IF NOT EXISTS user (
             id INTEGER PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
+            role TEXT,
+            password_hash TEXT NOT NULL,
+            totp_secret TEXT NOT NULL,
+            theme_profile TEXT,
+            theme_custom_css_path TEXT,
+            theme_custom_css_inline TEXT,
+            updated_at TEXT
+        )`,
+		`CREATE TABLE IF NOT EXISTS identity (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            handle TEXT UNIQUE NOT NULL,
             email TEXT,
             display_name TEXT,
             bio TEXT,
@@ -23,7 +34,6 @@ func InitDB(db *sql.DB) error {
             visibility TEXT,
             private_token TEXT,
             links TEXT,
-            aliases TEXT,
             social_profiles TEXT,
             wallets TEXT,
             public_keys TEXT,
@@ -35,13 +45,8 @@ func InitDB(db *sql.DB) error {
             atproto_did TEXT,
             timezone TEXT,
             profile_picture_id INTEGER,
-            role TEXT,
-            password_hash TEXT NOT NULL,
-            totp_secret TEXT NOT NULL,
-            theme_profile TEXT,
-            theme_custom_css_path TEXT,
-            theme_custom_css_inline TEXT,
-            updated_at TEXT
+            updated_at TEXT,
+            UNIQUE(user_id)
         )`,
 		`CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
@@ -56,10 +61,6 @@ func InitDB(db *sql.DB) error {
             used_at TEXT,
             used_by INTEGER
         )`,
-		`CREATE TABLE IF NOT EXISTS user_identifier (
-            identifier TEXT PRIMARY KEY,
-            user_id INTEGER NOT NULL
-        )`,
 		`CREATE TABLE IF NOT EXISTS passkey (
             id INTEGER PRIMARY KEY,
             user_id INTEGER NOT NULL,
@@ -72,14 +73,14 @@ func InitDB(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_passkey_user ON passkey(user_id)`,
 		`CREATE TABLE IF NOT EXISTS domain_verification (
             id INTEGER PRIMARY KEY,
-            user_id INTEGER NOT NULL,
+            identity_id INTEGER NOT NULL,
             domain TEXT NOT NULL,
             token TEXT NOT NULL,
             verified_at TEXT,
             created_at TEXT NOT NULL,
-            UNIQUE(user_id, domain)
+            UNIQUE(identity_id, domain)
         )`,
-		`CREATE INDEX IF NOT EXISTS idx_domain_verification_user ON domain_verification(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_domain_verification_identity ON domain_verification(identity_id)`,
 		`CREATE TABLE IF NOT EXISTS audit_log (
             id INTEGER PRIMARY KEY,
             actor_id INTEGER,
@@ -91,12 +92,12 @@ func InitDB(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at)`,
 		`CREATE TABLE IF NOT EXISTS profile_picture (
             id INTEGER PRIMARY KEY,
-            user_id INTEGER NOT NULL,
+            identity_id INTEGER NOT NULL,
             filename TEXT NOT NULL,
             alt_text TEXT,
             created_at TEXT NOT NULL
         )`,
-		`CREATE INDEX IF NOT EXISTS idx_profile_picture_user ON profile_picture(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_profile_picture_identity ON profile_picture(identity_id)`,
 	}
 
 	for _, stmt := range stmts {

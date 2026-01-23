@@ -15,7 +15,7 @@ For the external contract and protocol details, see RFC-PINC.md.
 - `internal/platform/transport` - small interfaces for HTTP wiring and middleware contracts.
 - `internal/platform/wiring` - adapters that bind server + repos to feature dependency interfaces.
 - `internal/platform/storage` - storage helpers (backup/export); concrete repos live in sqlite.
-- `internal/platform/storage/sqlite` - DB init/migrations plus repositories grouped by feature (users/identifiers, invites, domains, profile pictures, passkeys, audit, settings).
+- `internal/platform/storage/sqlite` - DB init plus repositories grouped by feature (users, identities, invites, domains, profile pictures, passkeys, audit, settings).
 - Feature packages (under `internal/features/`): `public`, `auth`, `admin`, `domains`, `invites`, `passkeys`, `oauth`, `profilepicture`, `mcp`, `identity`, `federation`, `health`, `settings`. Each owns its handlers + service logic; they depend on interfaces from platform layers.
 
 ## Handler/service/repo conventions

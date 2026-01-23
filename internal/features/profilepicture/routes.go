@@ -21,9 +21,6 @@ func Register(mux *http.ServeMux, reg transport.Registrar, deps Dependencies, cf
 		CacheAltFormats:   cfg.CacheAltFormats,
 	}, deps)
 
-	register("/profile-picture", http.HandlerFunc(handler.ProfilePictureRoot))
-	register("/profile-picture/", http.HandlerFunc(handler.ProfilePicture))
-
 	requireLogin := func(next http.HandlerFunc) http.HandlerFunc {
 		return reg.RequireSession(next, "/login?next=/settings")
 	}

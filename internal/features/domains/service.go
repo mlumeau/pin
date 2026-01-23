@@ -12,14 +12,14 @@ import (
 )
 
 type Store interface {
-	ListDomainVerifications(ctx context.Context, userID int) ([]domainpkg.DomainVerification, error)
-	UpsertDomainVerification(ctx context.Context, userID int, domain, token string) error
-	DeleteDomainVerification(ctx context.Context, userID int, domain string) error
-	MarkDomainVerified(ctx context.Context, userID int, domain string) error
+	ListDomainVerifications(ctx context.Context, identityID int) ([]domainpkg.DomainVerification, error)
+	UpsertDomainVerification(ctx context.Context, identityID int, domain, token string) error
+	DeleteDomainVerification(ctx context.Context, identityID int, domain string) error
+	MarkDomainVerified(ctx context.Context, identityID int, domain string) error
 }
 
 type Protector interface {
-	HasDomainVerification(ctx context.Context, userID int, domain string) (bool, error)
+	HasDomainVerification(ctx context.Context, identityID int, domain string) (bool, error)
 	ProtectedDomain(ctx context.Context) string
 	SetProtectedDomain(ctx context.Context, domain string) error
 }
@@ -32,8 +32,8 @@ func NewService(store Store) Service {
 	return Service{store: store}
 }
 
-func (s Service) VerifyDomain(ctx context.Context, userID int, domain string) ([]domainpkg.DomainVerification, []string, error) {
-	rows, err := s.store.ListDomainVerifications(ctx, userID)
+func (s Service) VerifyDomain(ctx context.Context, identityID int, domain string) ([]domainpkg.DomainVerification, []string, error) {
+	rows, err := s.store.ListDomainVerifications(ctx, identityID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -54,10 +54,10 @@ func (s Service) VerifyDomain(ctx context.Context, userID int, domain string) ([
 	if !ok {
 		return nil, nil, errors.New("token not found")
 	}
-	if err := s.store.MarkDomainVerified(ctx, userID, domain); err != nil {
+	if err := s.store.MarkDomainVerified(ctx, identityID, domain); err != nil {
 		return nil, nil, err
 	}
-	rows, err = s.store.ListDomainVerifications(ctx, userID)
+	rows, err = s.store.ListDomainVerifications(ctx, identityID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -75,11 +75,11 @@ func (s Service) VerifyDomain(ctx context.Context, userID int, domain string) ([
 	return rows, verified, nil
 }
 
-func (s Service) DeleteDomain(ctx context.Context, userID int, domain string) ([]domainpkg.DomainVerification, []string, error) {
-	if err := s.store.DeleteDomainVerification(ctx, userID, domain); err != nil {
+func (s Service) DeleteDomain(ctx context.Context, identityID int, domain string) ([]domainpkg.DomainVerification, []string, error) {
+	if err := s.store.DeleteDomainVerification(ctx, identityID, domain); err != nil {
 		return nil, nil, err
 	}
-	rows, err := s.store.ListDomainVerifications(ctx, userID)
+	rows, err := s.store.ListDomainVerifications(ctx, identityID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -93,8 +93,8 @@ func (s Service) DeleteDomain(ctx context.Context, userID int, domain string) ([
 	return rows, remaining, nil
 }
 
-func (s Service) CreateDomains(ctx context.Context, userID int, domains []string, tokenFactory func() string) ([]domainpkg.DomainVerification, []string, error) {
-	rows, err := s.syncDomainVerifications(ctx, userID, domains, tokenFactory)
+func (s Service) CreateDomains(ctx context.Context, identityID int, domains []string, tokenFactory func() string) ([]domainpkg.DomainVerification, []string, error) {
+	rows, err := s.syncDomainVerifications(ctx, identityID, domains, tokenFactory)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -102,19 +102,19 @@ func (s Service) CreateDomains(ctx context.Context, userID int, domains []string
 	return rows, verified, nil
 }
 
-func (s Service) SeedDomains(ctx context.Context, userID int, domains []string, tokenFactory func() string) []domainpkg.DomainVerification {
+func (s Service) SeedDomains(ctx context.Context, identityID int, domains []string, tokenFactory func() string) []domainpkg.DomainVerification {
 	rows := []domainpkg.DomainVerification{}
 	for _, domain := range domains {
 		token := tokenFactory()
-		if err := s.store.UpsertDomainVerification(ctx, userID, domain, token); err == nil {
-			rows = append(rows, domainpkg.DomainVerification{UserID: userID, Domain: domain, Token: token})
+		if err := s.store.UpsertDomainVerification(ctx, identityID, domain, token); err == nil {
+			rows = append(rows, domainpkg.DomainVerification{IdentityID: identityID, Domain: domain, Token: token})
 		}
 	}
 	return rows
 }
 
-func (s Service) syncDomainVerifications(ctx context.Context, userID int, domains []string, tokenFactory func() string) ([]domainpkg.DomainVerification, error) {
-	existing, err := s.store.ListDomainVerifications(ctx, userID)
+func (s Service) syncDomainVerifications(ctx context.Context, identityID int, domains []string, tokenFactory func() string) ([]domainpkg.DomainVerification, error) {
+	existing, err := s.store.ListDomainVerifications(ctx, identityID)
 	if err != nil {
 		return nil, err
 	}
@@ -133,10 +133,10 @@ func (s Service) syncDomainVerifications(ctx context.Context, userID int, domain
 			continue
 		}
 		token := tokenFactory()
-		if err := s.store.UpsertDomainVerification(ctx, userID, normalized, token); err != nil {
+		if err := s.store.UpsertDomainVerification(ctx, identityID, normalized, token); err != nil {
 			return nil, err
 		}
-		rows = append(rows, domainpkg.DomainVerification{UserID: userID, Domain: normalized, Token: token})
+		rows = append(rows, domainpkg.DomainVerification{IdentityID: identityID, Domain: normalized, Token: token})
 	}
 	toDelete := map[int]domainpkg.DomainVerification{}
 	for _, row := range existing {
@@ -146,12 +146,12 @@ func (s Service) syncDomainVerifications(ctx context.Context, userID int, domain
 		delete(toDelete, row.ID)
 	}
 	for _, row := range toDelete {
-		_ = s.store.DeleteDomainVerification(ctx, userID, row.Domain)
+		_ = s.store.DeleteDomainVerification(ctx, identityID, row.Domain)
 	}
 	return rows, nil
 }
 
-func (s Service) EnsureServerDomainVerification(ctx context.Context, baseURL string, userID int, protector Protector, tokenFactory func() string) {
+func (s Service) EnsureServerDomainVerification(ctx context.Context, baseURL string, identityID int, protector Protector, tokenFactory func() string) {
 	if strings.TrimSpace(baseURL) == "" {
 		return
 	}
@@ -162,9 +162,9 @@ func (s Service) EnsureServerDomainVerification(ctx context.Context, baseURL str
 	if protected := protector.ProtectedDomain(ctx); protected != "" {
 		return
 	}
-	if exists, err := protector.HasDomainVerification(ctx, userID, baseDomain); err == nil && !exists {
+	if exists, err := protector.HasDomainVerification(ctx, identityID, baseDomain); err == nil && !exists {
 		_ = protector.SetProtectedDomain(ctx, baseDomain)
-		_, _ = s.syncDomainVerifications(ctx, userID, []string{baseDomain}, tokenFactory)
+		_, _ = s.syncDomainVerifications(ctx, identityID, []string{baseDomain}, tokenFactory)
 	}
 }
 

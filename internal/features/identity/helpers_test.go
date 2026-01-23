@@ -16,8 +16,8 @@ func TestVisibleIdentityFiltersPrivateFields(t *testing.T) {
 		{Label: "Private", URL: "https://private.example.com"},
 	}
 
-	user := domain.User{
-		Username:           "alice",
+	user := domain.Identity{
+		Handle:             "alice",
 		Email:              "alice@example.com",
 		Phone:              "123",
 		Location:           "Paris",
@@ -129,7 +129,7 @@ func TestEncodeDecodeVisibilityMapRoundTrip(t *testing.T) {
 }
 
 func TestVisibleIdentityFiltersLinksAndSocialByIndex(t *testing.T) {
-	user := domain.User{
+	user := domain.Identity{
 		LinksJSON:          EncodeLinks([]domain.Link{{Label: "Keep", URL: "https://keep.example"}, {Label: "Drop", URL: "https://drop.example"}}),
 		SocialProfilesJSON: EncodeSocialProfiles([]domain.SocialProfile{{Label: "Keep", URL: "https://social.keep"}, {Label: "Drop", URL: "https://social.drop"}}),
 		VisibilityJSON: EncodeVisibilityMap(map[string]string{
@@ -149,7 +149,7 @@ func TestVisibleIdentityFiltersLinksAndSocialByIndex(t *testing.T) {
 }
 
 func TestVisibleIdentityFiltersWalletsByVisibilityKey(t *testing.T) {
-	user := domain.User{
+	user := domain.Identity{
 		WalletsJSON: EncodeStringMap(map[string]string{"BTC": "1", "eth": "2"}),
 		VisibilityJSON: EncodeVisibilityMap(map[string]string{
 			"wallet.btc": "private",
@@ -237,13 +237,6 @@ func TestEncodeDecodeSocialProfiles(t *testing.T) {
 	}
 }
 
-func TestAliasesSliceToStructsSkipsEmpty(t *testing.T) {
-	aliases := []string{"", "alt"}
-	out := AliasesSliceToStructs(aliases)
-	if len(out) != 1 || out[0].Name != "alt" {
-		t.Fatalf("unexpected aliases: %+v", out)
-	}
-}
 
 func TestEncodeDecodeCustomFields(t *testing.T) {
 	fields := []domain.CustomField{{Key: "site", Value: "example"}}
@@ -290,17 +283,5 @@ func TestEncodeDecodeVerifiedDomains(t *testing.T) {
 	decoded := DecodeVerifiedDomains(encoded)
 	if len(decoded) != 1 || decoded[0].Domain != "example.com" {
 		t.Fatalf("unexpected decoded verified domains: %+v", decoded)
-	}
-}
-
-func TestEncodeDecodeAliases(t *testing.T) {
-	aliases := []domain.Alias{{Name: "alt"}}
-	encoded := EncodeAliases(aliases)
-	if encoded == "" {
-		t.Fatalf("expected encoded aliases")
-	}
-	decoded := DecodeAliases(encoded)
-	if len(decoded) != 1 || decoded[0].Name != "alt" {
-		t.Fatalf("unexpected decoded aliases: %+v", decoded)
 	}
 }
