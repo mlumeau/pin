@@ -43,7 +43,7 @@ By default, PIN listens on `127.0.0.1:5000` and stores data in `identity.db` in 
 - Go (net/http) with server-rendered HTML templates
 - SQLite storage via `modernc.org/sqlite` (pure Go)
 - Auth/session stack: passkeys (WebAuthn), TOTP (`pquerna/otp`), `gorilla/sessions`
-- Media/encoding: WebP via `cwebp` + `golang.org/x/image`, QR codes via `go-qrcode`
+- Media/encoding: WebP via `cwebp` + `golang.org/x/image`
 
 ## Architecture
 
@@ -87,8 +87,6 @@ PIN explicitly does not aim to:
 If a feature does not strengthen identity clarity or portability, it likely does not belong here.
 
 ## Roadmap
-- remove qr code endopints
-- remove /u/ alias endpoint
 - implement full compliance with RFC-PINC
 
 ## License

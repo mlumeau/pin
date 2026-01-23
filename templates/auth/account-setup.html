@@ -62,17 +62,8 @@
         </form>
         {{ end }}
     </div>
-    <script>
-        (function () {
-            const qrPanel = document.querySelector('.totp-setup');
-            if (!qrPanel) return;
-            const qrImg = qrPanel.querySelector('.qr');
-            const data = qrPanel.getAttribute('data-qr');
-            if (!qrImg || !data) return;
-            const qrUrl = '/qr?data=' + encodeURIComponent(data);
-            qrImg.src = qrUrl;
-        })();
-    </script>
+    <script src="/static/js/qrcode.min.js"></script>
+    <script src="/static/js/qr.js"></script>
     <script src="/static/js/settings-copy.js"></script>
 </body>
 </html>

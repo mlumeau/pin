@@ -31,8 +31,6 @@ All paths are relative to the Base URL.
 
 ## Public pages
 - `/landing` - landing page regardless of default mode
-- `/qr?data=...` - QR code PNG
-- `/u/{username}` - shortcut to profile
 
 ## Setup and auth
 - `/setup` - first-run setup (when no user exists)

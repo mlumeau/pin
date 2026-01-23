@@ -21,7 +21,6 @@ func Register(mux *http.ServeMux, reg transport.Registrar, deps Dependencies, pu
 	register("/.well-known/atproto-did", http.HandlerFunc(handler.AtprotoDID))
 	register("/.well-known/pin-verify", http.HandlerFunc(handler.WellKnownPinVerify))
 	register("/users/", http.HandlerFunc(handler.Actor))
-	register("/u/", http.HandlerFunc(handler.UserShortcut))
 	register("/p/", http.HandlerFunc(publicHandler.PrivateIdentity))
 	register("/identity.schema.json", http.HandlerFunc(handler.IdentitySchema))
 	export.Register(register, exportSource)

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/sessions"
-	"github.com/skip2/go-qrcode"
 	"pin/internal/config"
 	"pin/internal/domain"
 	"pin/internal/features/domains"
@@ -37,30 +36,9 @@ type Dependencies interface {
 	AuditOutcome(ctx context.Context, actorID int, action, target string, err error, meta map[string]string)
 }
 
-// Handler serves public endpoints, including QR and profile pages.
+// Handler serves public endpoints.
 type Handler struct {
 	deps Dependencies
 }
 
 func NewHandler(deps Dependencies) Handler { return Handler{deps: deps} }
-
-// QR renders a PNG QR code for the provided data string.
-func (Handler) QR(w http.ResponseWriter, r *http.Request) {
-	data := r.URL.Query().Get("data")
-	if data == "" {
-		http.Error(w, "Missing data", http.StatusBadRequest)
-		return
-	}
-	if len(data) > 2048 {
-		http.Error(w, "Data too long", http.StatusBadRequest)
-		return
-	}
-	png, err := qrcode.Encode(data, qrcode.Medium, 256)
-	if err != nil {
-		http.Error(w, "Failed to generate QR", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "image/png")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(png)
-}

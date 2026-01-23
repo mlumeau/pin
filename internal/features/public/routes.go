@@ -16,6 +16,5 @@ func Register(mux *http.ServeMux, reg transport.Registrar, deps Dependencies) {
 
 	register("/", http.HandlerFunc(handler.Index))
 	register("/landing", http.HandlerFunc(handler.Landing))
-	register("/qr", http.HandlerFunc(handler.QR))
 	register("/setup", http.HandlerFunc(handler.Setup))
 }

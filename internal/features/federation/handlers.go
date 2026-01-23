@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,17 +104,6 @@ func (h Handler) Actor(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/activity+json")
 	_ = json.NewEncoder(w).Encode(response)
-}
-
-// UserShortcut redirects /u/{name} to /{name}.
-func (h Handler) UserShortcut(w http.ResponseWriter, r *http.Request) {
-	ident := strings.TrimPrefix(r.URL.Path, "/u/")
-	ident = strings.Trim(ident, "/")
-	if ident == "" {
-		http.NotFound(w, r)
-		return
-	}
-	http.Redirect(w, r, "/"+url.PathEscape(ident), http.StatusFound)
 }
 
 // WellKnownPinVerify serves .well-known/pin-verify from the static directory.

@@ -6,7 +6,6 @@ require (
 	github.com/go-webauthn/webauthn v0.11.0
 	github.com/gorilla/sessions v1.2.2
 	github.com/pquerna/otp v1.4.0
-	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/crypto v0.25.0
 	golang.org/x/image v0.21.0
 	modernc.org/sqlite v1.42.2

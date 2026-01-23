@@ -113,33 +113,6 @@ func (publicDeps) GetProfilePictureAlt(ctx context.Context, userID int, pictureI
 	return "", nil
 }
 
-func TestQR(t *testing.T) {
-	handler := Handler{}
-	req := httptest.NewRequest(http.MethodGet, "/qr?data=hello", nil)
-	rec := httptest.NewRecorder()
-	handler.QR(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
-	if ct := rec.Header().Get("Content-Type"); ct != "image/png" {
-		t.Fatalf("expected png content type, got %q", ct)
-	}
-	body := rec.Body.Bytes()
-	if len(body) < 8 || string(body[:8]) != "\x89PNG\r\n\x1a\n" {
-		t.Fatalf("expected png header")
-	}
-}
-
-func TestQRMissingData(t *testing.T) {
-	handler := Handler{}
-	req := httptest.NewRequest(http.MethodGet, "/qr", nil)
-	rec := httptest.NewRecorder()
-	handler.QR(rec, req)
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", rec.Code)
-	}
-}
-
 func TestIndexRedirectsToSetup(t *testing.T) {
 	handler := Handler{deps: publicDeps{hasUser: false}}
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
