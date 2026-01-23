@@ -36,6 +36,7 @@ By default, PIN listens on `127.0.0.1:5000` and stores data in `identity.db` in 
 - [docs/backup.md](docs/backup.md)
 - [docs/themes.md](docs/themes.md)
 - [docs/endpoints.md](docs/endpoints.md)
+- [RFC-PINC.md](RFC-PINC.md) (PINC interoperability contract)
 
 ## Technical stack
 
@@ -86,6 +87,9 @@ PIN explicitly does not aim to:
 If a feature does not strengthen identity clarity or portability, it likely does not belong here.
 
 ## Roadmap
+- remove qr code endopints
+- remove /u/ alias endpoint
+- implement full compliance with RFC-PINC
 
 ## License
 

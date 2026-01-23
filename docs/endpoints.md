@@ -1,21 +1,38 @@
 # Endpoints
 
 This is a high-level overview of the main routes. See feature `routes.go` files for the full list.
+For the normative PINC contract, see RFC-PINC.md.
+
+## PINC endpoints (RFC-PINC)
+All paths are relative to the Base URL.
+
+### Owner identity
+- `/json` - owner identity (public) Canonical JSON
+- `/xml`, `/txt`, `/vcf` - owner identity alternate formats
+- `/` - landing or profile page
+
+### Public identities
+- `/{handle}.json` - identity (public) Canonical JSON
+- `/{handle}` - identity page or content negotiation
+- `/{handle}.xml`, `/{handle}.txt`, `/{handle}.vcf` - alternate formats
+
+### Private identities
+- `/p/{...}.json` - identity (private) Canonical JSON
+- `/p/{...}` - private page or content negotiation
+- `/p/{...}.xml`, `/p/{...}.txt`, `/p/{...}.vcf` - alternate formats
+
+### Profile pictures
+- `/{handle}/profile-picture?s=160&format=webp` - public profile picture
+- `/p/{...}/profile-picture?s=160&format=webp` - private profile picture
+
+### Capability and schema
+- `/.well-known/pinc` - capability document
+- `/.well-known/pinc/identity` - JSON schema for canonical identity
 
 ## Public pages
-- `/` - landing page (or profile, depending on settings)
 - `/landing` - landing page regardless of default mode
 - `/qr?data=...` - QR code PNG
-- `/{username}` - public profile page
 - `/u/{username}` - shortcut to profile
-- `/p/{hash}/{token}` - private profile view
-- `/profile-picture/{username}?s=160&format=webp` - profile picture (size/format)
-
-## Identity exports
-- `/json`, `/xml`, `/txt`, `/vcf` - owner identity exports
-- `/{identifier}.json|xml|txt|vcf` - identity exports by username/alias/email
-- `/.well-known/identity.json|xml|txt|vcf` - standard identity endpoints
-- `/identity.schema.json` - JSON schema for identity export
 
 ## Setup and auth
 - `/setup` - first-run setup (when no user exists)
@@ -43,7 +60,7 @@ Most of these require a session.
 - `/oauth/github/start` and `/oauth/github/callback`
 - `/oauth/reddit/start` and `/oauth/reddit/callback`
 
-## Federation and well-known
+## Federation and other well-known
 - `/.well-known/webfinger`
 - `/.well-known/atproto-did`
 - `/.well-known/pin-verify`
