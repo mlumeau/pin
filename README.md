@@ -2,6 +2,11 @@
 
 PIN stands for Personal Identity Node. It is a lightweight, self-hosted identity server written in Go and designed to be the authoritative source of one or multiple people and organizations on the web. It exposes clean profile pages, multi-profile management in settings, and machine-readable identity exports intended for humans, bots, and agents.
 
+PIN implements the [PINC (Personal Identity Node Contract)](RFC-PINC.md) interoperability specification also defined as part of this project. In short:
+- PIN is the server and product.
+- PINC is the versioned interoperability spec for endpoints, formats, and behaviors.
+See the aforementioned RFC for the normative contract.
+
 ## Quick start
 
 ### Prerequisites
