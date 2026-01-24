@@ -8,6 +8,7 @@ import (
 	"pin/internal/domain"
 )
 
+// TestDomainsHelpers verifies domains helpers behavior.
 func TestDomainsHelpers(t *testing.T) {
 	rows := []domain.DomainVerification{
 		{Domain: "example.com", VerifiedAt: sql.NullTime{Time: time.Now(), Valid: true}},
@@ -30,6 +31,7 @@ func TestDomainsHelpers(t *testing.T) {
 	}
 }
 
+// TestMergeSocialProfiles verifies merge social profiles behavior.
 func TestMergeSocialProfiles(t *testing.T) {
 	existing := []domain.SocialProfile{
 		{URL: "https://github.com/alice", Provider: "github", Verified: true},

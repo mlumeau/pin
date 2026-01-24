@@ -8,6 +8,7 @@ import (
 	"testing"
 )
 
+// TestServeHTTPMethodNotAllowed verifies serve HTTP method not allowed behavior.
 func TestServeHTTPMethodNotAllowed(t *testing.T) {
 	handler := NewHandler(Config{Enabled: true}, nil)
 	req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
@@ -18,6 +19,7 @@ func TestServeHTTPMethodNotAllowed(t *testing.T) {
 	}
 }
 
+// TestServeHTTPDisabled verifies serve HTTP disabled behavior.
 func TestServeHTTPDisabled(t *testing.T) {
 	handler := NewHandler(Config{Enabled: false}, nil)
 	body := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize"}`)
@@ -29,6 +31,7 @@ func TestServeHTTPDisabled(t *testing.T) {
 	}
 }
 
+// TestServeHTTPUnauthorized verifies serve HTTP unauthorized behavior.
 func TestServeHTTPUnauthorized(t *testing.T) {
 	handler := NewHandler(Config{Enabled: true, Token: "secret"}, nil)
 	body := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize"}`)

@@ -12,10 +12,12 @@ type setupDeps struct {
 	err     error
 }
 
+// HasUser reports whether user exists.
 func (d setupDeps) HasUser(ctx context.Context) (bool, error) {
 	return d.hasUser, d.err
 }
 
+// TestWithSetupRedirect verifies with setup redirect behavior.
 func TestWithSetupRedirect(t *testing.T) {
 	handler := WithSetupRedirect(setupDeps{hasUser: false}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -33,6 +35,7 @@ func TestWithSetupRedirect(t *testing.T) {
 	}
 }
 
+// TestWithSetupRedirectAllowsSetup verifies with setup redirect allows setup behavior.
 func TestWithSetupRedirectAllowsSetup(t *testing.T) {
 	handler := WithSetupRedirect(setupDeps{hasUser: false}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTeapot)

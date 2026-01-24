@@ -100,7 +100,7 @@ func EnsureDefaultWebP(staticDir string) error {
 	return nil
 }
 
-// WriteWebP decodes the uploaded image and writes a WebP version to disk.
+// WriteWebP writes a WebP file to destPath using a temp staging file.
 func WriteWebP(src io.Reader, destPath string) error {
 	tmpInput, err := os.CreateTemp(filepath.Dir(destPath), "profile_picture_*.tmp")
 	if err != nil {
@@ -117,6 +117,7 @@ func WriteWebP(src io.Reader, destPath string) error {
 		return err
 	}
 
+	// Encode to a temporary output so we can atomically replace the target file.
 	tmpOutput := destPath + ".tmp"
 	targetW, targetH, err := profilePictureResize(tmpInput.Name(), 1024)
 	if err != nil {
@@ -135,6 +136,7 @@ func WriteWebP(src io.Reader, destPath string) error {
 	return os.Rename(tmpOutput, destPath)
 }
 
+// profilePictureResize returns dimensions scaled to fit within maxDim.
 func profilePictureResize(path string, maxDim int) (int, int, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -168,7 +170,7 @@ func profilePictureResize(path string, maxDim int) (int, int, error) {
 	return newW, newH, nil
 }
 
-// ResizeAndCache scales an image to size and caches it as WebP.
+// ResizeAndCache resizes the source image, encodes WebP, and caches the result.
 func ResizeAndCache(sourcePath, cachePath string, size int) error {
 	if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err != nil {
 		return err
@@ -180,6 +182,7 @@ func ResizeAndCache(sourcePath, cachePath string, size int) error {
 	}
 	defer srcFile.Close()
 
+	// Decode the full image to generate a resized cache entry.
 	srcImg, _, err := image.Decode(srcFile)
 	if err != nil {
 		return err
@@ -189,6 +192,7 @@ func ResizeAndCache(sourcePath, cachePath string, size int) error {
 	if srcW < size && srcH < size {
 		return ErrImageTooSmall
 	}
+	// Fit to cover so the cached image has the requested minimum dimension.
 	targetW, targetH := FitCover(srcW, srcH, size)
 
 	dst := image.NewRGBA(image.Rect(0, 0, targetW, targetH))
@@ -212,6 +216,7 @@ func ResizeAndCache(sourcePath, cachePath string, size int) error {
 		_ = os.Remove(tmpPNGPath)
 	}()
 
+	// Encode via a temp file to keep cache writes atomic.
 	tmpOutput := cachePath + ".tmp"
 	if err := EncodeWebP(tmpPNGPath, tmpOutput, targetW, targetH, 80); err != nil {
 		_ = os.Remove(tmpOutput)
@@ -220,6 +225,7 @@ func ResizeAndCache(sourcePath, cachePath string, size int) error {
 	return os.Rename(tmpOutput, cachePath)
 }
 
+// FitWithin scales dimensions down to fit within maxDim while preserving aspect.
 func FitWithin(width, height, maxDim int) (int, int) {
 	if width <= 0 || height <= 0 || maxDim <= 0 {
 		return maxDim, maxDim
@@ -243,6 +249,7 @@ func FitWithin(width, height, maxDim int) (int, int) {
 	return newW, newH
 }
 
+// FitCover scales dimensions to cover minDim while preserving aspect.
 func FitCover(width, height, minDim int) (int, int) {
 	if width <= 0 || height <= 0 || minDim <= 0 {
 		return minDim, minDim

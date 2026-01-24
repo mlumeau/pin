@@ -13,6 +13,7 @@ import (
 	sqlitestore "pin/internal/platform/storage/sqlite"
 )
 
+// TestConfig verifies config behavior.
 func TestConfig(t *testing.T) config.Config {
 	t.Helper()
 	tempDir := t.TempDir()
@@ -28,6 +29,7 @@ func TestConfig(t *testing.T) config.Config {
 	}
 }
 
+// NewServer constructs a new server.
 func NewServer(t *testing.T) *pinserver.Server {
 	t.Helper()
 	cfg := TestConfig(t)

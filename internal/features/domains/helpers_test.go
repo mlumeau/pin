@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// TestNormalizeDomain verifies normalize domain behavior.
 func TestNormalizeDomain(t *testing.T) {
 	if got := normalizeDomain(" https://Example.com/path "); got != "example.com" {
 		t.Fatalf("expected normalized domain, got %q", got)
@@ -18,6 +19,7 @@ func TestNormalizeDomain(t *testing.T) {
 	}
 }
 
+// TestParseDomains verifies parse domains behavior.
 func TestParseDomains(t *testing.T) {
 	values := parseDomains("Example.com, test.com\nFoo.com")
 	if len(values) != 3 {
@@ -28,6 +30,7 @@ func TestParseDomains(t *testing.T) {
 	}
 }
 
+// TestWantsJSON verifies wants JSON behavior.
 func TestWantsJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Accept", "application/json")

@@ -16,22 +16,27 @@ type pincSource struct {
 	alt     string
 }
 
+// GetOwnerIdentity returns the owner identity.
 func (p pincSource) GetOwnerIdentity(ctx context.Context) (domain.Identity, error) {
 	return domain.Identity{}, nil
 }
 
+// VisibleIdentity returns the identity and custom fields for tests.
 func (p pincSource) VisibleIdentity(user domain.Identity, isPrivate bool) (domain.Identity, map[string]string) {
 	return user, nil
 }
 
+// ActiveProfilePictureAlt returns a fixed alt text for tests.
 func (p pincSource) ActiveProfilePictureAlt(ctx context.Context, user domain.Identity) string {
 	return p.alt
 }
 
+// BaseURL returns the test base URL.
 func (p pincSource) BaseURL(r *http.Request) string {
 	return p.baseURL
 }
 
+// TestBuildPINCUsesSelfProfileImageAndMeta verifies build PINC uses self profile image and meta behavior.
 func TestBuildPINCUsesSelfProfileImageAndMeta(t *testing.T) {
 	source := pincSource{baseURL: "https://pin.example", alt: "Portrait"}
 	handler := NewHandler(source)
@@ -90,6 +95,7 @@ func TestBuildPINCUsesSelfProfileImageAndMeta(t *testing.T) {
 	}
 }
 
+// TestComputePINCRevStableForMaps verifies compute PINC rev stable for maps behavior.
 func TestComputePINCRevStableForMaps(t *testing.T) {
 	payload := pincIdentity{
 		Handle:      "alice",

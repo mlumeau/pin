@@ -10,6 +10,7 @@ type Deps struct {
 	repos contracts.Repos
 }
 
+// NewDeps constructs a new deps.
 func NewDeps(srv *pinserver.Server) Deps {
 	return Deps{srv: srv, repos: srv.Repos()}
 }

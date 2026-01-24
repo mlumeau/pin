@@ -31,6 +31,7 @@ type SocialEntry struct {
 	Visibility string
 }
 
+// BuildWalletEntries builds wallet entries from the supplied inputs.
 func BuildWalletEntries(wallets map[string]string, visibility map[string]string) []WalletEntry {
 	if wallets == nil {
 		return []WalletEntry{}
@@ -56,6 +57,7 @@ func BuildWalletEntries(wallets map[string]string, visibility map[string]string)
 	return out
 }
 
+// BuildLinkEntries builds link entries from the supplied inputs.
 func BuildLinkEntries(links []domain.Link, visibility map[string]string) []LinkEntry {
 	if len(links) == 0 {
 		return []LinkEntry{}
@@ -75,6 +77,7 @@ func BuildLinkEntries(links []domain.Link, visibility map[string]string) []LinkE
 	return out
 }
 
+// BuildSocialEntries builds social entries from the supplied inputs.
 func BuildSocialEntries(social []domain.SocialProfile, visibility map[string]string) []SocialEntry {
 	if len(social) == 0 {
 		return []SocialEntry{}
@@ -99,6 +102,7 @@ func BuildSocialEntries(social []domain.SocialProfile, visibility map[string]str
 	return out
 }
 
+// ParseLinksForm parses links form from the provided input.
 func ParseLinksForm(labels, urls, visibilities []string) ([]domain.Link, map[string]string) {
 	var links []domain.Link
 	visibility := map[string]string{}
@@ -135,6 +139,7 @@ func ParseLinksForm(labels, urls, visibilities []string) ([]domain.Link, map[str
 	return links, visibility
 }
 
+// ParseCustomFieldsForm parses custom fields form from the provided input.
 func ParseCustomFieldsForm(keys, values []string) map[string]string {
 	out := map[string]string{}
 	maxLen := len(keys)
@@ -158,6 +163,7 @@ func ParseCustomFieldsForm(keys, values []string) map[string]string {
 	return out
 }
 
+// ParseVisibilityForm parses visibility form from the provided input.
 func ParseVisibilityForm(values map[string][]string, fields []string) map[string]string {
 	out := map[string]string{}
 	for _, field := range fields {
@@ -171,6 +177,7 @@ func ParseVisibilityForm(values map[string][]string, fields []string) map[string
 	return out
 }
 
+// NormalizeVisibility normalizes visibility values to "public" or "private".
 func NormalizeVisibility(value string) string {
 	value = strings.TrimSpace(value)
 	if value != "private" && value != "public" {
@@ -179,6 +186,7 @@ func NormalizeVisibility(value string) string {
 	return value
 }
 
+// BuildVisibilityMap builds visibility map from the supplied inputs.
 func BuildVisibilityMap(fieldVisibility map[string]string, customVisibility map[string]string) map[string]string {
 	out := map[string]string{}
 	for key, value := range fieldVisibility {
@@ -197,6 +205,7 @@ func BuildVisibilityMap(fieldVisibility map[string]string, customVisibility map[
 	return out
 }
 
+// VisibilityCustomMap returns visibility entries scoped to custom fields.
 func VisibilityCustomMap(visibility map[string]string) map[string]string {
 	out := map[string]string{}
 	for key, value := range visibility {
@@ -212,6 +221,7 @@ func VisibilityCustomMap(visibility map[string]string) map[string]string {
 	return out
 }
 
+// DomainVisibilityMap returns visibility entries scoped to verified domains.
 func DomainVisibilityMap(visibility map[string]string) map[string]string {
 	out := map[string]string{}
 	for key, value := range visibility {
@@ -228,6 +238,7 @@ func DomainVisibilityMap(visibility map[string]string) map[string]string {
 	return out
 }
 
+// ParseCustomVisibilityForm parses custom visibility form from the provided input.
 func ParseCustomVisibilityForm(keys, values, visibilities []string) map[string]string {
 	out := map[string]string{}
 	maxLen := len(keys)
@@ -261,6 +272,7 @@ func ParseCustomVisibilityForm(keys, values, visibilities []string) map[string]s
 	return out
 }
 
+// FilterCustomVisibility filters custom visibility using the provided criteria.
 func FilterCustomVisibility(fields, visibility map[string]string) map[string]string {
 	out := map[string]string{}
 	for key := range fields {
@@ -278,6 +290,7 @@ func FilterCustomVisibility(fields, visibility map[string]string) map[string]str
 	return out
 }
 
+// ParseWalletForm parses wallet form from the provided input.
 func ParseWalletForm(labels, addresses, visibilities []string) (map[string]string, map[string]string, error) {
 	out := map[string]string{}
 	visibility := map[string]string{}
@@ -319,6 +332,7 @@ func ParseWalletForm(labels, addresses, visibilities []string) (map[string]strin
 	return out, visibility, nil
 }
 
+// ParseVerifiedDomainsText parses verified domains text from the provided input.
 func ParseVerifiedDomainsText(input string) []string {
 	var domains []string
 	for _, line := range strings.Split(strings.TrimSpace(input), "\n") {
@@ -331,6 +345,7 @@ func ParseVerifiedDomainsText(input string) []string {
 	return domains
 }
 
+// ParseVerifiedDomainVisibilityForm parses verified domain visibility form from the provided input.
 func ParseVerifiedDomainVisibilityForm(domains, visibilities []string) map[string]string {
 	out := map[string]string{}
 	maxLen := len(domains)
@@ -354,6 +369,7 @@ func ParseVerifiedDomainVisibilityForm(domains, visibilities []string) map[strin
 	return out
 }
 
+// VerifiedDomainsToText renders verified domains as newline-delimited text.
 func VerifiedDomainsToText(jsonStr string) string {
 	var domains []string
 	if jsonStr == "" {
@@ -365,6 +381,7 @@ func VerifiedDomainsToText(jsonStr string) string {
 	return strings.Join(domains, "\n")
 }
 
+// visibilityValue returns a normalized visibility value with defaults applied.
 func visibilityValue(visibility map[string]string, field string, defaultPrivate map[string]bool) string {
 	val, ok := visibility[field]
 	if !ok && defaultPrivate != nil && defaultPrivate[field] {

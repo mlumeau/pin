@@ -25,14 +25,19 @@ type authDeps struct {
 	userErr     error
 }
 
+// HasUser reports whether user exists.
 func (d authDeps) HasUser(ctx context.Context) (bool, error) { return d.hasUser, nil }
+// GetSession returns the session.
 func (d authDeps) GetSession(r *http.Request, name string) (*sessions.Session, error) {
 	return d.store.Get(r, name)
 }
+// EnsureCSRF ensures CSRF is initialized and available.
 func (authDeps) EnsureCSRF(session *sessions.Session) string { return "token" }
+// ValidateCSRF validates CSRF and returns an error on failure.
 func (authDeps) ValidateCSRF(session *sessions.Session, token string) bool {
 	return true
 }
+// GetIdentityByHandle returns identity by handle.
 func (d authDeps) GetIdentityByHandle(ctx context.Context, handle string) (domain.Identity, error) {
 	if d.identityErr != nil {
 		return domain.Identity{}, d.identityErr
@@ -42,6 +47,7 @@ func (d authDeps) GetIdentityByHandle(ctx context.Context, handle string) (domai
 	}
 	return d.identity, nil
 }
+// GetUserByID returns user by ID.
 func (d authDeps) GetUserByID(ctx context.Context, id int) (domain.User, error) {
 	if d.userErr != nil {
 		return domain.User{}, d.userErr
@@ -51,6 +57,7 @@ func (d authDeps) GetUserByID(ctx context.Context, id int) (domain.User, error) 
 	}
 	return d.user, nil
 }
+// RenderTemplate stubs template rendering for tests.
 func (authDeps) RenderTemplate(w http.ResponseWriter, name string, data interface{}) error {
 	w.WriteHeader(http.StatusOK)
 	return nil
@@ -60,19 +67,26 @@ func (authDeps) RenderTemplate(w http.ResponseWriter, name string, data interfac
 func (authDeps) GetSettings(ctx context.Context, keys ...string) (map[string]string, error) {
 	return map[string]string{}, nil
 }
+// GetSetting returns the setting.
 func (authDeps) GetSetting(ctx context.Context, key string) (string, bool, error) {
 	return "", false, nil
 }
+// SetSetting sets setting to the provided value.
 func (authDeps) SetSetting(ctx context.Context, key, value string) error         { return nil }
+// SetSettings sets settings to the provided value.
 func (authDeps) SetSettings(ctx context.Context, values map[string]string) error { return nil }
+// DeleteSetting deletes setting.
 func (authDeps) DeleteSetting(ctx context.Context, key string) error             { return nil }
+// UpdateUserTheme updates user theme using the supplied data.
 func (authDeps) UpdateUserTheme(ctx context.Context, userID int, themeProfile, customCSSPath, customCSSInline string) error {
 	return nil
 }
+// GetOwnerUser returns the owner user.
 func (authDeps) GetOwnerUser(ctx context.Context) (domain.User, error) {
 	return domain.User{}, errors.New("no user")
 }
 
+// TestLoginRedirectsToSetup verifies login redirects to setup behavior.
 func TestLoginRedirectsToSetup(t *testing.T) {
 	deps := authDeps{hasUser: false, store: sessions.NewCookieStore([]byte("test-secret"))}
 	handler := NewHandler(deps)
@@ -89,6 +103,7 @@ func TestLoginRedirectsToSetup(t *testing.T) {
 	}
 }
 
+// TestLogoutRedirectsHome verifies logout redirects home behavior.
 func TestLogoutRedirectsHome(t *testing.T) {
 	deps := authDeps{hasUser: true, store: sessions.NewCookieStore([]byte("test-secret"))}
 	handler := NewHandler(deps)
@@ -105,6 +120,7 @@ func TestLogoutRedirectsHome(t *testing.T) {
 	}
 }
 
+// TestLoginSetsSessionFromIdentityUser verifies login sets session from identity user behavior.
 func TestLoginSetsSessionFromIdentityUser(t *testing.T) {
 	store := sessions.NewCookieStore([]byte("test-secret"))
 	password := "super-secret"

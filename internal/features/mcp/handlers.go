@@ -36,6 +36,7 @@ type Handler struct {
 	deps Dependencies
 }
 
+// NewHandler constructs a new handler.
 func NewHandler(cfg Config, deps Dependencies) Handler {
 	return Handler{cfg: cfg, deps: deps}
 }
@@ -70,6 +71,7 @@ type readParams struct {
 	URI string `json:"uri"`
 }
 
+// ServeHTTP handles HTTP requests for HTTP.
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -136,6 +138,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// listIdentityResources returns the identity resources list.
 func (h Handler) listIdentityResources(r *http.Request) ([]resource, error) {
 	users, err := h.deps.ListIdentities(r.Context())
 	if err != nil {
@@ -163,6 +166,7 @@ func (h Handler) listIdentityResources(r *http.Request) ([]resource, error) {
 	return resources, nil
 }
 
+// readIdentityResource resolves an identity URI into JSON-RPC resource contents.
 func (h Handler) readIdentityResource(r *http.Request, uri string) ([]map[string]interface{}, error) {
 	target, err := parseIdentityURI(uri)
 	if err != nil {
@@ -207,6 +211,7 @@ type identityResourceTarget struct {
 	ProfilePicture bool
 }
 
+// parseIdentityURI validates and parses an identity:// URI.
 func parseIdentityURI(uri string) (identityResourceTarget, error) {
 	parsed, err := url.Parse(uri)
 	if err != nil {
@@ -226,22 +231,26 @@ func parseIdentityURI(uri string) (identityResourceTarget, error) {
 	return identityResourceTarget{Ident: ident}, nil
 }
 
+// profilePictureURL returns the public profile picture URL for a user.
 func (h Handler) profilePictureURL(r *http.Request, user domain.Identity) string {
 	return h.deps.BaseURL(r) + "/" + url.PathEscape(user.Handle) + "/profile-picture"
 }
 
+// writeResult writes result to the response/output.
 func (h Handler) writeResult(w http.ResponseWriter, id interface{}, result interface{}) {
 	resp := response{JSONRPC: "2.0", ID: id, Result: result}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+// writeError writes error to the response/output.
 func (h Handler) writeError(w http.ResponseWriter, id interface{}, code int, message string) {
 	resp := response{JSONRPC: "2.0", ID: id, Error: &rpcError{Code: code, Message: message}}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+// authorize validates the request token against configured credentials.
 func (h Handler) authorize(r *http.Request) bool {
 	if strings.TrimSpace(h.cfg.Token) == "" {
 		return true
@@ -257,10 +266,12 @@ func (h Handler) authorize(r *http.Request) bool {
 	return false
 }
 
+// subtleCompare performs a constant-time string comparison.
 func subtleCompare(a, b string) bool {
 	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
+// isReadMethod reports whether read method is true.
 func isReadMethod(method string) bool {
 	switch method {
 	case "initialize", "resources/list", "resources/read":
@@ -274,18 +285,22 @@ type source struct {
 	deps Dependencies
 }
 
+// GetOwnerIdentity returns the owner identity.
 func (s source) GetOwnerIdentity(ctx context.Context) (domain.Identity, error) {
 	return s.deps.GetOwnerIdentity(ctx)
 }
 
+// VisibleIdentity returns the visible identity fields for the requested view.
 func (s source) VisibleIdentity(user domain.Identity, isPrivate bool) (domain.Identity, map[string]string) {
 	return identity.VisibleIdentity(user, isPrivate)
 }
 
+// ActiveProfilePictureAlt returns profile picture alt.
 func (s source) ActiveProfilePictureAlt(ctx context.Context, user domain.Identity) string {
 	return profilepicture.NewService(s.deps).ActiveAlt(ctx, user)
 }
 
+// BaseURL returns the base URL.
 func (s source) BaseURL(r *http.Request) string {
 	return s.deps.BaseURL(r)
 }

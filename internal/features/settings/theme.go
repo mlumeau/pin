@@ -65,6 +65,7 @@ type Service struct {
 	store Store
 }
 
+// NewService constructs a new service.
 func NewService(store Store) Service {
 	return Service{store: store}
 }
@@ -87,6 +88,7 @@ var builtInThemes = []ThemeOption{
 	{Name: "tech", Label: "Tech grid", Description: "Slate/teal gradient, neon lime highlights, condensed tech-forward font."},
 }
 
+// NormalizeThemeChoice normalizes theme choice into a canonical form.
 func NormalizeThemeChoice(name string) string {
 	name = strings.ToLower(strings.TrimSpace(name))
 	if name == "" {
@@ -103,10 +105,12 @@ func NormalizeThemeChoice(name string) string {
 	return defaultThemeName
 }
 
+// ThemeDir returns the filesystem path to bundled themes.
 func ThemeDir(cfg config.Config) string {
 	return filepath.Join(cfg.UploadsDir, themeUploadsSubdirectory)
 }
 
+// ThemeCustomCSSURL builds a public URL for a custom CSS file.
 func ThemeCustomCSSURL(path string) string {
 	base := filepath.Base(strings.TrimSpace(path))
 	if base == "" || base == "." || base == string(filepath.Separator) {
@@ -115,6 +119,7 @@ func ThemeCustomCSSURL(path string) string {
 	return "/static/uploads/" + themeUploadsSubdirectory + "/" + url.PathEscape(base)
 }
 
+// ThemeOptions returns the supported built-in theme list.
 func ThemeOptions() []ThemeOption {
 	out := make([]ThemeOption, 0, len(builtInThemes))
 	for i, opt := range builtInThemes {
@@ -124,6 +129,7 @@ func ThemeOptions() []ThemeOption {
 	return out
 }
 
+// DefaultThemeSettings returns the effective server theme defaults.
 func (s Service) DefaultThemeSettings(ctx context.Context) ThemeSettings {
 	defaultTheme, defaultSet, _ := s.ServerDefaultTheme(ctx)
 	defaultCustomCSSPath, hasDefaultCustomCSS := s.ServerDefaultCustomCSS(ctx)
@@ -150,6 +156,7 @@ func (s Service) DefaultThemeSettings(ctx context.Context) ThemeSettings {
 	return settings
 }
 
+// ThemeSettings returns the effective theme settings for a user.
 func (s Service) ThemeSettings(ctx context.Context, user *domain.User) ThemeSettings {
 	defaultTheme, defaultSet, _ := s.ServerDefaultTheme(ctx)
 	defaultCustomCSSPath, hasDefaultCustomCSS := s.ServerDefaultCustomCSS(ctx)
@@ -234,6 +241,7 @@ func (s Service) ThemeSettings(ctx context.Context, user *domain.User) ThemeSett
 	return settings
 }
 
+// ServerDefaultTheme returns the server default theme and its force flag.
 func (s Service) ServerDefaultTheme(ctx context.Context) (string, bool, bool) {
 	values, err := s.store.GetSettings(ctx, themeDefaultKey, themeDefaultForceKey)
 	if err != nil {
@@ -245,6 +253,7 @@ func (s Service) ServerDefaultTheme(ctx context.Context) (string, bool, bool) {
 	return value, set, force
 }
 
+// SaveServerDefaultTheme saves server default theme to storage.
 func (s Service) SaveServerDefaultTheme(ctx context.Context, theme string, force bool) error {
 	theme = NormalizeThemeChoice(theme)
 	forceValue := "0"
@@ -257,6 +266,7 @@ func (s Service) SaveServerDefaultTheme(ctx context.Context, theme string, force
 	})
 }
 
+// ServerDefaultCustomCSS returns the default custom CSS path, if set.
 func (s Service) ServerDefaultCustomCSS(ctx context.Context) (string, bool) {
 	value, ok, err := s.store.GetSetting(ctx, themeDefaultCustomCSSPathKey)
 	if err != nil || !ok {
@@ -269,6 +279,7 @@ func (s Service) ServerDefaultCustomCSS(ctx context.Context) (string, bool) {
 	return trimmed, true
 }
 
+// SaveServerDefaultCustomCSS saves server default custom CSS to storage.
 func (s Service) SaveServerDefaultCustomCSS(ctx context.Context, path string) error {
 	trimmed := strings.TrimSpace(path)
 	if trimmed == "" {
@@ -277,6 +288,7 @@ func (s Service) SaveServerDefaultCustomCSS(ctx context.Context, path string) er
 	return s.store.SetSetting(ctx, themeDefaultCustomCSSPathKey, trimmed)
 }
 
+// ServerThemePolicy returns the current theme policy settings.
 func (s Service) ServerThemePolicy(ctx context.Context) ThemePolicy {
 	policy := ThemePolicy{AllowUserTheme: true, AllowUserCustomCSS: true}
 	values, err := s.store.GetSettings(ctx, themeUserSelectKey, themeUserCustomCSSKey)
@@ -294,6 +306,7 @@ func (s Service) ServerThemePolicy(ctx context.Context) ThemePolicy {
 	return policy
 }
 
+// SaveServerThemePolicy saves server theme policy to storage.
 func (s Service) SaveServerThemePolicy(ctx context.Context, policy ThemePolicy) error {
 	if !policy.AllowUserTheme {
 		policy.AllowUserCustomCSS = false
@@ -312,6 +325,7 @@ func (s Service) SaveServerThemePolicy(ctx context.Context, policy ThemePolicy) 
 	})
 }
 
+// SaveThemeSettings persists per-user theme settings and custom CSS choices.
 func (s Service) SaveThemeSettings(ctx context.Context, userID int, settings ThemeSettings) error {
 	settings.ProfileTheme = NormalizeThemeChoice(settings.ProfileTheme)
 	settings.AdminTheme = settings.ProfileTheme
@@ -321,6 +335,7 @@ func (s Service) SaveThemeSettings(ctx context.Context, userID int, settings The
 	return s.store.UpdateUserTheme(ctx, userID, settings.ProfileTheme, settings.CustomCSSPath, settings.InlineCSS)
 }
 
+// parseSettingBool parses a settings value into a boolean.
 func parseSettingBool(value string) bool {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "1", "true", "yes", "on":
@@ -330,6 +345,7 @@ func parseSettingBool(value string) bool {
 	}
 }
 
+// isAdmin reports whether admin is true.
 func isAdmin(user domain.User) bool {
 	return strings.EqualFold(user.Role, "admin") || strings.EqualFold(user.Role, "owner")
 }

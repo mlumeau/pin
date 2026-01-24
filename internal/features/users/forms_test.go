@@ -6,6 +6,7 @@ import (
 	"pin/internal/domain"
 )
 
+// TestBuildVisibilityMapPrefixesCustomKeys verifies build visibility map prefixes custom keys behavior.
 func TestBuildVisibilityMapPrefixesCustomKeys(t *testing.T) {
 	fieldVisibility := map[string]string{
 		"email": "private",
@@ -22,6 +23,7 @@ func TestBuildVisibilityMapPrefixesCustomKeys(t *testing.T) {
 	}
 }
 
+// TestVisibilityCustomMapFiltersOnlyCustomKeys verifies visibility custom map filters only custom keys behavior.
 func TestVisibilityCustomMapFiltersOnlyCustomKeys(t *testing.T) {
 	visibility := map[string]string{
 		"email":           "private",
@@ -36,6 +38,7 @@ func TestVisibilityCustomMapFiltersOnlyCustomKeys(t *testing.T) {
 	}
 }
 
+// TestDomainVisibilityMapNormalizesDomains verifies domain visibility map normalizes domains behavior.
 func TestDomainVisibilityMapNormalizesDomains(t *testing.T) {
 	visibility := map[string]string{
 		"verified_domain:Example.COM": "private",
@@ -50,6 +53,7 @@ func TestDomainVisibilityMapNormalizesDomains(t *testing.T) {
 	}
 }
 
+// TestBuildLinkEntriesUsesVisibilityIndex verifies build link entries uses visibility index behavior.
 func TestBuildLinkEntriesUsesVisibilityIndex(t *testing.T) {
 	links := []domain.Link{
 		{Label: "One", URL: "https://one.example"},
@@ -67,6 +71,7 @@ func TestBuildLinkEntriesUsesVisibilityIndex(t *testing.T) {
 	}
 }
 
+// TestBuildSocialEntriesAllowsProviderLabel verifies build social entries allows provider label behavior.
 func TestBuildSocialEntriesAllowsProviderLabel(t *testing.T) {
 	social := []domain.SocialProfile{
 		{Provider: "mastodon", URL: "https://social.example"},

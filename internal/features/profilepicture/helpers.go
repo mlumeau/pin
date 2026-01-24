@@ -32,11 +32,13 @@ func parseProfilePictureSize(r *http.Request) int {
 	return parsed
 }
 
+// wantsJSON reports whether the request's Accept header prefers JSON.
 func wantsJSON(r *http.Request) bool {
 	accept := strings.ToLower(r.Header.Get("Accept"))
 	return strings.Contains(accept, "application/json") || strings.Contains(accept, "json")
 }
 
+// activePictureID returns the active profile picture ID or zero when unset.
 func activePictureID(identity domain.Identity) int64 {
 	if identity.ProfilePictureID.Valid {
 		return identity.ProfilePictureID.Int64
@@ -44,6 +46,7 @@ func activePictureID(identity domain.Identity) int64 {
 	return 0
 }
 
+// WriteProfilePictureStoreError writes profile picture store error to the response/output.
 func WriteProfilePictureStoreError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, media.ErrCWebPUnavailable):
@@ -55,6 +58,7 @@ func WriteProfilePictureStoreError(w http.ResponseWriter, err error) {
 	}
 }
 
+// resolveProfilePictureFormat selects an output format based on request and Accept header.
 func resolveProfilePictureFormat(r *http.Request, format string) string {
 	format = strings.ToLower(strings.TrimSpace(format))
 	switch format {

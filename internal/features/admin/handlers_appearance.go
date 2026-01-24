@@ -11,9 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"pin/internal/domain"
 	featuresettings "pin/internal/features/settings"
 )
 
+// Appearance handles the HTTP request.
 func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.deps.GetSession(r, "pin_session")
 	current, err := h.deps.CurrentUser(r)
@@ -30,10 +32,7 @@ func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 	settingsSvc := featuresettings.NewService(h.deps)
 	theme := settingsSvc.ThemeSettings(r.Context(), &current)
 	policy := settingsSvc.ServerThemePolicy(r.Context())
-	isAdminUser := isAdmin(current)
-	canSelectTheme := isAdminUser || policy.AllowUserTheme
-	canCustomCSS := isAdminUser || (policy.AllowUserTheme && policy.AllowUserCustomCSS)
-	showAppearanceNav := canSelectTheme
+	perms := appearancePermissions(current, policy)
 	defaultCustomCSSPath, hasDefaultCustomCSS := settingsSvc.ServerDefaultCustomCSS(r.Context())
 	defaultCustomThemeOption := featuresettings.ThemeOption{
 		Name:        featuresettings.DefaultCustomThemeName,
@@ -42,22 +41,7 @@ func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 	}
 	cfg := h.deps.Config()
 	message := ""
-	data := map[string]interface{}{
-		"User":                 currentIdentity,
-		"IsAdmin":              isAdminUser,
-		"Themes":               featuresettings.ThemeOptions(),
-		"Theme":                theme,
-		"Title":                "Settings - Appearance",
-		"DefaultCustomTheme":   defaultCustomThemeOption,
-		"HasDefaultCustomCSS":  hasDefaultCustomCSS,
-		"DefaultCustomCSSURL":  featuresettings.ThemeCustomCSSURL(defaultCustomCSSPath),
-		"DefaultCustomCSSName": filepath.Base(defaultCustomCSSPath),
-		"Message":              message,
-		"CSRFToken":            h.deps.EnsureCSRF(session),
-		"CanSelectTheme":       canSelectTheme,
-		"CanCustomCSS":         canCustomCSS,
-		"ShowAppearanceNav":    showAppearanceNav,
-	}
+	data := buildAppearanceData(currentIdentity, theme, defaultCustomCSSPath, hasDefaultCustomCSS, defaultCustomThemeOption, perms, message, h.deps.EnsureCSRF(session))
 	if toast := r.URL.Query().Get("toast"); toast != "" {
 		message = toast
 		data["Message"] = message
@@ -73,7 +57,7 @@ func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid CSRF token", http.StatusBadRequest)
 			return
 		}
-		if !canSelectTheme {
+		if !perms.canSelectTheme {
 			data["Message"] = "Theme selection is disabled by the server administrator."
 			goto renderAppearance
 		}
@@ -81,7 +65,7 @@ func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 		profileTheme := featuresettings.NormalizeThemeChoice(r.FormValue("profile_theme"))
 		inlineCSS := strings.TrimSpace(r.FormValue("inline_css"))
 		customCSSPath := strings.TrimSpace(current.ThemeCustomCSSPath)
-		if !canCustomCSS {
+		if !perms.canCustomCSS {
 			inlineCSS = strings.TrimSpace(current.ThemeCustomCSSInline)
 		}
 
@@ -91,16 +75,16 @@ func (h Handler) Appearance(w http.ResponseWriter, r *http.Request) {
 			CustomCSSPath: customCSSPath,
 		}
 
-		if canCustomCSS && r.FormValue("action") == "delete-css" {
+		if perms.canCustomCSS && r.FormValue("action") == "delete-css" {
 			if updated.CustomCSSPath != "" && updated.CustomCSSPath != defaultCustomCSSPath {
 				_ = os.Remove(filepath.Join(featuresettings.ThemeDir(cfg), updated.CustomCSSPath))
 			}
 			updated.CustomCSSPath = ""
-		} else if canCustomCSS {
+		} else if perms.canCustomCSS {
 			updated.CustomCSSPath = theme.CustomCSSPath
 		}
 
-		if canCustomCSS {
+		if perms.canCustomCSS {
 			if file, header, err := r.FormFile("custom_css_file"); err == nil && header != nil && header.Filename != "" {
 				defer file.Close()
 				ext := strings.ToLower(filepath.Ext(header.Filename))
@@ -165,5 +149,45 @@ renderAppearance:
 
 	if err := h.deps.RenderTemplate(w, "settings_appearance.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
+	}
+}
+
+type appearancePerms struct {
+	isAdminUser      bool
+	canSelectTheme   bool
+	canCustomCSS     bool
+	showAppearanceNav bool
+}
+
+// appearancePermissions derives per-user capabilities from the current policy.
+func appearancePermissions(current domain.User, policy featuresettings.ThemePolicy) appearancePerms {
+	isAdminUser := isAdmin(current)
+	canSelectTheme := isAdminUser || policy.AllowUserTheme
+	canCustomCSS := isAdminUser || (policy.AllowUserTheme && policy.AllowUserCustomCSS)
+	return appearancePerms{
+		isAdminUser:      isAdminUser,
+		canSelectTheme:   canSelectTheme,
+		canCustomCSS:     canCustomCSS,
+		showAppearanceNav: canSelectTheme,
+	}
+}
+
+// buildAppearanceData assembles the view model for the appearance template.
+func buildAppearanceData(currentIdentity domain.Identity, theme featuresettings.ThemeSettings, defaultCustomCSSPath string, hasDefaultCustomCSS bool, defaultCustomThemeOption featuresettings.ThemeOption, perms appearancePerms, message string, csrfToken string) map[string]interface{} {
+	return map[string]interface{}{
+		"User":                 currentIdentity,
+		"IsAdmin":              perms.isAdminUser,
+		"Themes":               featuresettings.ThemeOptions(),
+		"Theme":                theme,
+		"Title":                "Settings - Appearance",
+		"DefaultCustomTheme":   defaultCustomThemeOption,
+		"HasDefaultCustomCSS":  hasDefaultCustomCSS,
+		"DefaultCustomCSSURL":  featuresettings.ThemeCustomCSSURL(defaultCustomCSSPath),
+		"DefaultCustomCSSName": filepath.Base(defaultCustomCSSPath),
+		"Message":              message,
+		"CSRFToken":            csrfToken,
+		"CanSelectTheme":       perms.canSelectTheme,
+		"CanCustomCSS":         perms.canCustomCSS,
+		"ShowAppearanceNav":    perms.showAppearanceNav,
 	}
 }

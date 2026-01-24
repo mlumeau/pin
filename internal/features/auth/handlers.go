@@ -28,11 +28,12 @@ type Handler struct {
 	deps Dependencies
 }
 
+// NewHandler constructs a new handler.
 func NewHandler(deps Dependencies) Handler {
 	return Handler{deps: deps}
 }
 
-// Login renders the login form and authenticates the admin user.
+// Login handles the HTTP request.
 func (h Handler) Login(w http.ResponseWriter, r *http.Request) {
 	if ok, err := h.deps.HasUser(r.Context()); err != nil {
 		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
@@ -107,7 +108,7 @@ render:
 	}
 }
 
-// Logout clears the session and redirects to the home page.
+// Logout handles the HTTP request.
 func (h Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.deps.GetSession(r, "pin_session")
 	session.Values = map[interface{}]interface{}{}

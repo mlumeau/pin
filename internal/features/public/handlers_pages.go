@@ -18,9 +18,10 @@ import (
 	"pin/internal/platform/core"
 )
 
-// Index renders the root page (landing page or profile).
+// Index handles the HTTP request.
 func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
+		// Support profile picture and export routes at the top level.
 		if handle, ok := profilePictureHandleFromPath(r.URL.Path); ok {
 			handler := h.profilePictureHandler()
 			handler.ProfilePictureByHandle(w, r, handle)
@@ -66,6 +67,7 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 	landing := settingsSvc.LandingSettings(r.Context())
 	theme := settingsSvc.DefaultThemeSettings(r.Context())
 
+	// Render custom landing HTML when configured and available on disk.
 	if landing.Mode == featuresettings.LandingModeCustom && landing.CustomPath != "" {
 		customPath := featuresettings.LandingCustomPath(h.deps.Config(), landing.CustomPath)
 		if data, err := os.ReadFile(customPath); err == nil {
@@ -88,6 +90,7 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !showLanding {
+		// Full profile view renders the identity details and export metadata.
 		links := identity.DecodeLinks(publicUser.LinksJSON)
 		socialProfiles := identity.DecodeSocialProfiles(publicUser.SocialProfilesJSON)
 		wallets := identity.WalletsMapToStructs(identity.DecodeStringMap(publicUser.WalletsJSON))
@@ -111,6 +114,7 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 			theme = settingsSvc.ThemeSettings(r.Context(), &authUser)
 		}
 	} else {
+		// Landing view only needs the profile link and hero data.
 		data["ProfilePath"] = profilePath
 		data["ProfileURL"] = h.deps.BaseURL(r) + profilePath
 		data["ExportBase"] = profilePath
@@ -127,7 +131,7 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Landing renders the landing page regardless of the default mode.
+// Landing handles the HTTP request.
 func (h Handler) Landing(w http.ResponseWriter, r *http.Request) {
 	if ok, err := h.deps.HasUser(r.Context()); err != nil {
 		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
@@ -178,7 +182,7 @@ func (h Handler) Landing(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Profile renders a user's public profile page.
+// Profile handles the HTTP request.
 func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	ident := strings.Trim(r.URL.Path, "/")
 	ident = strings.Trim(ident, "/")
@@ -270,7 +274,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// PrivateIdentity serves a private profile view and private exports via /p/<handlehash>/<token>.
+// PrivateIdentity handles HTTP requests for identity.
 func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/p/")
 	path = strings.Trim(path, "/")
@@ -288,6 +292,7 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// Allow private export formats while still supporting the profile-picture path.
 	name, ext := identity.FromIdent(path)
 	if ext != "" {
 		if isProfilePicture {
@@ -312,6 +317,7 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	// Guard against leaked tokens by validating the handle hash.
 	expectedHash := core.ShortHash(strings.ToLower(strings.TrimSpace(user.Handle)), 7)
 	if !strings.EqualFold(handleHash, expectedHash) {
 		http.NotFound(w, r)
@@ -324,6 +330,7 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 	}
 	privateUser, customFields := identity.VisibleIdentity(user, true)
 	if ext != "" {
+		// Serve private exports in the requested format.
 		handler := export.NewHandler(identitySource{deps: h.deps})
 		profileURL := h.deps.BaseURL(r) + "/p/" + url.PathEscape(expectedHash) + "/" + url.PathEscape(user.PrivateToken)
 		if ext == "json" {
@@ -375,6 +382,7 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// profilePictureHandler returns picture handler.
 func (h Handler) profilePictureHandler() profilepicture.Handler {
 	cfg := h.deps.Config()
 	return profilepicture.NewHandler(profilepicture.Config{
@@ -386,6 +394,7 @@ func (h Handler) profilePictureHandler() profilepicture.Handler {
 	}, h.deps)
 }
 
+// profilePictureHandleFromPath extracts profile picture handle from path.
 func profilePictureHandleFromPath(path string) (string, bool) {
 	path = strings.Trim(path, "/")
 	if path == "" {

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 )
 
-// InitDB ensures the SQLite schema exists.
+// InitDB returns db.
 func InitDB(db *sql.DB) error {
 	stmts := []string{
 		`CREATE TABLE IF NOT EXISTS user (
@@ -109,6 +109,7 @@ func InitDB(db *sql.DB) error {
 	return nil
 }
 
+// nullInt returns int.
 func nullInt(value sql.NullInt64) interface{} {
 	if value.Valid {
 		return value.Int64

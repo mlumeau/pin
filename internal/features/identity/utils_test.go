@@ -6,6 +6,7 @@ import (
 	"pin/internal/domain"
 )
 
+// TestFromIdent verifies from ident behavior.
 func TestFromIdent(t *testing.T) {
 	name, ext := FromIdent("alice.json")
 	if name != "alice" || ext != "json" {
@@ -25,6 +26,7 @@ func TestFromIdent(t *testing.T) {
 	}
 }
 
+// TestExtensionFromPath verifies extension from path behavior.
 func TestExtensionFromPath(t *testing.T) {
 	if got := ExtensionFromPath("/json"); got != "json" {
 		t.Fatalf("expected json, got %q", got)
@@ -37,6 +39,7 @@ func TestExtensionFromPath(t *testing.T) {
 	}
 }
 
+// TestFirstNonEmpty verifies first non empty behavior.
 func TestFirstNonEmpty(t *testing.T) {
 	if got := FirstNonEmpty("", "  ", "pin"); got != "pin" {
 		t.Fatalf("expected pin, got %q", got)
@@ -46,6 +49,7 @@ func TestFirstNonEmpty(t *testing.T) {
 	}
 }
 
+// TestEscapeVCard verifies escape v card behavior.
 func TestEscapeVCard(t *testing.T) {
 	value := "a,b;c\\d\n"
 	if got := EscapeVCard(value); got != "a\\,b\\;c\\\\d\\n" {
@@ -53,12 +57,14 @@ func TestEscapeVCard(t *testing.T) {
 	}
 }
 
+// TestSanitizeVCardKey verifies sanitize v card key behavior.
 func TestSanitizeVCardKey(t *testing.T) {
 	if got := SanitizeVCardKey(" Foo:Bar.Baz "); got != "FOO_BAR_BAZ" {
 		t.Fatalf("unexpected key: %q", got)
 	}
 }
 
+// TestSubjectForIdentityNormalizesHandle verifies subject for identity normalizes handle behavior.
 func TestSubjectForIdentityNormalizesHandle(t *testing.T) {
 	first := SubjectForIdentity(domain.Identity{ID: 12, Handle: "Alice"})
 	second := SubjectForIdentity(domain.Identity{ID: 12, Handle: " alice "})

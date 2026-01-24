@@ -30,7 +30,7 @@ func NewHandler(cfg config.Config, deps Dependencies) Handler {
 	return Handler{cfg: cfg, deps: deps}
 }
 
-// Actor serves ActivityPub actor JSON and inbox endpoint.
+// Actor handles the HTTP request.
 func (h Handler) Actor(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/users/")
 	if path == "" {
@@ -117,7 +117,7 @@ func (h Handler) WellKnownPinVerify(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path)
 }
 
-// Webfinger serves the WebFinger response for ActivityPub discovery.
+// Webfinger handles the HTTP request.
 func (h Handler) Webfinger(w http.ResponseWriter, r *http.Request) {
 	resource := r.URL.Query().Get("resource")
 	if !strings.HasPrefix(resource, "acct:") {
@@ -183,7 +183,7 @@ func (h Handler) AtprotoDID(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(did))
 }
 
-// PincCapability serves the PINC capability document.
+// PincCapability handles HTTP requests for capability.
 func (h Handler) PincCapability(w http.ResponseWriter, r *http.Request) {
 	base := core.BaseURL(r)
 	payload := map[string]interface{}{

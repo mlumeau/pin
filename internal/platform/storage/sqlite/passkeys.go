@@ -12,6 +12,7 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 )
 
+// ListPasskeys returns the passkeys list in the SQLite store.
 func ListPasskeys(ctx context.Context, db *sql.DB, userID int) ([]domain.Passkey, error) {
 	rows, err := db.QueryContext(ctx, "SELECT id, user_id, name, credential_id, credential_json, created_at, last_used_at FROM passkey WHERE user_id = ? ORDER BY id", userID)
 	if err != nil {
@@ -38,6 +39,7 @@ func ListPasskeys(ctx context.Context, db *sql.DB, userID int) ([]domain.Passkey
 	return passkeys, nil
 }
 
+// LoadPasskeyCredentials loads passkey credentials from storage.
 func LoadPasskeyCredentials(ctx context.Context, db *sql.DB, userID int) ([]webauthn.Credential, error) {
 	rows, err := db.QueryContext(ctx, "SELECT credential_json FROM passkey WHERE user_id = ?", userID)
 	if err != nil {
@@ -60,6 +62,7 @@ func LoadPasskeyCredentials(ctx context.Context, db *sql.DB, userID int) ([]weba
 	return out, nil
 }
 
+// InsertPasskey returns passkey.
 func InsertPasskey(ctx context.Context, db *sql.DB, userID int, name string, credential webauthn.Credential) error {
 	payload, err := json.Marshal(credential)
 	if err != nil {
@@ -78,6 +81,7 @@ func InsertPasskey(ctx context.Context, db *sql.DB, userID int, name string, cre
 	return err
 }
 
+// UpdatePasskeyCredential updates passkey credential using the supplied data in the SQLite store.
 func UpdatePasskeyCredential(ctx context.Context, db *sql.DB, userID int, credentialID string, credential webauthn.Credential) error {
 	payload, err := json.Marshal(credential)
 	if err != nil {
@@ -101,6 +105,7 @@ func UpdatePasskeyCredential(ctx context.Context, db *sql.DB, userID int, creden
 	return nil
 }
 
+// DeletePasskey deletes passkey in the SQLite store.
 func DeletePasskey(ctx context.Context, db *sql.DB, userID, id int) error {
 	res, err := db.ExecContext(ctx, "DELETE FROM passkey WHERE id = ? AND user_id = ?", id, userID)
 	if err != nil {

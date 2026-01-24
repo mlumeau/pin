@@ -60,6 +60,7 @@ type Handler struct {
 	source Source
 }
 
+// NewHandler constructs a new handler.
 func NewHandler(source Source) Handler {
 	return Handler{source: source}
 }
@@ -118,6 +119,7 @@ func (h Handler) Build(ctx context.Context, r *http.Request, user domain.Identit
 	}, nil
 }
 
+// IdentityJSON handles HTTP requests for JSON.
 func (h Handler) IdentityJSON(w http.ResponseWriter, r *http.Request) {
 	user, err := h.source.GetOwnerIdentity(r.Context())
 	if err != nil {
@@ -135,6 +137,7 @@ func (h Handler) IdentityJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// IdentityXML handles HTTP requests for XML.
 func (h Handler) IdentityXML(w http.ResponseWriter, r *http.Request) {
 	user, err := h.source.GetOwnerIdentity(r.Context())
 	if err != nil {
@@ -157,6 +160,7 @@ func (h Handler) IdentityXML(w http.ResponseWriter, r *http.Request) {
 	_ = enc.Encode(identityExport)
 }
 
+// IdentityTXT handles HTTP requests for txt.
 func (h Handler) IdentityTXT(w http.ResponseWriter, r *http.Request) {
 	user, err := h.source.GetOwnerIdentity(r.Context())
 	if err != nil {
@@ -261,6 +265,7 @@ func (h Handler) IdentityTXT(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(strings.Join(lines, "\n")))
 }
 
+// IdentityVCF handles HTTP requests for VCF.
 func (h Handler) IdentityVCF(w http.ResponseWriter, r *http.Request) {
 	user, err := h.source.GetOwnerIdentity(r.Context())
 	if err != nil {

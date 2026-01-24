@@ -31,6 +31,7 @@ type LandingSettings struct {
 	CustomPath string
 }
 
+// LandingSettings returns the effective landing mode and custom path.
 func (s Service) LandingSettings(ctx context.Context) LandingSettings {
 	settings := LandingSettings{Mode: landingModeGeneric}
 	values, err := s.store.GetSettings(ctx, landingModeKey, landingCustomPathKey)
@@ -48,6 +49,7 @@ func (s Service) LandingSettings(ctx context.Context) LandingSettings {
 	return settings
 }
 
+// SaveLandingSettings normalizes and persists landing configuration.
 func (s Service) SaveLandingSettings(ctx context.Context, settings LandingSettings) error {
 	settings.Mode = normalizeLandingMode(settings.Mode)
 	settings.CustomPath = normalizeLandingCustomPath(settings.CustomPath)
@@ -61,10 +63,12 @@ func (s Service) SaveLandingSettings(ctx context.Context, settings LandingSettin
 	return nil
 }
 
+// LandingDir returns the upload directory for landing assets.
 func LandingDir(cfg config.Config) string {
 	return filepath.Join(cfg.UploadsDir, landingUploadsSubdir)
 }
 
+// LandingCustomURL returns a public URL for a landing asset.
 func LandingCustomURL(path string) string {
 	base := normalizeLandingCustomPath(path)
 	if base == "" {
@@ -73,6 +77,7 @@ func LandingCustomURL(path string) string {
 	return "/static/uploads/" + landingUploadsSubdir + "/" + url.PathEscape(base)
 }
 
+// LandingCustomPath returns the full filesystem path for a landing asset.
 func LandingCustomPath(cfg config.Config, filename string) string {
 	base := normalizeLandingCustomPath(filename)
 	if base == "" {
@@ -81,6 +86,7 @@ func LandingCustomPath(cfg config.Config, filename string) string {
 	return filepath.Join(LandingDir(cfg), base)
 }
 
+// RemoveLandingFile deletes the configured landing file if present.
 func RemoveLandingFile(cfg config.Config, filename string) {
 	if strings.TrimSpace(filename) == "" {
 		return
@@ -88,6 +94,7 @@ func RemoveLandingFile(cfg config.Config, filename string) {
 	_ = os.Remove(LandingCustomPath(cfg, filename))
 }
 
+// normalizeLandingMode normalizes the landing mode to a supported value.
 func normalizeLandingMode(mode string) string {
 	mode = strings.ToLower(strings.TrimSpace(mode))
 	switch mode {
@@ -100,6 +107,7 @@ func normalizeLandingMode(mode string) string {
 	}
 }
 
+// normalizeLandingCustomPath sanitizes the landing filename to a base name.
 func normalizeLandingCustomPath(path string) string {
 	base := filepath.Base(strings.TrimSpace(path))
 	if base == "" || base == "." || base == string(filepath.Separator) {

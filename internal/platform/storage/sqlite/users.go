@@ -11,6 +11,7 @@ import (
 	"pin/internal/domain"
 )
 
+// GetUserByID returns user by ID.
 func GetUserByID(ctx context.Context, db *sql.DB, id int) (domain.User, error) {
 	row := db.QueryRowContext(
 		ctx,
@@ -28,6 +29,7 @@ func GetUserByID(ctx context.Context, db *sql.DB, id int) (domain.User, error) {
 	return u, nil
 }
 
+// GetOwnerUser returns the owner user in the SQLite store.
 func GetOwnerUser(ctx context.Context, db *sql.DB) (domain.User, error) {
 	row := db.QueryRowContext(
 		ctx,
@@ -44,6 +46,7 @@ func GetOwnerUser(ctx context.Context, db *sql.DB) (domain.User, error) {
 	return u, nil
 }
 
+// ListUsers returns the users list in the SQLite store.
 func ListUsers(ctx context.Context, db *sql.DB) ([]domain.User, error) {
 	rows, err := db.QueryContext(ctx, "SELECT id, COALESCE(role,'user') FROM user ORDER BY id")
 	if err != nil {
@@ -62,6 +65,7 @@ func ListUsers(ctx context.Context, db *sql.DB) ([]domain.User, error) {
 	return users, nil
 }
 
+// ListUsersPaged returns a page of users paged using limit/offset in the SQLite store.
 func ListUsersPaged(ctx context.Context, db *sql.DB, query, sort, dir string, limit, offset int) ([]domain.User, int, error) {
 	if limit <= 0 {
 		limit = 20
@@ -113,6 +117,7 @@ func ListUsersPaged(ctx context.Context, db *sql.DB, query, sort, dir string, li
 	return users, total, nil
 }
 
+// HasUser reports whether user exists in the SQLite store.
 func HasUser(ctx context.Context, db *sql.DB) (bool, error) {
 	row := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM user")
 	var count int
@@ -122,6 +127,7 @@ func HasUser(ctx context.Context, db *sql.DB) (bool, error) {
 	return count > 0, nil
 }
 
+// CreateUser creates user using the supplied input in the SQLite store.
 func CreateUser(ctx context.Context, db *sql.DB, role, passwordHash, totpSecret, themeProfile string) (int64, error) {
 	if strings.TrimSpace(passwordHash) == "" || strings.TrimSpace(totpSecret) == "" {
 		return 0, errors.New("password hash and TOTP secret are required")
@@ -138,6 +144,7 @@ func CreateUser(ctx context.Context, db *sql.DB, role, passwordHash, totpSecret,
 	return res.LastInsertId()
 }
 
+// UpdateUser updates user using the supplied data in the SQLite store.
 func UpdateUser(ctx context.Context, db *sql.DB, u domain.User) error {
 	_, err := db.ExecContext(
 		ctx,
@@ -147,16 +154,19 @@ func UpdateUser(ctx context.Context, db *sql.DB, u domain.User) error {
 	return err
 }
 
+// DeleteUser deletes user in the SQLite store.
 func DeleteUser(ctx context.Context, db *sql.DB, userID int) error {
 	_, err := db.ExecContext(ctx, "DELETE FROM user WHERE id = ?", userID)
 	return err
 }
 
+// ResetAllUserThemes resets all user themes to its default state.
 func ResetAllUserThemes(ctx context.Context, db *sql.DB, themeValue string) error {
 	_, err := db.ExecContext(ctx, "UPDATE user SET theme_profile = ?, theme_custom_css_path = '', theme_custom_css_inline = ''", themeValue)
 	return err
 }
 
+// UpdateUserTheme updates user theme using the supplied data in the SQLite store.
 func UpdateUserTheme(ctx context.Context, db *sql.DB, userID int, themeProfile, customCSSPath, customCSSInline string) error {
 	_, err := db.ExecContext(ctx, "UPDATE user SET theme_profile = ?, theme_custom_css_path = ?, theme_custom_css_inline = ?, updated_at = ? WHERE id = ?", themeProfile, customCSSPath, customCSSInline, time.Now().UTC().Format(time.RFC3339), userID)
 	return err

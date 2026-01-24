@@ -51,6 +51,7 @@ type Handler struct {
 	deps Dependencies
 }
 
+// NewHandler constructs a new handler.
 func NewHandler(deps Dependencies) Handler {
 	return Handler{deps: deps}
 }

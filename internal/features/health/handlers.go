@@ -21,7 +21,7 @@ func NewHandler(cfg config.Config) Handler {
 	return Handler{cfg: cfg}
 }
 
-// ImageHealth reports availability of image processing utilities.
+// ImageHealth handles HTTP requests for health.
 func (h Handler) ImageHealth(w http.ResponseWriter, _ *http.Request) {
 	profilePictureStatus := map[string]bool{
 		"decode_webp": false,

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"pin/internal/config"
 	"pin/internal/domain"
 	"pin/internal/features/domains"
 	"pin/internal/features/identity"
@@ -22,6 +24,45 @@ import (
 	"pin/internal/platform/media"
 )
 
+// profileFormData captures validated form inputs for profile updates.
+type profileFormData struct {
+	handle           string
+	displayName      string
+	email            string
+	bio              string
+	organization     string
+	jobTitle         string
+	birthdate        string
+	languages        string
+	phone            string
+	address          string
+	location         string
+	website          string
+	pronouns         string
+	timezone         string
+	atprotoHandle    string
+	atprotoDID       string
+	links            []domain.Link
+	linkVisibility   map[string]string
+	customFields     map[string]string
+	fieldVisibility  map[string]string
+	customVisibility map[string]string
+	social           []domain.SocialProfile
+	socialVisibility map[string]string
+	wallets          map[string]string
+	walletVisibility map[string]string
+	publicKeys       map[string]string
+	verifiedDomains  []string
+	domainVisibility map[string]string
+}
+
+// uploadResult describes the outcome of a profile picture upload.
+type uploadResult struct {
+	message   string
+	pictureID sql.NullInt64
+}
+
+// Profile handles the HTTP request.
 func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/settings/identity" {
 		http.Redirect(w, r, "/settings/profile", http.StatusFound)
@@ -134,139 +175,41 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		handle := strings.TrimSpace(r.FormValue("handle"))
-		displayName := strings.TrimSpace(r.FormValue("display_name"))
-		email := strings.TrimSpace(r.FormValue("email"))
-		bio := strings.TrimSpace(r.FormValue("bio"))
-		links, linkVisibility := users.ParseLinksForm(r.Form["link_label"], r.Form["link_url"], r.Form["link_visibility"])
-		customFields := users.ParseCustomFieldsForm(r.Form["custom_key"], r.Form["custom_value"])
-		fieldVisibility := users.ParseVisibilityForm(r.Form, []string{
-			"email",
-			"organization",
-			"job_title",
-			"birthdate",
-			"languages",
-			"phone",
-			"address",
-			"location",
-			"website",
-			"pronouns",
-			"timezone",
-			"atproto_handle",
-			"atproto_did",
-			"key_pgp",
-			"key_ssh",
-			"key_age",
-			"key_activitypub",
-		})
-		customVisibility := users.ParseCustomVisibilityForm(r.Form["custom_key"], r.Form["custom_value"], r.Form["custom_visibility"])
-		social, socialVisibility := identity.ParseSocialForm(r.Form["social_label"], r.Form["social_url"], r.Form["social_visibility"])
-		social = identity.MergeSocialProfiles(social, socialProfiles)
-		if err := identity.ValidateHandle(r.Context(), handle, currentIdentity.ID, h.deps.Reserved(), h.deps.CheckHandleCollision); err != nil {
+		form, err := h.parseProfileForm(r, currentIdentity, socialProfiles)
+		if err != nil {
 			h.deps.AuditOutcome(r.Context(), current.ID, "profile.update", currentIdentity.Handle, err, nil)
 			data["Message"] = err.Error()
 			goto renderProfile
 		}
-		wallets, walletVisibility, err := users.ParseWalletForm(r.Form["wallet_label"], r.Form["wallet_address"], r.Form["wallet_visibility"])
+		domainRows, verified, err := h.syncProfileDomains(r.Context(), current, currentIdentity, form.verifiedDomains)
 		if err != nil {
-			data["Message"] = err.Error()
-			goto renderProfile
-		}
-		for key, value := range walletVisibility {
-			fieldVisibility[key] = value
-		}
-		publicKeys := map[string]string{
-			"pgp":         strings.TrimSpace(r.FormValue("key_pgp")),
-			"ssh":         strings.TrimSpace(r.FormValue("key_ssh")),
-			"age":         strings.TrimSpace(r.FormValue("key_age")),
-			"activitypub": strings.TrimSpace(r.FormValue("key_activitypub")),
-		}
-		verifiedDomains := users.ParseVerifiedDomainsText(r.FormValue("verified_domains"))
-		domainVisibility := users.ParseVerifiedDomainVisibilityForm(r.Form["verified_domain"], r.Form["verified_domain_visibility"])
-		h.deps.AuditAttempt(r.Context(), current.ID, "domain.sync", currentIdentity.Handle, nil)
-		domainRows, verified, err := domains.NewService(h.deps).CreateDomains(r.Context(), currentIdentity.ID, verifiedDomains, func() string {
-			return domains.RandomTokenURL(12)
-		})
-		if err != nil {
-			h.deps.AuditOutcome(r.Context(), current.ID, "domain.sync", currentIdentity.Handle, err, nil)
 			http.Error(w, "Failed to update verified domains", http.StatusInternalServerError)
 			return
 		}
-		h.deps.AuditOutcome(r.Context(), current.ID, "domain.sync", currentIdentity.Handle, nil, nil)
-
-		profilePictureFile, profilePictureHeader, err := r.FormFile("profile_picture")
-		if err == nil && profilePictureHeader != nil && profilePictureHeader.Filename != "" {
-			defer profilePictureFile.Close()
-			ext := strings.ToLower(filepath.Ext(profilePictureHeader.Filename))
-			if !cfg.AllowedExts[ext] {
-				data["Message"] = "Profile picture must be an image (png/jpg/gif)"
-			} else {
-				if err := os.MkdirAll(cfg.ProfilePictureDir, 0755); err != nil {
-					http.Error(w, "Failed to store profile picture", http.StatusInternalServerError)
-					return
-				}
-				filename := fmt.Sprintf("profile_picture_%d.webp", time.Now().UTC().UnixNano())
-				if err := media.WriteWebP(profilePictureFile, filepath.Join(cfg.ProfilePictureDir, filename)); err != nil {
-					switch {
-					case errors.Is(err, media.ErrCWebPUnavailable):
-						http.Error(w, "WebP encoder unavailable", http.StatusServiceUnavailable)
-					case errors.Is(err, media.ErrImageTooSmall):
-						http.Error(w, "Image too small", http.StatusBadRequest)
-					default:
-						http.Error(w, "Failed to process profile picture", http.StatusInternalServerError)
-					}
-					return
-				}
-				altText := strings.TrimSpace(r.FormValue("profile_picture_alt"))
-				meta := map[string]string{"filename": filename}
-				h.deps.AuditAttempt(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(int64(currentIdentity.ID), 10), meta)
-				picID, err := h.deps.CreateProfilePicture(r.Context(), currentIdentity.ID, filename, altText)
-				if err != nil {
-					h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(int64(currentIdentity.ID), 10), err, meta)
-					http.Error(w, "Failed to save profile picture", http.StatusInternalServerError)
-					return
-				}
-				h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(picID, 10), nil, meta)
-				currentIdentity.ProfilePictureID = sql.NullInt64{Int64: picID, Valid: true}
+		upload, err := h.uploadProfilePicture(r, cfg, current, currentIdentity.ID)
+		if err != nil {
+			if reqErr, ok := err.(requestError); ok {
+				http.Error(w, reqErr.Error(), reqErr.status)
+				return
 			}
+			http.Error(w, "Failed to process profile picture", http.StatusInternalServerError)
+			return
+		}
+		if upload.message != "" {
+			data["Message"] = upload.message
+		}
+		if upload.pictureID.Valid {
+			currentIdentity.ProfilePictureID = upload.pictureID
 		}
 
-		currentIdentity.Handle = handle
-		currentIdentity.DisplayName = displayName
-		currentIdentity.Email = email
-		currentIdentity.Bio = bio
-		currentIdentity.Organization = strings.TrimSpace(r.FormValue("organization"))
-		currentIdentity.JobTitle = strings.TrimSpace(r.FormValue("job_title"))
-		currentIdentity.Birthdate = strings.TrimSpace(r.FormValue("birthdate"))
-		currentIdentity.Languages = strings.TrimSpace(r.FormValue("languages"))
-		currentIdentity.Phone = strings.TrimSpace(r.FormValue("phone"))
-		currentIdentity.Address = strings.TrimSpace(r.FormValue("address"))
-		currentIdentity.Location = strings.TrimSpace(r.FormValue("location"))
-		currentIdentity.Website = strings.TrimSpace(r.FormValue("website"))
-		currentIdentity.Pronouns = strings.TrimSpace(r.FormValue("pronouns"))
-		currentIdentity.Timezone = strings.TrimSpace(r.FormValue("timezone"))
-		currentIdentity.ATProtoHandle = strings.TrimSpace(r.FormValue("atproto_handle"))
-		currentIdentity.ATProtoDID = strings.TrimSpace(r.FormValue("atproto_did"))
-		currentIdentity.LinksJSON = identity.EncodeLinks(links)
-		if customJSON, err := json.Marshal(customFields); err == nil {
-			currentIdentity.CustomFieldsJSON = string(customJSON)
-		}
-		visibility := users.BuildVisibilityMap(fieldVisibility, users.FilterCustomVisibility(customFields, customVisibility))
-		for domain, vis := range domainVisibility {
-			visibility["verified_domain:"+domain] = users.NormalizeVisibility(vis)
-		}
-		for key, value := range linkVisibility {
-			visibility[key] = value
-		}
-		for key, value := range socialVisibility {
-			visibility[key] = value
-		}
+		currentIdentity = applyProfileForm(currentIdentity, form)
+		visibility := buildProfileVisibility(form)
 		currentIdentity.VisibilityJSON = identity.EncodeVisibilityMap(visibility)
-		currentIdentity.SocialProfilesJSON = identity.EncodeSocialProfiles(social)
-		if walletsJSON, err := json.Marshal(identity.StripEmptyMap(wallets)); err == nil {
+		currentIdentity.SocialProfilesJSON = identity.EncodeSocialProfiles(form.social)
+		if walletsJSON, err := json.Marshal(identity.StripEmptyMap(form.wallets)); err == nil {
 			currentIdentity.WalletsJSON = string(walletsJSON)
 		}
-		if keysJSON, err := json.Marshal(identity.StripEmptyMap(publicKeys)); err == nil {
+		if keysJSON, err := json.Marshal(identity.StripEmptyMap(form.publicKeys)); err == nil {
 			currentIdentity.PublicKeysJSON = string(keysJSON)
 		}
 		if domainsJSON, err := json.Marshal(verified); err == nil {
@@ -281,11 +224,11 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 
 		data["Message"] = core.FirstNonEmpty(data["Message"].(string), "Profile updated successfully.")
 		data["User"] = current
-		data["Links"] = users.BuildLinkEntries(links, visibility)
-		data["CustomFields"] = customFields
-		data["FieldVisibility"] = fieldVisibility
-		data["CustomFieldVisibility"] = users.FilterCustomVisibility(customFields, customVisibility)
-		data["SocialProfiles"] = users.BuildSocialEntries(social, visibility)
+		data["Links"] = users.BuildLinkEntries(form.links, visibility)
+		data["CustomFields"] = form.customFields
+		data["FieldVisibility"] = form.fieldVisibility
+		data["CustomFieldVisibility"] = users.FilterCustomVisibility(form.customFields, form.customVisibility)
+		data["SocialProfiles"] = users.BuildSocialEntries(form.social, visibility)
 		data["Wallets"] = identity.DecodeStringMap(currentIdentity.WalletsJSON)
 		data["PublicKeys"] = identity.DecodeStringMap(currentIdentity.PublicKeysJSON)
 		data["DomainVerifications"] = domainRows
@@ -300,7 +243,165 @@ renderProfile:
 		return
 	}
 
-	if err := h.deps.RenderTemplate(w, "settings_profile.html", data); err != nil {
-		http.Error(w, "Template error", http.StatusInternalServerError)
+	// Template execution may have already written headers; avoid double WriteHeader.
+	_ = h.deps.RenderTemplate(w, "settings_profile.html", data)
+}
+
+// parseProfileForm extracts form values and validates the handle.
+func (h Handler) parseProfileForm(r *http.Request, currentIdentity domain.Identity, socialProfiles []domain.SocialProfile) (profileFormData, error) {
+	form := profileFormData{
+		handle:        strings.TrimSpace(r.FormValue("handle")),
+		displayName:   strings.TrimSpace(r.FormValue("display_name")),
+		email:         strings.TrimSpace(r.FormValue("email")),
+		bio:           strings.TrimSpace(r.FormValue("bio")),
+		organization:  strings.TrimSpace(r.FormValue("organization")),
+		jobTitle:      strings.TrimSpace(r.FormValue("job_title")),
+		birthdate:     strings.TrimSpace(r.FormValue("birthdate")),
+		languages:     strings.TrimSpace(r.FormValue("languages")),
+		phone:         strings.TrimSpace(r.FormValue("phone")),
+		address:       strings.TrimSpace(r.FormValue("address")),
+		location:      strings.TrimSpace(r.FormValue("location")),
+		website:       strings.TrimSpace(r.FormValue("website")),
+		pronouns:      strings.TrimSpace(r.FormValue("pronouns")),
+		timezone:      strings.TrimSpace(r.FormValue("timezone")),
+		atprotoHandle: strings.TrimSpace(r.FormValue("atproto_handle")),
+		atprotoDID:    strings.TrimSpace(r.FormValue("atproto_did")),
 	}
+	form.links, form.linkVisibility = users.ParseLinksForm(r.Form["link_label"], r.Form["link_url"], r.Form["link_visibility"])
+	form.customFields = users.ParseCustomFieldsForm(r.Form["custom_key"], r.Form["custom_value"])
+	form.fieldVisibility = users.ParseVisibilityForm(r.Form, []string{
+		"email",
+		"organization",
+		"job_title",
+		"birthdate",
+		"languages",
+		"phone",
+		"address",
+		"location",
+		"website",
+		"pronouns",
+		"timezone",
+		"atproto_handle",
+		"atproto_did",
+		"key_pgp",
+		"key_ssh",
+		"key_age",
+		"key_activitypub",
+	})
+	form.customVisibility = users.ParseCustomVisibilityForm(r.Form["custom_key"], r.Form["custom_value"], r.Form["custom_visibility"])
+	form.social, form.socialVisibility = identity.ParseSocialForm(r.Form["social_label"], r.Form["social_url"], r.Form["social_visibility"])
+	form.social = identity.MergeSocialProfiles(form.social, socialProfiles)
+
+	if err := identity.ValidateHandle(r.Context(), form.handle, currentIdentity.ID, h.deps.Reserved(), h.deps.CheckHandleCollision); err != nil {
+		return profileFormData{}, err
+	}
+	var err error
+	form.wallets, form.walletVisibility, err = users.ParseWalletForm(r.Form["wallet_label"], r.Form["wallet_address"], r.Form["wallet_visibility"])
+	if err != nil {
+		return profileFormData{}, err
+	}
+	for key, value := range form.walletVisibility {
+		form.fieldVisibility[key] = value
+	}
+	form.publicKeys = map[string]string{
+		"pgp":         strings.TrimSpace(r.FormValue("key_pgp")),
+		"ssh":         strings.TrimSpace(r.FormValue("key_ssh")),
+		"age":         strings.TrimSpace(r.FormValue("key_age")),
+		"activitypub": strings.TrimSpace(r.FormValue("key_activitypub")),
+	}
+	form.verifiedDomains = users.ParseVerifiedDomainsText(r.FormValue("verified_domains"))
+	form.domainVisibility = users.ParseVerifiedDomainVisibilityForm(r.Form["verified_domain"], r.Form["verified_domain_visibility"])
+	return form, nil
+}
+
+// syncProfileDomains reconciles verified domains with user input.
+func (h Handler) syncProfileDomains(ctx context.Context, current domain.User, currentIdentity domain.Identity, verifiedDomains []string) ([]domain.DomainVerification, []string, error) {
+	h.deps.AuditAttempt(ctx, current.ID, "domain.sync", currentIdentity.Handle, nil)
+	domainRows, verified, err := domains.NewService(h.deps).CreateDomains(ctx, currentIdentity.ID, verifiedDomains, func() string {
+		return domains.RandomTokenURL(12)
+	})
+	if err != nil {
+		h.deps.AuditOutcome(ctx, current.ID, "domain.sync", currentIdentity.Handle, err, nil)
+		return nil, nil, err
+	}
+	h.deps.AuditOutcome(ctx, current.ID, "domain.sync", currentIdentity.Handle, nil, nil)
+	return domainRows, verified, nil
+}
+
+// uploadProfilePicture stores a new profile picture and returns the new ID when present.
+func (h Handler) uploadProfilePicture(r *http.Request, cfg config.Config, current domain.User, identityID int) (uploadResult, error) {
+	file, header, err := r.FormFile("profile_picture")
+	if err != nil || header == nil || header.Filename == "" {
+		return uploadResult{}, nil
+	}
+	defer file.Close()
+
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	if !cfg.AllowedExts[ext] {
+		return uploadResult{message: "Profile picture must be an image (png/jpg/gif)"}, nil
+	}
+	if err := os.MkdirAll(cfg.ProfilePictureDir, 0755); err != nil {
+		return uploadResult{}, err
+	}
+	filename := fmt.Sprintf("profile_picture_%d.webp", time.Now().UTC().UnixNano())
+	if err := media.WriteWebP(file, filepath.Join(cfg.ProfilePictureDir, filename)); err != nil {
+		switch {
+		case errors.Is(err, media.ErrCWebPUnavailable):
+			return uploadResult{}, requestError{err: errors.New("WebP encoder unavailable"), status: http.StatusServiceUnavailable}
+		case errors.Is(err, media.ErrImageTooSmall):
+			return uploadResult{}, requestError{err: errors.New("Image too small"), status: http.StatusBadRequest}
+		default:
+			return uploadResult{}, err
+		}
+	}
+	altText := strings.TrimSpace(r.FormValue("profile_picture_alt"))
+	meta := map[string]string{"filename": filename}
+	h.deps.AuditAttempt(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(int64(identityID), 10), meta)
+	picID, err := h.deps.CreateProfilePicture(r.Context(), identityID, filename, altText)
+	if err != nil {
+		h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(int64(identityID), 10), err, meta)
+		return uploadResult{}, err
+	}
+	h.deps.AuditOutcome(r.Context(), current.ID, "profile_picture.upload", strconv.FormatInt(picID, 10), nil, meta)
+	return uploadResult{pictureID: sql.NullInt64{Int64: picID, Valid: true}}, nil
+}
+
+// applyProfileForm copies form fields into the identity record.
+func applyProfileForm(identityRecord domain.Identity, form profileFormData) domain.Identity {
+	identityRecord.Handle = form.handle
+	identityRecord.DisplayName = form.displayName
+	identityRecord.Email = form.email
+	identityRecord.Bio = form.bio
+	identityRecord.Organization = form.organization
+	identityRecord.JobTitle = form.jobTitle
+	identityRecord.Birthdate = form.birthdate
+	identityRecord.Languages = form.languages
+	identityRecord.Phone = form.phone
+	identityRecord.Address = form.address
+	identityRecord.Location = form.location
+	identityRecord.Website = form.website
+	identityRecord.Pronouns = form.pronouns
+	identityRecord.Timezone = form.timezone
+	identityRecord.ATProtoHandle = form.atprotoHandle
+	identityRecord.ATProtoDID = form.atprotoDID
+	identityRecord.LinksJSON = identity.EncodeLinks(form.links)
+	if customJSON, err := json.Marshal(form.customFields); err == nil {
+		identityRecord.CustomFieldsJSON = string(customJSON)
+	}
+	return identityRecord
+}
+
+// buildProfileVisibility merges core, custom, link, social, and domain visibility values.
+func buildProfileVisibility(form profileFormData) map[string]string {
+	visibility := users.BuildVisibilityMap(form.fieldVisibility, users.FilterCustomVisibility(form.customFields, form.customVisibility))
+	for domain, vis := range form.domainVisibility {
+		visibility["verified_domain:"+domain] = users.NormalizeVisibility(vis)
+	}
+	for key, value := range form.linkVisibility {
+		visibility[key] = value
+	}
+	for key, value := range form.socialVisibility {
+		visibility[key] = value
+	}
+	return visibility
 }

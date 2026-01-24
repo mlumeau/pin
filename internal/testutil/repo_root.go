@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// ChdirRepoRoot switches the working directory to the repo root for template globbing.
+// ChdirRepoRoot changes the working directory to the repository root.
 func ChdirRepoRoot(t *testing.T) {
 	t.Helper()
 	wd, err := os.Getwd()

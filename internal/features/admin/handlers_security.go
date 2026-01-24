@@ -10,6 +10,7 @@ import (
 	"pin/internal/platform/core"
 )
 
+// Security handles the HTTP request.
 func (h Handler) Security(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.deps.GetSession(r, "pin_session")
 
@@ -92,6 +93,7 @@ func (h Handler) Security(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// PrivateIdentityRegenerate handles HTTP requests for identity regenerate.
 func (h Handler) PrivateIdentityRegenerate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

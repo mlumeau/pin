@@ -9,6 +9,7 @@ import (
 	"pin/internal/domain"
 )
 
+// WriteAuditLog writes audit log to the response/output.
 func WriteAuditLog(ctx context.Context, db *sql.DB, actorID int, action, target string, metadata map[string]string) error {
 	metaJSON := ""
 	if metadata != nil {
@@ -28,6 +29,7 @@ func WriteAuditLog(ctx context.Context, db *sql.DB, actorID int, action, target 
 	return err
 }
 
+// ListAuditLogs returns a page of audit logs using limit/offset in the SQLite store.
 func ListAuditLogs(ctx context.Context, db *sql.DB, limit, offset int) ([]domain.AuditLog, error) {
 	if limit <= 0 {
 		limit = 25
@@ -58,6 +60,7 @@ func ListAuditLogs(ctx context.Context, db *sql.DB, limit, offset int) ([]domain
 	return logs, nil
 }
 
+// CountAuditLogs returns audit logs.
 func CountAuditLogs(ctx context.Context, db *sql.DB) (int, error) {
 	row := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM audit_log")
 	var count int
@@ -67,6 +70,7 @@ func CountAuditLogs(ctx context.Context, db *sql.DB) (int, error) {
 	return count, nil
 }
 
+// ListAllAuditLogs returns the all audit logs list in the SQLite store.
 func ListAllAuditLogs(ctx context.Context, db *sql.DB) ([]domain.AuditLog, error) {
 	rows, err := db.QueryContext(ctx, "SELECT audit_log.id, COALESCE(audit_log.actor_id, 0), COALESCE(identity.handle,''), audit_log.action, COALESCE(audit_log.target,''), COALESCE(audit_log.metadata,''), audit_log.created_at FROM audit_log LEFT JOIN user ON user.id = audit_log.actor_id LEFT JOIN identity ON identity.user_id = user.id ORDER BY audit_log.id")
 	if err != nil {

@@ -28,15 +28,18 @@ type Service struct {
 	store Store
 }
 
+// NewService constructs a new service.
 func NewService(store Store) Service {
 	return Service{store: store}
 }
 
+// VerifyDomain checks /.well-known/pin-verify for the stored token and marks the domain verified.
 func (s Service) VerifyDomain(ctx context.Context, identityID int, domain string) ([]domainpkg.DomainVerification, []string, error) {
 	rows, err := s.store.ListDomainVerifications(ctx, identityID)
 	if err != nil {
 		return nil, nil, err
 	}
+	// Find the previously issued token for this domain.
 	token := ""
 	for _, row := range rows {
 		if row.Domain == domain {
@@ -75,6 +78,7 @@ func (s Service) VerifyDomain(ctx context.Context, identityID int, domain string
 	return rows, verified, nil
 }
 
+// DeleteDomain deletes domain.
 func (s Service) DeleteDomain(ctx context.Context, identityID int, domain string) ([]domainpkg.DomainVerification, []string, error) {
 	if err := s.store.DeleteDomainVerification(ctx, identityID, domain); err != nil {
 		return nil, nil, err
@@ -93,6 +97,7 @@ func (s Service) DeleteDomain(ctx context.Context, identityID int, domain string
 	return rows, remaining, nil
 }
 
+// CreateDomains creates domains using the supplied input.
 func (s Service) CreateDomains(ctx context.Context, identityID int, domains []string, tokenFactory func() string) ([]domainpkg.DomainVerification, []string, error) {
 	rows, err := s.syncDomainVerifications(ctx, identityID, domains, tokenFactory)
 	if err != nil {
@@ -102,6 +107,7 @@ func (s Service) CreateDomains(ctx context.Context, identityID int, domains []st
 	return rows, verified, nil
 }
 
+// SeedDomains seeds domains with default values.
 func (s Service) SeedDomains(ctx context.Context, identityID int, domains []string, tokenFactory func() string) []domainpkg.DomainVerification {
 	rows := []domainpkg.DomainVerification{}
 	for _, domain := range domains {
@@ -113,11 +119,13 @@ func (s Service) SeedDomains(ctx context.Context, identityID int, domains []stri
 	return rows
 }
 
+// syncDomainVerifications syncs domain verifications to match the desired state.
 func (s Service) syncDomainVerifications(ctx context.Context, identityID int, domains []string, tokenFactory func() string) ([]domainpkg.DomainVerification, error) {
 	existing, err := s.store.ListDomainVerifications(ctx, identityID)
 	if err != nil {
 		return nil, err
 	}
+	// Index existing rows by lowercase domain for dedupe.
 	seen := map[string]domainpkg.DomainVerification{}
 	for _, row := range existing {
 		seen[strings.ToLower(row.Domain)] = row
@@ -132,12 +140,14 @@ func (s Service) syncDomainVerifications(ctx context.Context, identityID int, do
 			rows = append(rows, row)
 			continue
 		}
+		// Issue a fresh token for newly requested domains.
 		token := tokenFactory()
 		if err := s.store.UpsertDomainVerification(ctx, identityID, normalized, token); err != nil {
 			return nil, err
 		}
 		rows = append(rows, domainpkg.DomainVerification{IdentityID: identityID, Domain: normalized, Token: token})
 	}
+	// Remove verifications that are no longer present in the desired list.
 	toDelete := map[int]domainpkg.DomainVerification{}
 	for _, row := range existing {
 		toDelete[row.ID] = row
@@ -151,6 +161,7 @@ func (s Service) syncDomainVerifications(ctx context.Context, identityID int, do
 	return rows, nil
 }
 
+// EnsureServerDomainVerification ensures server domain verification is initialized and available.
 func (s Service) EnsureServerDomainVerification(ctx context.Context, baseURL string, identityID int, protector Protector, tokenFactory func() string) {
 	if strings.TrimSpace(baseURL) == "" {
 		return
@@ -162,12 +173,14 @@ func (s Service) EnsureServerDomainVerification(ctx context.Context, baseURL str
 	if protected := protector.ProtectedDomain(ctx); protected != "" {
 		return
 	}
+	// Only seed once for the base domain to avoid overwriting a protected domain.
 	if exists, err := protector.HasDomainVerification(ctx, identityID, baseDomain); err == nil && !exists {
 		_ = protector.SetProtectedDomain(ctx, baseDomain)
 		_, _ = s.syncDomainVerifications(ctx, identityID, []string{baseDomain}, tokenFactory)
 	}
 }
 
+// checkDomainVerification fetches /.well-known/pin-verify and searches for the token.
 func checkDomainVerification(ctx context.Context, domain, token string) (bool, error) {
 	domain = normalizeDomain(domain)
 	if domain == "" || strings.TrimSpace(token) == "" {

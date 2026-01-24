@@ -7,6 +7,7 @@ import (
 	"pin/internal/testutil"
 )
 
+// TestMainWiring verifies main wiring behavior.
 func TestMainWiring(t *testing.T) {
 	testutil.ChdirRepoRoot(t)
 	srv := testutil.NewServer(t)

@@ -31,7 +31,7 @@ func IsReservedIdentifier(identifier string, reserved map[string]struct{}) bool 
 	return ok
 }
 
-// ValidateHandle checks for reserved names and collisions.
+// ValidateHandle validates handle and returns an error on failure.
 func ValidateHandle(ctx context.Context, handle string, excludeID int, reserved map[string]struct{}, checkCollision func(context.Context, string, int) error) error {
 	normalized := strings.ToLower(strings.TrimSpace(handle))
 	if normalized == "" {
@@ -46,7 +46,7 @@ func ValidateHandle(ctx context.Context, handle string, excludeID int, reserved 
 	return nil
 }
 
-// MatchesIdentity checks whether the identifier matches the user's handle.
+// MatchesIdentity reports whether the identifier matches the user's handle.
 func MatchesIdentity(identity domain.Identity, identifier string) bool {
 	needle := strings.ToLower(strings.TrimSpace(identifier))
 	if needle == "" {
@@ -55,7 +55,7 @@ func MatchesIdentity(identity domain.Identity, identifier string) bool {
 	return strings.EqualFold(identity.Handle, needle)
 }
 
-// RouteSegment returns the first path segment (lowercased).
+// RouteSegment returns segment.
 func RouteSegment(path string) string {
 	path = strings.TrimPrefix(path, "/")
 	parts := strings.SplitN(path, "/", 2)

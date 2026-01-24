@@ -92,11 +92,13 @@ type pincIdentityRev struct {
 	ATProtoDID      string                 `json:"atproto_did,omitempty"`
 }
 
+// BuildPINC builds a PINC envelope with identity fields and metadata.
 func (h Handler) BuildPINC(ctx context.Context, r *http.Request, user domain.Identity, customFields map[string]string, view string, selfURL string) (pincEnvelope, error) {
 	baseURL := h.source.BaseURL(r)
 	handle := strings.TrimSpace(user.Handle)
 	profileURL := baseURL + "/" + url.PathEscape(handle)
 	profileImageURL := baseURL + "/" + url.PathEscape(handle) + "/profile-picture"
+	// Private exports reuse the self URL to avoid leaking the public handle path.
 	if strings.EqualFold(view, "private") && strings.TrimSpace(selfURL) != "" {
 		if privateImage := profileImageFromSelf(selfURL); privateImage != "" {
 			profileImageURL = privateImage
@@ -107,6 +109,7 @@ func (h Handler) BuildPINC(ctx context.Context, r *http.Request, user domain.Ide
 		updatedAt = time.Now().UTC()
 	}
 
+	// Normalize optional collections to omit empty fields in the payload.
 	customFields = identity.StripEmptyMap(customFields)
 	if len(customFields) == 0 {
 		customFields = nil
@@ -179,6 +182,7 @@ func (h Handler) BuildPINC(ctx context.Context, r *http.Request, user domain.Ide
 	}, nil
 }
 
+// profileImageFromSelf converts a self URL to its profile-picture URL.
 func profileImageFromSelf(selfURL string) string {
 	parsed, err := url.Parse(selfURL)
 	if err != nil {
@@ -194,6 +198,7 @@ func profileImageFromSelf(selfURL string) string {
 	return parsed.String()
 }
 
+// ServePINCJSON writes a PINC JSON response with appropriate cache headers.
 func (h Handler) ServePINCJSON(w http.ResponseWriter, r *http.Request, user domain.Identity, customFields map[string]string, view string, selfURL string) error {
 	payload, err := h.BuildPINC(r.Context(), r, user, customFields, view, selfURL)
 	if err != nil {
@@ -208,6 +213,7 @@ func (h Handler) ServePINCJSON(w http.ResponseWriter, r *http.Request, user doma
 	return json.NewEncoder(w).Encode(payload)
 }
 
+// computePINCRev computes a stable hash over the identity payload.
 func computePINCRev(identityPayload pincIdentity) string {
 	rev := pincIdentityRev{
 		Handle:          identityPayload.Handle,
@@ -226,6 +232,7 @@ func computePINCRev(identityPayload pincIdentity) string {
 		Website:         identityPayload.Website,
 		Pronouns:        identityPayload.Pronouns,
 		Timezone:        identityPayload.Timezone,
+		// Sort maps to keep the hash stable across map iteration order.
 		CustomFields:    sortedPairs(identityPayload.CustomFields),
 		ProfileImage:    identityPayload.ProfileImage,
 		ImageAltText:    identityPayload.ImageAltText,
@@ -242,6 +249,7 @@ func computePINCRev(identityPayload pincIdentity) string {
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
+// sortedPairs returns non-empty key/value pairs sorted by key.
 func sortedPairs(values map[string]string) []pincPair {
 	if len(values) == 0 {
 		return nil

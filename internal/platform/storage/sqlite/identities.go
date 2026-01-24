@@ -11,6 +11,7 @@ import (
 	"pin/internal/domain"
 )
 
+// GetIdentityByID returns identity by ID.
 func GetIdentityByID(ctx context.Context, db *sql.DB, id int) (domain.Identity, error) {
 	row := db.QueryRowContext(
 		ctx,
@@ -20,6 +21,7 @@ func GetIdentityByID(ctx context.Context, db *sql.DB, id int) (domain.Identity, 
 	return scanIdentity(row)
 }
 
+// GetIdentityByHandle returns identity by handle.
 func GetIdentityByHandle(ctx context.Context, db *sql.DB, handle string) (domain.Identity, error) {
 	row := db.QueryRowContext(
 		ctx,
@@ -29,6 +31,7 @@ func GetIdentityByHandle(ctx context.Context, db *sql.DB, handle string) (domain
 	return scanIdentity(row)
 }
 
+// GetIdentityByPrivateToken returns identity by private token.
 func GetIdentityByPrivateToken(ctx context.Context, db *sql.DB, token string) (domain.Identity, error) {
 	row := db.QueryRowContext(
 		ctx,
@@ -38,6 +41,7 @@ func GetIdentityByPrivateToken(ctx context.Context, db *sql.DB, token string) (d
 	return scanIdentity(row)
 }
 
+// GetIdentityByUserID returns identity by user ID.
 func GetIdentityByUserID(ctx context.Context, db *sql.DB, userID int) (domain.Identity, error) {
 	row := db.QueryRowContext(
 		ctx,
@@ -47,6 +51,7 @@ func GetIdentityByUserID(ctx context.Context, db *sql.DB, userID int) (domain.Id
 	return scanIdentity(row)
 }
 
+// GetOwnerIdentity returns the owner identity in the SQLite store.
 func GetOwnerIdentity(ctx context.Context, db *sql.DB) (domain.Identity, error) {
 	row := db.QueryRowContext(
 		ctx,
@@ -55,6 +60,7 @@ func GetOwnerIdentity(ctx context.Context, db *sql.DB) (domain.Identity, error) 
 	return scanIdentity(row)
 }
 
+// ListIdentities returns the identities list in the SQLite store.
 func ListIdentities(ctx context.Context, db *sql.DB) ([]domain.Identity, error) {
 	rows, err := db.QueryContext(ctx, "SELECT id, user_id, handle, COALESCE(email,''), COALESCE(display_name,''), COALESCE(updated_at,'') FROM identity ORDER BY id")
 	if err != nil {
@@ -77,6 +83,7 @@ func ListIdentities(ctx context.Context, db *sql.DB) ([]domain.Identity, error) 
 	return identities, nil
 }
 
+// ListIdentitiesPaged returns a page of identities paged using limit/offset in the SQLite store.
 func ListIdentitiesPaged(ctx context.Context, db *sql.DB, query, sort, dir string, limit, offset int) ([]domain.Identity, int, error) {
 	if limit <= 0 {
 		limit = 20
@@ -136,6 +143,7 @@ func ListIdentitiesPaged(ctx context.Context, db *sql.DB, query, sort, dir strin
 	return identities, total, nil
 }
 
+// CreateIdentity creates identity using the supplied input in the SQLite store.
 func CreateIdentity(ctx context.Context, db *sql.DB, identity domain.Identity) (int64, error) {
 	if strings.TrimSpace(identity.Handle) == "" {
 		return 0, errors.New("handle is required")
@@ -152,6 +160,7 @@ func CreateIdentity(ctx context.Context, db *sql.DB, identity domain.Identity) (
 	return res.LastInsertId()
 }
 
+// UpdateIdentity updates identity using the supplied data in the SQLite store.
 func UpdateIdentity(ctx context.Context, db *sql.DB, identity domain.Identity) error {
 	_, err := db.ExecContext(
 		ctx,
@@ -161,11 +170,13 @@ func UpdateIdentity(ctx context.Context, db *sql.DB, identity domain.Identity) e
 	return err
 }
 
+// UpdatePrivateToken updates private token using the supplied data in the SQLite store.
 func UpdatePrivateToken(ctx context.Context, db *sql.DB, identityID int, token string) error {
 	_, err := db.ExecContext(ctx, "UPDATE identity SET private_token = ?, updated_at = ? WHERE id = ?", token, time.Now().UTC().Format(time.RFC3339), identityID)
 	return err
 }
 
+// CheckHandleCollision checks handle collision and reports whether it matches.
 func CheckHandleCollision(ctx context.Context, db *sql.DB, handle string, excludeID int) error {
 	handle = strings.TrimSpace(handle)
 	if handle == "" {
@@ -187,11 +198,13 @@ func CheckHandleCollision(ctx context.Context, db *sql.DB, handle string, exclud
 	return errors.New("handle already exists")
 }
 
+// DeleteIdentity deletes identity in the SQLite store.
 func DeleteIdentity(ctx context.Context, db *sql.DB, identityID int) error {
 	_, err := db.ExecContext(ctx, "DELETE FROM identity WHERE id = ?", identityID)
 	return err
 }
 
+// scanIdentity scans a single-row result into an identity model.
 func scanIdentity(row *sql.Row) (domain.Identity, error) {
 	var identity domain.Identity
 	var updatedAt string

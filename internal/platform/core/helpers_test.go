@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/sessions"
 )
 
+// TestBaseURL verifies base URL behavior.
 func TestBaseURL(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/path", nil)
 	if got := BaseURL(req); got != "http://example.com" {
@@ -22,6 +23,7 @@ func TestBaseURL(t *testing.T) {
 	}
 }
 
+// TestIsSafeRedirect verifies is safe redirect behavior.
 func TestIsSafeRedirect(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "https://example.com/base", nil)
 
@@ -42,6 +44,7 @@ func TestIsSafeRedirect(t *testing.T) {
 	}
 }
 
+// TestNormalizeDomain verifies normalize domain behavior.
 func TestNormalizeDomain(t *testing.T) {
 	if got := NormalizeDomain(" https://Example.com/path "); got != "example.com" {
 		t.Fatalf("expected normalized domain, got %q", got)
@@ -54,6 +57,7 @@ func TestNormalizeDomain(t *testing.T) {
 	}
 }
 
+// TestShortHash verifies short hash behavior.
 func TestShortHash(t *testing.T) {
 	hash := ShortHash("pin", 8)
 	if len(hash) != 8 {
@@ -65,6 +69,7 @@ func TestShortHash(t *testing.T) {
 	}
 }
 
+// TestSessionUserID verifies session user ID behavior.
 func TestSessionUserID(t *testing.T) {
 	session := &sessions.Session{Values: map[interface{}]interface{}{"user_id": 42}}
 	if id, ok := SessionUserID(session); !ok || id != 42 {

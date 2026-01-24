@@ -6,6 +6,7 @@ import (
 	"pin/internal/domain"
 )
 
+// TestVisibleIdentityFiltersPrivateFields verifies visible identity filters private fields behavior.
 func TestVisibleIdentityFiltersPrivateFields(t *testing.T) {
 	links := []domain.Link{
 		{Label: "Public", URL: "https://example.com"},
@@ -73,6 +74,7 @@ func TestVisibleIdentityFiltersPrivateFields(t *testing.T) {
 	}
 }
 
+// TestParseSocialForm verifies parse social form behavior.
 func TestParseSocialForm(t *testing.T) {
 	out, visibility := ParseSocialForm(
 		[]string{" GitHub ", "", "X"},
@@ -90,6 +92,7 @@ func TestParseSocialForm(t *testing.T) {
 	}
 }
 
+// TestNormalizeVisibility verifies normalize visibility behavior.
 func TestNormalizeVisibility(t *testing.T) {
 	if got := NormalizeVisibility("private"); got != "private" {
 		t.Fatalf("expected private, got %q", got)
@@ -102,6 +105,7 @@ func TestNormalizeVisibility(t *testing.T) {
 	}
 }
 
+// TestEncodeDecodeVisibilityMapRoundTrip verifies encode decode visibility map round trip behavior.
 func TestEncodeDecodeVisibilityMapRoundTrip(t *testing.T) {
 	values := map[string]string{
 		"email":      "PRIVATE",
@@ -128,6 +132,7 @@ func TestEncodeDecodeVisibilityMapRoundTrip(t *testing.T) {
 	}
 }
 
+// TestVisibleIdentityFiltersLinksAndSocialByIndex verifies visible identity filters links and social by index behavior.
 func TestVisibleIdentityFiltersLinksAndSocialByIndex(t *testing.T) {
 	user := domain.Identity{
 		LinksJSON:          EncodeLinks([]domain.Link{{Label: "Keep", URL: "https://keep.example"}, {Label: "Drop", URL: "https://drop.example"}}),
@@ -148,6 +153,7 @@ func TestVisibleIdentityFiltersLinksAndSocialByIndex(t *testing.T) {
 	}
 }
 
+// TestVisibleIdentityFiltersWalletsByVisibilityKey verifies visible identity filters wallets by visibility key behavior.
 func TestVisibleIdentityFiltersWalletsByVisibilityKey(t *testing.T) {
 	user := domain.Identity{
 		WalletsJSON: EncodeStringMap(map[string]string{"BTC": "1", "eth": "2"}),
@@ -165,6 +171,7 @@ func TestVisibleIdentityFiltersWalletsByVisibilityKey(t *testing.T) {
 	}
 }
 
+// TestEncodeDecodeLinks verifies encode decode links behavior.
 func TestEncodeDecodeLinks(t *testing.T) {
 	links := []domain.Link{{Label: "Site", URL: "https://example.com"}}
 	encoded := EncodeLinks(links)
@@ -177,6 +184,7 @@ func TestEncodeDecodeLinks(t *testing.T) {
 	}
 }
 
+// TestEncodeDecodeStringSlice verifies encode decode string slice behavior.
 func TestEncodeDecodeStringSlice(t *testing.T) {
 	values := []string{"one", "two"}
 	encoded := EncodeStringSlice(values)
@@ -189,6 +197,7 @@ func TestEncodeDecodeStringSlice(t *testing.T) {
 	}
 }
 
+// TestWalletsMapToStructsSkipsEmpty verifies wallets map to structs skips empty behavior.
 func TestWalletsMapToStructsSkipsEmpty(t *testing.T) {
 	wallets := map[string]string{"": "1", "btc": " "}
 	out := WalletsMapToStructs(wallets)
@@ -197,6 +206,7 @@ func TestWalletsMapToStructsSkipsEmpty(t *testing.T) {
 	}
 }
 
+// TestPublicKeysMapToStructsFiltersEmpty verifies public keys map to structs filters empty behavior.
 func TestPublicKeysMapToStructsFiltersEmpty(t *testing.T) {
 	keys := map[string]string{"pgp": " ", "ssh": "key"}
 	out := PublicKeysMapToStructs(keys)
@@ -205,6 +215,7 @@ func TestPublicKeysMapToStructsFiltersEmpty(t *testing.T) {
 	}
 }
 
+// TestVerifiedDomainsSliceToStructsSkipsEmpty verifies verified domains slice to structs skips empty behavior.
 func TestVerifiedDomainsSliceToStructsSkipsEmpty(t *testing.T) {
 	domains := []string{"", "example.com"}
 	out := VerifiedDomainsSliceToStructs(domains)
@@ -213,6 +224,7 @@ func TestVerifiedDomainsSliceToStructsSkipsEmpty(t *testing.T) {
 	}
 }
 
+// TestEncodeDecodeStringMap verifies encode decode string map behavior.
 func TestEncodeDecodeStringMap(t *testing.T) {
 	values := map[string]string{"foo": "bar"}
 	encoded := EncodeStringMap(values)
@@ -225,6 +237,7 @@ func TestEncodeDecodeStringMap(t *testing.T) {
 	}
 }
 
+// TestEncodeDecodeSocialProfiles verifies encode decode social profiles behavior.
 func TestEncodeDecodeSocialProfiles(t *testing.T) {
 	social := []domain.SocialProfile{{Label: "Mastodon", URL: "https://social.example"}}
 	encoded := EncodeSocialProfiles(social)
@@ -238,6 +251,7 @@ func TestEncodeDecodeSocialProfiles(t *testing.T) {
 }
 
 
+// TestEncodeDecodeCustomFields verifies encode decode custom fields behavior.
 func TestEncodeDecodeCustomFields(t *testing.T) {
 	fields := []domain.CustomField{{Key: "site", Value: "example"}}
 	encoded := EncodeCustomFields(fields)
@@ -250,6 +264,7 @@ func TestEncodeDecodeCustomFields(t *testing.T) {
 	}
 }
 
+// TestEncodeDecodeWallets verifies encode decode wallets behavior.
 func TestEncodeDecodeWallets(t *testing.T) {
 	wallets := []domain.Wallet{{Label: "btc", Address: "1"}}
 	encoded := EncodeWallets(wallets)
@@ -262,6 +277,7 @@ func TestEncodeDecodeWallets(t *testing.T) {
 	}
 }
 
+// TestEncodeDecodePublicKeys verifies encode decode public keys behavior.
 func TestEncodeDecodePublicKeys(t *testing.T) {
 	keys := []domain.PublicKey{{Algorithm: "pgp", Key: "key"}}
 	encoded := EncodePublicKeys(keys)
@@ -274,6 +290,7 @@ func TestEncodeDecodePublicKeys(t *testing.T) {
 	}
 }
 
+// TestEncodeDecodeVerifiedDomains verifies encode decode verified domains behavior.
 func TestEncodeDecodeVerifiedDomains(t *testing.T) {
 	domains := []domain.VerifiedDomain{{Domain: "example.com"}}
 	encoded := EncodeVerifiedDomains(domains)

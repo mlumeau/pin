@@ -10,6 +10,7 @@ import (
 	"pin/internal/domain"
 )
 
+// ListDomainVerifications returns the domain verifications list in the SQLite store.
 func ListDomainVerifications(ctx context.Context, db *sql.DB, identityID int) ([]domain.DomainVerification, error) {
 	rows, err := db.QueryContext(ctx, "SELECT id, identity_id, domain, token, verified_at, created_at FROM domain_verification WHERE identity_id = ? ORDER BY domain", identityID)
 	if err != nil {
@@ -36,6 +37,7 @@ func ListDomainVerifications(ctx context.Context, db *sql.DB, identityID int) ([
 	return out, nil
 }
 
+// UpsertDomainVerification returns domain verification.
 func UpsertDomainVerification(ctx context.Context, db *sql.DB, identityID int, domain, token string) error {
 	_, err := db.ExecContext(
 		ctx,
@@ -45,16 +47,19 @@ func UpsertDomainVerification(ctx context.Context, db *sql.DB, identityID int, d
 	return err
 }
 
+// DeleteDomainVerification deletes domain verification in the SQLite store.
 func DeleteDomainVerification(ctx context.Context, db *sql.DB, identityID int, domain string) error {
 	_, err := db.ExecContext(ctx, "DELETE FROM domain_verification WHERE identity_id = ? AND domain = ?", identityID, domain)
 	return err
 }
 
+// MarkDomainVerified returns domain verified.
 func MarkDomainVerified(ctx context.Context, db *sql.DB, identityID int, domain string) error {
 	_, err := db.ExecContext(ctx, "UPDATE domain_verification SET verified_at = ? WHERE identity_id = ? AND domain = ?", time.Now().UTC().Format(time.RFC3339), identityID, domain)
 	return err
 }
 
+// ListVerifiedDomains returns the verified domains list in the SQLite store.
 func ListVerifiedDomains(ctx context.Context, db *sql.DB, identityID int) ([]string, error) {
 	rows, err := db.QueryContext(ctx, "SELECT domain FROM domain_verification WHERE identity_id = ? AND verified_at IS NOT NULL", identityID)
 	if err != nil {
@@ -75,6 +80,7 @@ func ListVerifiedDomains(ctx context.Context, db *sql.DB, identityID int) ([]str
 	return out, nil
 }
 
+// HasDomainVerification reports whether domain verification exists in the SQLite store.
 func HasDomainVerification(ctx context.Context, db *sql.DB, identityID int, domain string) (bool, error) {
 	row := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM domain_verification WHERE identity_id = ? AND domain = ?", identityID, domain)
 	var count int
@@ -84,6 +90,7 @@ func HasDomainVerification(ctx context.Context, db *sql.DB, identityID int, doma
 	return count > 0, nil
 }
 
+// UpdateIdentityVerifiedDomains updates identity verified domains using the supplied data in the SQLite store.
 func UpdateIdentityVerifiedDomains(ctx context.Context, db *sql.DB, identityID int, domains []string) error {
 	raw, err := json.Marshal(domains)
 	if err != nil {

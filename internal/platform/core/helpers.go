@@ -16,14 +16,14 @@ import (
 	"github.com/gorilla/sessions"
 )
 
-// WriteJSON marshals JSON responses and sets the content type.
+// WriteJSON writes a JSON response with the default content type.
 func WriteJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)
 	_ = enc.Encode(data)
 }
 
-// BaseURL returns the scheme + host for absolute URLs.
+// BaseURL returns scheme and host from the incoming request.
 func BaseURL(r *http.Request) string {
 	scheme := "http"
 	if r.TLS != nil {
@@ -32,7 +32,7 @@ func BaseURL(r *http.Request) string {
 	return fmt.Sprintf("%s://%s", scheme, r.Host)
 }
 
-// IsSafeRedirect ensures redirect targets stay on the same host.
+// IsSafeRedirect reports whether the redirect stays on the same host or is relative.
 func IsSafeRedirect(r *http.Request, target string) bool {
 	if target == "" {
 		return false
@@ -57,7 +57,7 @@ func FirstNonEmpty(values ...string) string {
 	return ""
 }
 
-// RandomToken returns a hex-encoded random token (fallbacks to time-based string).
+// RandomToken returns a hex token, falling back to a timestamp on RNG failure.
 func RandomToken(n int) string {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {
@@ -66,7 +66,7 @@ func RandomToken(n int) string {
 	return hex.EncodeToString(b)
 }
 
-// RandomTokenURL returns a URL-safe base64 token without padding.
+// RandomTokenURL returns a URL-safe token, falling back to a timestamp on RNG failure.
 func RandomTokenURL(n int) string {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {
@@ -75,11 +75,12 @@ func RandomTokenURL(n int) string {
 	return "pin:" + strings.TrimRight(base64.URLEncoding.EncodeToString(b), "=")
 }
 
-// SubtleCompare uses constant-time comparison for security tokens.
+// SubtleCompare performs a constant-time string comparison.
 func SubtleCompare(a, b string) bool {
 	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
+// SessionUserID extracts user_id from session values and normalizes numeric types.
 func SessionUserID(session *sessions.Session) (int, bool) {
 	switch v := session.Values["user_id"].(type) {
 	case int:
@@ -93,6 +94,7 @@ func SessionUserID(session *sessions.Session) (int, bool) {
 	}
 }
 
+// NormalizeDomain trims whitespace, strips scheme/path, and lowercases to a bare host.
 func NormalizeDomain(raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -109,7 +111,7 @@ func NormalizeDomain(raw string) string {
 	return raw
 }
 
-// ShortHash returns the sha256 hex digest truncated to length.
+// ShortHash returns a truncated SHA-256 hex string.
 func ShortHash(value string, length int) string {
 	hash := Sha256Hex(value)
 	if length <= 0 || length >= len(hash) {
@@ -118,6 +120,7 @@ func ShortHash(value string, length int) string {
 	return hash[:length]
 }
 
+// Sha256Hex returns the hex-encoded SHA-256 digest of the input.
 func Sha256Hex(value string) string {
 	sum := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(sum[:])

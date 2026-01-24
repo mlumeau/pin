@@ -39,6 +39,7 @@ type Handler struct {
 	deps Dependencies
 }
 
+// NewHandler constructs a new handler.
 func NewHandler(deps Dependencies) Handler {
 	return Handler{deps: deps}
 }
@@ -160,6 +161,7 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Create issues a new invite token for the requested role.
 func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	current, err := h.deps.CurrentUser(r)
 	if err != nil || !isAdmin(current) {
@@ -197,6 +199,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/admin/server?toast=Invite%20created#section-invites", http.StatusFound)
 }
 
+// Delete revokes an invite by ID.
 func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	current, err := h.deps.CurrentUser(r)
 	if err != nil || !isAdmin(current) {
@@ -231,6 +234,7 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/admin/server?toast=Invite%20deleted#section-invites", http.StatusFound)
 }
 
+// isAdmin reports whether admin is true.
 func isAdmin(user domain.User) bool {
 	return user.Role == "owner" || user.Role == "admin"
 }

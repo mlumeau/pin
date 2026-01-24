@@ -48,6 +48,7 @@ type Handler struct {
 	deps Dependencies
 }
 
+// NewHandler constructs a new handler.
 func NewHandler(deps Dependencies) Handler {
 	return Handler{deps: deps}
 }
@@ -58,26 +59,32 @@ type passkeyUser struct {
 	credentials []webauthn.Credential
 }
 
+// WebAuthnID returns the stable user identifier for WebAuthn.
 func (u passkeyUser) WebAuthnID() []byte {
 	return []byte(strconv.Itoa(u.user.ID))
 }
 
+// WebAuthnName returns the user handle used for WebAuthn display.
 func (u passkeyUser) WebAuthnName() string {
 	return u.identity.Handle
 }
 
+// WebAuthnDisplayName returns the user-friendly name for WebAuthn prompts.
 func (u passkeyUser) WebAuthnDisplayName() string {
 	return core.FirstNonEmpty(u.identity.DisplayName, u.identity.Handle)
 }
 
+// WebAuthnIcon returns the icon URL for WebAuthn (unused).
 func (u passkeyUser) WebAuthnIcon() string {
 	return ""
 }
 
+// WebAuthnCredentials returns the registered credentials for the user.
 func (u passkeyUser) WebAuthnCredentials() []webauthn.Credential {
 	return u.credentials
 }
 
+// RegisterOptions starts a passkey registration ceremony and returns options.
 func (h Handler) RegisterOptions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -134,6 +141,7 @@ func (h Handler) RegisterOptions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Session error", http.StatusInternalServerError)
 		return
 	}
+	// Persist the friendly name alongside the ceremony session.
 	session.Values[passkeyRegisterNameKey] = name
 	if err := session.Save(r, w); err != nil {
 		http.Error(w, "Session error", http.StatusInternalServerError)
@@ -142,6 +150,7 @@ func (h Handler) RegisterOptions(w http.ResponseWriter, r *http.Request) {
 	core.WriteJSON(w, options)
 }
 
+// RegisterFinish completes passkey registration and persists the credential.
 func (h Handler) RegisterFinish(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -196,6 +205,7 @@ func (h Handler) RegisterFinish(w http.ResponseWriter, r *http.Request) {
 	core.WriteJSON(w, map[string]interface{}{"ok": true})
 }
 
+// LoginOptions starts a passkey login ceremony for the requested handle.
 func (h Handler) LoginOptions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -238,6 +248,7 @@ func (h Handler) LoginOptions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Session error", http.StatusInternalServerError)
 		return
 	}
+	// Bind the ceremony to the user and a safe post-login redirect.
 	session.Values[passkeyLoginUserKey] = user.ID
 	next := r.URL.Query().Get("next")
 	if next == "" {
@@ -254,6 +265,7 @@ func (h Handler) LoginOptions(w http.ResponseWriter, r *http.Request) {
 	core.WriteJSON(w, options)
 }
 
+// LoginFinish completes passkey login and updates credential counters.
 func (h Handler) LoginFinish(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -266,6 +278,7 @@ func (h Handler) LoginFinish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := 0
+	// Accept numeric types from session serialization across backends.
 	switch value := session.Values[passkeyLoginUserKey].(type) {
 	case int:
 		userID = value
@@ -315,6 +328,7 @@ func (h Handler) LoginFinish(w http.ResponseWriter, r *http.Request) {
 	}
 	h.deps.AuditOutcome(r.Context(), user.ID, "passkey.update", credentialID, nil, nil)
 
+	// Promote the authenticated user into the session and clear ceremony state.
 	session.Values["user_id"] = user.ID
 	delete(session.Values, passkeyLoginSessionKey)
 	delete(session.Values, passkeyLoginUserKey)
@@ -330,6 +344,7 @@ func (h Handler) LoginFinish(w http.ResponseWriter, r *http.Request) {
 	core.WriteJSON(w, map[string]interface{}{"ok": true, "redirect": next})
 }
 
+// Delete revokes a registered passkey by ID.
 func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -364,6 +379,7 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	core.WriteJSON(w, map[string]interface{}{"ok": true})
 }
 
+// webauthnForRequest builds a WebAuthn config using the request origin.
 func (h Handler) webauthnForRequest(r *http.Request) (*webauthn.WebAuthn, error) {
 	origin := strings.TrimRight(h.deps.Config().BaseURL, "/")
 	if origin == "" {
@@ -371,6 +387,7 @@ func (h Handler) webauthnForRequest(r *http.Request) (*webauthn.WebAuthn, error)
 	}
 	rpID := rpIDFromOrigin(origin)
 	if rpID == "" {
+		// Fall back to the request host when the origin is unset or invalid.
 		rpID = stripPort(r.Host)
 	}
 	return webauthn.New(&webauthn.Config{
@@ -380,6 +397,7 @@ func (h Handler) webauthnForRequest(r *http.Request) (*webauthn.WebAuthn, error)
 	})
 }
 
+// rpIDFromOrigin extracts rp ID from origin.
 func rpIDFromOrigin(origin string) string {
 	parsed, err := url.Parse(origin)
 	if err != nil {
@@ -388,6 +406,7 @@ func rpIDFromOrigin(origin string) string {
 	return parsed.Hostname()
 }
 
+// stripPort removes a port suffix from a host if present.
 func stripPort(host string) string {
 	if host == "" {
 		return ""
@@ -401,6 +420,7 @@ func stripPort(host string) string {
 	return host
 }
 
+// storeWebauthnSession serializes ceremony state into the session store.
 func storeWebauthnSession(session *sessions.Session, key string, data *webauthn.SessionData) error {
 	b, err := json.Marshal(data)
 	if err != nil {
@@ -410,6 +430,7 @@ func storeWebauthnSession(session *sessions.Session, key string, data *webauthn.
 	return nil
 }
 
+// loadWebauthnSession restores ceremony state from the session store.
 func loadWebauthnSession(session *sessions.Session, key string) (*webauthn.SessionData, error) {
 	raw, _ := session.Values[key].(string)
 	if raw == "" {

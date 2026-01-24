@@ -9,6 +9,7 @@ import (
 	"pin/internal/testutil"
 )
 
+// TestRoutesSetupPage verifies routes setup page behavior.
 func TestRoutesSetupPage(t *testing.T) {
 	testutil.ChdirRepoRoot(t)
 	srv := testutil.NewServer(t)

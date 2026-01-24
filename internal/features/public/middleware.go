@@ -10,7 +10,7 @@ type SetupRedirectDependencies interface {
 	HasUser(ctx context.Context) (bool, error)
 }
 
-// WithSetupRedirect sends first-time visitors to the setup page.
+// WithSetupRedirect wraps the handler with additional behavior.
 func WithSetupRedirect(deps SetupRedirectDependencies, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/setup" || strings.HasPrefix(r.URL.Path, "/invite/") || strings.HasPrefix(r.URL.Path, "/static/") {

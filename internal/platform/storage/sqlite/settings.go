@@ -35,7 +35,7 @@ func GetSettings(ctx context.Context, db *sql.DB, keys ...string) (map[string]st
 	return results, nil
 }
 
-// GetSetting returns a single setting and whether it existed.
+// GetSetting returns the setting in the SQLite store.
 func GetSetting(ctx context.Context, db *sql.DB, key string) (string, bool, error) {
 	values, err := GetSettings(ctx, db, key)
 	if err != nil {
@@ -45,13 +45,13 @@ func GetSetting(ctx context.Context, db *sql.DB, key string) (string, bool, erro
 	return value, ok, nil
 }
 
-// SetSetting upserts a single setting.
+// SetSetting sets setting to the provided value in the SQLite store.
 func SetSetting(ctx context.Context, db *sql.DB, key, value string) error {
 	_, err := db.ExecContext(ctx, "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", key, value)
 	return err
 }
 
-// SetSettings upserts multiple settings in a transaction.
+// SetSettings sets settings to the provided value in the SQLite store.
 func SetSettings(ctx context.Context, db *sql.DB, values map[string]string) error {
 	if len(values) == 0 {
 		return nil

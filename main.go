@@ -16,7 +16,7 @@ import (
 	sqlitestore "pin/internal/platform/storage/sqlite"
 )
 
-// main wires dependencies and starts the HTTP server.
+// main is the program entry point.
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "backup" {
 		cfg, err := config.LoadConfig()

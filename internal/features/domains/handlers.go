@@ -27,10 +27,12 @@ type Handler struct {
 	svc  Service
 }
 
+// NewHandler constructs a new handler.
 func NewHandler(deps Dependencies) Handler {
 	return Handler{deps: deps, svc: NewService(deps)}
 }
 
+// Create accepts domain input and returns verification records or errors.
 func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -89,6 +91,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/profile?toast=Domain%20records%20seeded#section-verified-domains", http.StatusFound)
 }
 
+// Verify checks a domain's verification token and returns the result.
 func (h Handler) Verify(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -157,6 +160,7 @@ func (h Handler) Verify(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/profile", http.StatusFound)
 }
 
+// Delete removes a domain verification and returns the remaining set.
 func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -211,6 +215,7 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/profile", http.StatusFound)
 }
 
+// writeJSON writes JSON to the response/output.
 func writeJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)

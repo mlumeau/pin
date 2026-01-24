@@ -40,17 +40,19 @@ type Handler struct {
 	deps Dependencies
 }
 
+// NewHandler constructs a new handler.
 func NewHandler(cfg Config, deps Dependencies) Handler {
 	return Handler{cfg: cfg, deps: deps}
 }
 
-// GitHubStart redirects to GitHub OAuth authorization.
+// GitHubStart redirects to GitHub OAuth with a stored state token.
 func (h Handler) GitHubStart(w http.ResponseWriter, r *http.Request) {
 	if h.cfg.GitHubClientID == "" || h.cfg.GitHubClientSecret == "" || h.cfg.BaseURL == "" {
 		http.Error(w, "GitHub OAuth not configured", http.StatusBadRequest)
 		return
 	}
 	session, _ := h.deps.GetSession(r, "pin_session")
+	// Bind the authorization request to a session-scoped state token.
 	state := core.RandomToken(16)
 	session.Values["oauth_github_state"] = state
 	if err := session.Save(r, w); err != nil {
@@ -67,9 +69,10 @@ func (h Handler) GitHubStart(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, authURL+"?"+params.Encode(), http.StatusFound)
 }
 
-// GitHubCallback exchanges code for token and verifies identity.
+// GitHubCallback exchanges the code for a token and persists the verified profile.
 func (h Handler) GitHubCallback(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.deps.GetSession(r, "pin_session")
+	// Validate state to protect against CSRF in the OAuth callback.
 	state, _ := session.Values["oauth_github_state"].(string)
 	if state == "" || r.URL.Query().Get("state") != state {
 		http.Error(w, "Invalid OAuth state", http.StatusBadRequest)
@@ -105,13 +108,14 @@ func (h Handler) GitHubCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/profile", http.StatusFound)
 }
 
-// RedditStart redirects to Reddit OAuth authorization.
+// RedditStart redirects to Reddit OAuth with a stored state token.
 func (h Handler) RedditStart(w http.ResponseWriter, r *http.Request) {
 	if h.cfg.RedditClientID == "" || h.cfg.RedditClientSecret == "" || h.cfg.BaseURL == "" {
 		http.Error(w, "Reddit OAuth not configured", http.StatusBadRequest)
 		return
 	}
 	session, _ := h.deps.GetSession(r, "pin_session")
+	// Bind the authorization request to a session-scoped state token.
 	state := core.RandomToken(16)
 	session.Values["oauth_reddit_state"] = state
 	if err := session.Save(r, w); err != nil {
@@ -130,9 +134,10 @@ func (h Handler) RedditStart(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, authURL+"?"+params.Encode(), http.StatusFound)
 }
 
-// RedditCallback exchanges code for token and verifies identity.
+// RedditCallback exchanges the code for a token and persists the verified profile.
 func (h Handler) RedditCallback(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.deps.GetSession(r, "pin_session")
+	// Validate state to protect against CSRF in the OAuth callback.
 	state, _ := session.Values["oauth_reddit_state"].(string)
 	if state == "" || r.URL.Query().Get("state") != state {
 		http.Error(w, "Invalid OAuth state", http.StatusBadRequest)
@@ -215,6 +220,7 @@ func (h Handler) BlueskyConnect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/profile", http.StatusFound)
 }
 
+// exchangeGitHubToken exchanges an OAuth code for a GitHub access token.
 func exchangeGitHubToken(cfg Config, code string) (string, error) {
 	payload := url.Values{}
 	payload.Set("client_id", cfg.GitHubClientID)
@@ -247,6 +253,7 @@ func exchangeGitHubToken(cfg Config, code string) (string, error) {
 	return data.AccessToken, nil
 }
 
+// fetchGitHubProfile returns the GitHub login and profile URL for a token.
 func fetchGitHubProfile(token string) (string, string, error) {
 	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/user", nil)
 	if err != nil {
@@ -274,6 +281,7 @@ func fetchGitHubProfile(token string) (string, string, error) {
 	return data.Login, data.HTML, nil
 }
 
+// exchangeRedditToken exchanges an OAuth code for a Reddit access token.
 func exchangeRedditToken(cfg Config, code string) (string, error) {
 	payload := url.Values{}
 	payload.Set("grant_type", "authorization_code")
@@ -306,6 +314,7 @@ func exchangeRedditToken(cfg Config, code string) (string, error) {
 	return data.AccessToken, nil
 }
 
+// fetchRedditProfile returns the Reddit username and profile URL for a token.
 func fetchRedditProfile(token, userAgent string) (string, string, error) {
 	req, err := http.NewRequest(http.MethodGet, "https://oauth.reddit.com/api/v1/me", nil)
 	if err != nil {
@@ -332,6 +341,7 @@ func fetchRedditProfile(token, userAgent string) (string, string, error) {
 	return data.Name, "https://www.reddit.com/user/" + data.Name, nil
 }
 
+// verifyBlueskyHandle verifies a Bluesky handle and returns its DID.
 func verifyBlueskyHandle(pdsURL, handle, appPassword string) (string, error) {
 	body := map[string]string{
 		"identifier": handle,
@@ -365,6 +375,7 @@ func verifyBlueskyHandle(pdsURL, handle, appPassword string) (string, error) {
 	return strings.TrimSpace(data.DID), nil
 }
 
+// updateATProtoProfile persists ATProto handle and DID on the identity.
 func (h Handler) updateATProtoProfile(r *http.Request, handle, did string) error {
 	current, err := h.deps.CurrentUser(r)
 	if err != nil {
@@ -392,6 +403,7 @@ func (h Handler) updateATProtoProfile(r *http.Request, handle, did string) error
 	return err
 }
 
+// addOrUpdateSocialProfile upserts a social profile entry by provider or URL.
 func (h Handler) addOrUpdateSocialProfile(r *http.Request, profile domain.SocialProfile) error {
 	user, err := h.deps.CurrentUser(r)
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"pin/internal/testutil"
 )
 
+// TestRenderLoginTemplate verifies render login template behavior.
 func TestRenderLoginTemplate(t *testing.T) {
 	testutil.ChdirRepoRoot(t)
 	srv := testutil.NewServer(t)

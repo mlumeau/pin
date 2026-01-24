@@ -46,11 +46,12 @@ type Handler struct {
 	svc  Service
 }
 
+// NewHandler constructs a new handler.
 func NewHandler(cfg Config, deps Dependencies) Handler {
 	return Handler{cfg: cfg, deps: deps, svc: NewService(deps)}
 }
 
-// ProfilePicture serves the uploaded profile picture or falls back to the default image.
+// ProfilePicture handles HTTP requests for picture.
 func (h Handler) ProfilePicture(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/profile-picture/" {
 		h.ProfilePictureRoot(w, r)
@@ -84,6 +85,7 @@ func (h Handler) ProfilePictureForUser(w http.ResponseWriter, r *http.Request, u
 	h.profilePictureForUser(w, r, user)
 }
 
+// profilePictureForUser handles HTTP requests for picture for user.
 func (h Handler) profilePictureForUser(w http.ResponseWriter, r *http.Request, user domain.Identity) {
 
 	size := parseProfilePictureSize(r)
@@ -148,7 +150,7 @@ func (h Handler) profilePictureForUser(w http.ResponseWriter, r *http.Request, u
 	serveProfilePictureWithFormat(w, r, defaultPath, desiredFormat)
 }
 
-// ProfilePictureRoot redirects /profile-picture to the default user's profile picture.
+// ProfilePictureRoot handles HTTP requests for picture root.
 func (h Handler) ProfilePictureRoot(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/profile-picture" && r.URL.Path != "/profile-picture/" {
 		http.NotFound(w, r)
@@ -166,6 +168,7 @@ func (h Handler) ProfilePictureRoot(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, target, http.StatusFound)
 }
 
+// Select handles the HTTP request.
 func (h Handler) Select(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -213,6 +216,7 @@ func (h Handler) Select(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/profile", http.StatusFound)
 }
 
+// Delete removes a profile picture and clears selection if needed.
 func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -275,6 +279,7 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/profile", http.StatusFound)
 }
 
+// UpdateAlt updates alt using the supplied data.
 func (h Handler) UpdateAlt(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -323,6 +328,7 @@ func (h Handler) UpdateAlt(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/profile", http.StatusFound)
 }
 
+// Upload handles the HTTP request.
 func (h Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -392,10 +398,12 @@ func (h Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/profile", http.StatusFound)
 }
 
+// ActiveAlt returns alt.
 func (h Handler) ActiveAlt(ctx context.Context, user domain.Identity) string {
 	return h.svc.ActiveAlt(ctx, user)
 }
 
+// mustListProfilePictures returns list profile pictures.
 func (h Handler) mustListProfilePictures(ctx context.Context, identityID int) []domain.ProfilePicture {
 	pics, err := h.svc.List(ctx, identityID)
 	if err != nil {
@@ -404,6 +412,7 @@ func (h Handler) mustListProfilePictures(ctx context.Context, identityID int) []
 	return pics
 }
 
+// writeJSON writes JSON to the response/output.
 func writeJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)

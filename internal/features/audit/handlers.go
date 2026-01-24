@@ -23,16 +23,19 @@ type Handler struct {
 	deps Dependencies
 }
 
+// NewHandler constructs a new handler.
 func NewHandler(deps Dependencies) Handler {
 	return Handler{deps: deps}
 }
 
+// Download exports audit logs as CSV, JSON, or text, scoped by the request query.
 func (h Handler) Download(w http.ResponseWriter, r *http.Request) {
 	current, err := h.deps.CurrentUser(r)
 	if err != nil || !isAdmin(current) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	// Normalize query params with safe defaults.
 	format := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("format")))
 	scope := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("scope")))
 	if format == "" {
@@ -43,6 +46,7 @@ func (h Handler) Download(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var logs []domain.AuditLog
+	// Load either the entire log or a paged slice based on scope.
 	if scope == "all" {
 		logs, err = h.deps.ListAllAuditLogs(r.Context())
 	} else {
@@ -67,6 +71,7 @@ func (h Handler) Download(w http.ResponseWriter, r *http.Request) {
 	}
 	filename += "." + format
 
+	// Render the export in the requested format.
 	switch format {
 	case "json":
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -117,6 +122,7 @@ func (h Handler) Download(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// isAdmin reports whether admin is true.
 func isAdmin(user domain.User) bool {
 	return strings.EqualFold(user.Role, "admin") || strings.EqualFold(user.Role, "owner")
 }

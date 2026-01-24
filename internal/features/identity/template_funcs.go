@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// TemplateFuncs exposes identity-specific template helpers.
+// TemplateFuncs returns funcs.
 func TemplateFuncs() template.FuncMap {
 	return template.FuncMap{
 		"isKnownWallet": func(label string) bool {

@@ -6,7 +6,7 @@ import (
 	"pin/internal/domain"
 )
 
-// DomainsToText renders domain verifications as a comma-separated list.
+// DomainsToText returns to text.
 func DomainsToText(rows []domain.DomainVerification) string {
 	if len(rows) == 0 {
 		return ""
@@ -20,7 +20,7 @@ func DomainsToText(rows []domain.DomainVerification) string {
 	return strings.Join(parts, ", ")
 }
 
-// VerifiedDomains returns verified domain strings.
+// VerifiedDomains returns domains.
 func VerifiedDomains(rows []domain.DomainVerification) []string {
 	var out []string
 	for _, row := range rows {

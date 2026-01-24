@@ -144,6 +144,7 @@ func VisibleIdentity(user domain.Identity, isPrivate bool) (domain.Identity, map
 	return user, customFields
 }
 
+// DecodeStringMap decodes a JSON string map into a Go map.
 func DecodeStringMap(jsonStr string) map[string]string {
 	out := map[string]string{}
 	if jsonStr == "" {
@@ -153,6 +154,7 @@ func DecodeStringMap(jsonStr string) map[string]string {
 	return out
 }
 
+// EncodeStringMap encodes a string map as JSON.
 func EncodeStringMap(values map[string]string) string {
 	if len(values) == 0 {
 		return ""
@@ -163,6 +165,7 @@ func EncodeStringMap(values map[string]string) string {
 	return ""
 }
 
+// DecodeVisibilityMap decodes JSON visibility entries into a key/value map.
 func DecodeVisibilityMap(jsonStr string) map[string]string {
 	out := map[string]string{}
 	if jsonStr == "" {
@@ -182,6 +185,7 @@ func DecodeVisibilityMap(jsonStr string) map[string]string {
 	return out
 }
 
+// EncodeVisibilityMap encodes a visibility map as a stable JSON list.
 func EncodeVisibilityMap(values map[string]string) string {
 	if len(values) == 0 {
 		return ""
@@ -208,6 +212,7 @@ func EncodeVisibilityMap(values map[string]string) string {
 	return ""
 }
 
+// DecodeStringSlice decodes a JSON string slice.
 func DecodeStringSlice(jsonStr string) []string {
 	var out []string
 	if jsonStr == "" {
@@ -217,6 +222,7 @@ func DecodeStringSlice(jsonStr string) []string {
 	return out
 }
 
+// EncodeStringSlice encodes a string slice as JSON.
 func EncodeStringSlice(values []string) string {
 	if len(values) == 0 {
 		return ""
@@ -227,6 +233,7 @@ func EncodeStringSlice(values []string) string {
 	return ""
 }
 
+// DecodeCustomFields decodes JSON custom fields into structs.
 func DecodeCustomFields(jsonStr string) []domain.CustomField {
 	var out []domain.CustomField
 	if jsonStr == "" {
@@ -236,6 +243,7 @@ func DecodeCustomFields(jsonStr string) []domain.CustomField {
 	return out
 }
 
+// EncodeCustomFields encodes custom field structs as JSON.
 func EncodeCustomFields(values []domain.CustomField) string {
 	if len(values) == 0 {
 		return ""
@@ -246,6 +254,7 @@ func EncodeCustomFields(values []domain.CustomField) string {
 	return ""
 }
 
+// DecodeWallets decodes JSON wallet entries into structs.
 func DecodeWallets(jsonStr string) []domain.Wallet {
 	var out []domain.Wallet
 	if jsonStr == "" {
@@ -255,6 +264,7 @@ func DecodeWallets(jsonStr string) []domain.Wallet {
 	return out
 }
 
+// EncodeWallets encodes wallet structs as JSON.
 func EncodeWallets(values []domain.Wallet) string {
 	if len(values) == 0 {
 		return ""
@@ -265,6 +275,7 @@ func EncodeWallets(values []domain.Wallet) string {
 	return ""
 }
 
+// DecodePublicKeys decodes JSON public keys into structs.
 func DecodePublicKeys(jsonStr string) []domain.PublicKey {
 	var out []domain.PublicKey
 	if jsonStr == "" {
@@ -274,6 +285,7 @@ func DecodePublicKeys(jsonStr string) []domain.PublicKey {
 	return out
 }
 
+// EncodePublicKeys encodes public key structs as JSON.
 func EncodePublicKeys(values []domain.PublicKey) string {
 	if len(values) == 0 {
 		return ""
@@ -284,6 +296,7 @@ func EncodePublicKeys(values []domain.PublicKey) string {
 	return ""
 }
 
+// DecodeVerifiedDomains decodes JSON verified domains into structs.
 func DecodeVerifiedDomains(jsonStr string) []domain.VerifiedDomain {
 	var out []domain.VerifiedDomain
 	if jsonStr == "" {
@@ -293,6 +306,7 @@ func DecodeVerifiedDomains(jsonStr string) []domain.VerifiedDomain {
 	return out
 }
 
+// EncodeVerifiedDomains encodes verified domain structs as JSON.
 func EncodeVerifiedDomains(values []domain.VerifiedDomain) string {
 	if len(values) == 0 {
 		return ""
@@ -304,7 +318,7 @@ func EncodeVerifiedDomains(values []domain.VerifiedDomain) string {
 }
 
 
-// DecodeLinks decodes LinksJSON to []domain.Link
+// DecodeLinks decodes links from a string representation.
 func DecodeLinks(jsonStr string) []domain.Link {
 	var out []domain.Link
 	if jsonStr == "" {
@@ -314,7 +328,7 @@ func DecodeLinks(jsonStr string) []domain.Link {
 	return out
 }
 
-// EncodeLinks encodes []domain.Link to JSON string
+// EncodeLinks encodes links into a string representation.
 func EncodeLinks(values []domain.Link) string {
 	if len(values) == 0 {
 		return ""
@@ -325,7 +339,7 @@ func EncodeLinks(values []domain.Link) string {
 	return ""
 }
 
-// DecodeSocialProfiles decodes SocialProfilesJSON to []domain.SocialProfile
+// DecodeSocialProfiles decodes social profiles from a string representation.
 func DecodeSocialProfiles(jsonStr string) []domain.SocialProfile {
 	var out []domain.SocialProfile
 	if jsonStr == "" {
@@ -335,7 +349,7 @@ func DecodeSocialProfiles(jsonStr string) []domain.SocialProfile {
 	return out
 }
 
-// EncodeSocialProfiles encodes []domain.SocialProfile to JSON string
+// EncodeSocialProfiles encodes social profiles into a string representation.
 func EncodeSocialProfiles(values []domain.SocialProfile) string {
 	if len(values) == 0 {
 		return ""
@@ -346,7 +360,7 @@ func EncodeSocialProfiles(values []domain.SocialProfile) string {
 	return ""
 }
 
-// WalletsMapToStructs converts a map[string]string to []domain.Wallet
+// WalletsMapToStructs converts a string map into wallet structs, skipping empty entries.
 func WalletsMapToStructs(wallets map[string]string) []domain.Wallet {
 	if len(wallets) == 0 {
 		return nil
@@ -364,7 +378,7 @@ func WalletsMapToStructs(wallets map[string]string) []domain.Wallet {
 	return out
 }
 
-// PublicKeysMapToStructs converts a map[string]string to []domain.PublicKey
+// PublicKeysMapToStructs converts a key map into public key structs in preferred order.
 func PublicKeysMapToStructs(keys map[string]string) []domain.PublicKey {
 	if len(keys) == 0 {
 		return nil
@@ -382,7 +396,7 @@ func PublicKeysMapToStructs(keys map[string]string) []domain.PublicKey {
 	return out
 }
 
-// VerifiedDomainsSliceToStructs converts []string to []domain.VerifiedDomain
+// VerifiedDomainsSliceToStructs converts a string slice into verified domain structs.
 func VerifiedDomainsSliceToStructs(domains []string) []domain.VerifiedDomain {
 	if len(domains) == 0 {
 		return nil
@@ -399,6 +413,7 @@ func VerifiedDomainsSliceToStructs(domains []string) []domain.VerifiedDomain {
 	return out
 }
 
+// StripEmptyMap filters out empty values from a string map.
 func StripEmptyMap(values map[string]string) map[string]string {
 	out := map[string]string{}
 	for k, v := range values {
@@ -411,6 +426,7 @@ func StripEmptyMap(values map[string]string) map[string]string {
 	return out
 }
 
+// BuildAttachments builds ActivityPub attachment payloads for public identity fields.
 func BuildAttachments(user domain.Identity, wallets, keys map[string]string, domains []string, social []domain.SocialProfile) []map[string]string {
 	var attachments []map[string]string
 	add := func(name, value string) {
@@ -452,6 +468,7 @@ func BuildAttachments(user domain.Identity, wallets, keys map[string]string, dom
 	return attachments
 }
 
+// ParseSocialForm parses social profiles and visibility from form input arrays.
 func ParseSocialForm(labels, urls, visibilities []string) ([]domain.SocialProfile, map[string]string) {
 	var out []domain.SocialProfile
 	visibility := map[string]string{}
@@ -491,6 +508,7 @@ func ParseSocialForm(labels, urls, visibilities []string) ([]domain.SocialProfil
 	return out, visibility
 }
 
+// NormalizeVisibility normalizes visibility values to "public" or "private".
 func NormalizeVisibility(input string) string {
 	v := strings.ToLower(strings.TrimSpace(input))
 	if v == "private" || v == "public" {
@@ -499,6 +517,7 @@ func NormalizeVisibility(input string) string {
 	return "public"
 }
 
+// applyVisibilityToStringFields applies visibility to string fields to the target.
 func applyVisibilityToStringFields(fields map[string]*string, visibility map[string]string, defaults map[string]bool) {
 	for key, ptr := range fields {
 		if ptr == nil {
@@ -518,6 +537,7 @@ func applyVisibilityToStringFields(fields map[string]*string, visibility map[str
 	}
 }
 
+// isVisibilityPrivate reports whether visibility private is true.
 func isVisibilityPrivate(values map[string]string, key string, fallback string) bool {
 	if key != "" {
 		if vis, ok := values[key]; ok {
@@ -527,10 +547,12 @@ func isVisibilityPrivate(values map[string]string, key string, fallback string) 
 	return fallback == "private"
 }
 
+// LinkVisibilityKey returns the visibility map key for a link index.
 func LinkVisibilityKey(index int) string {
 	return "link:" + strconv.Itoa(index)
 }
 
+// SocialVisibilityKey returns the visibility map key for a social profile index.
 func SocialVisibilityKey(index int) string {
 	return "social:" + strconv.Itoa(index)
 }

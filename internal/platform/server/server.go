@@ -33,7 +33,7 @@ func NewServer(cfg config.Config, db *sql.DB, extraFuncs ...template.FuncMap) (*
 	return NewServerWithRepos(cfg, db, sqlitestore.NewRepos(db), extraFuncs...)
 }
 
-// NewServerWithRepos allows injecting repository implementations (for testing or alternative stores).
+// NewServerWithRepos constructs a new server with repos.
 func NewServerWithRepos(cfg config.Config, db *sql.DB, repos contracts.Repos, extraFuncs ...template.FuncMap) (*Server, error) {
 	store := sessions.NewCookieStore(cfg.SecretKey)
 	store.Options = &sessions.Options{
@@ -91,12 +91,13 @@ func NewServerWithRepos(cfg config.Config, db *sql.DB, repos contracts.Repos, ex
 	}, nil
 }
 
-// Routes builds the HTTP mux and applies security headers.
+// Routes builds the HTTP route tree.
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	return s.WithSecurityHeaders(mux)
 }
 
+// register registers routes and handlers.
 func (s *Server) register(mux *http.ServeMux, pattern string, handler http.Handler) {
 	mux.Handle(pattern, handler)
 	segment := routeSegment(pattern)
@@ -105,26 +106,27 @@ func (s *Server) register(mux *http.ServeMux, pattern string, handler http.Handl
 	}
 }
 
-// RegisterRoute exposes route registration while tracking reserved segments.
+// RegisterRoute registers routes and handlers for route.
 func (s *Server) RegisterRoute(mux *http.ServeMux, pattern string, handler http.Handler) {
 	s.register(mux, pattern, handler)
 }
 
-// WithSecurityHeaders exposes security header middleware.
+// WithSecurityHeaders wraps the handler with additional behavior.
 func (s *Server) WithSecurityHeaders(next http.Handler) http.Handler {
 	return s.withSecurityHeaders(next)
 }
 
-// Config returns a copy of the server config.
+// Config returns a copy of the server configuration.
 func (s *Server) Config() config.Config {
 	return s.cfg
 }
 
-// Repos exposes the configured repository implementations.
+// Repos returns the repository bundle for storage access.
 func (s *Server) Repos() contracts.Repos {
 	return s.repos
 }
 
+// routeSegment returns the first URL path segment from a route pattern.
 func routeSegment(pattern string) string {
 	if pattern == "" || pattern == "/" {
 		return ""
@@ -137,7 +139,7 @@ func routeSegment(pattern string) string {
 	return strings.ToLower(parts[0])
 }
 
-// withSecurityHeaders adds a baseline set of HTTP security headers.
+// withSecurityHeaders wraps the handler with additional behavior.
 func (s *Server) withSecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -148,7 +150,7 @@ func (s *Server) withSecurityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-// RequireSession enforces an authenticated session for protected routes.
+// RequireSession wraps a handler with session enforcement and redirect behavior.
 func (s *Server) RequireSession(next http.HandlerFunc, redirectTo string) http.HandlerFunc {
 	return s.requireSession(next, redirectTo)
 }
@@ -169,6 +171,7 @@ func (s *Server) requireSession(next http.HandlerFunc, redirectTo string) http.H
 	}
 }
 
+// toJSON returns JSON-safe template content.
 func toJSON(value interface{}) template.JS {
 	b, err := json.Marshal(value)
 	if err != nil {
@@ -177,7 +180,7 @@ func toJSON(value interface{}) template.JS {
 	return template.JS(b)
 }
 
-// ensureCSRF creates or reuses a CSRF token in the session.
+// ensureCSRF ensures CSRF is initialized and available.
 func (s *Server) ensureCSRF(session *sessions.Session) string {
 	if token, ok := session.Values["csrf_token"].(string); ok && token != "" {
 		return token

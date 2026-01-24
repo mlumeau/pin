@@ -42,15 +42,17 @@ func ExtensionFromPath(path string) string {
 	return ""
 }
 
+// WriteIdentityCacheHeaders writes identity cache headers to the response/output.
 func WriteIdentityCacheHeaders(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "public, max-age=300, stale-while-revalidate=300")
 }
 
+// WritePrivateIdentityCacheHeaders writes private identity cache headers to the response/output.
 func WritePrivateIdentityCacheHeaders(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "private, no-store")
 }
 
-// FirstNonEmpty returns the first non-empty, trimmed string.
+// FirstNonEmpty returns the first non empty.
 func FirstNonEmpty(values ...string) string {
 	for _, value := range values {
 		if v := strings.TrimSpace(value); v != "" {
@@ -60,6 +62,7 @@ func FirstNonEmpty(values ...string) string {
 	return ""
 }
 
+// EscapeVCard escapes v card for safe output.
 func EscapeVCard(value string) string {
 	value = strings.ReplaceAll(value, "\\", "\\\\")
 	value = strings.ReplaceAll(value, "\n", "\\n")
@@ -68,6 +71,7 @@ func EscapeVCard(value string) string {
 	return value
 }
 
+// SanitizeVCardKey returns v card key.
 func SanitizeVCardKey(value string) string {
 	value = strings.TrimSpace(value)
 	value = strings.ReplaceAll(value, " ", "_")

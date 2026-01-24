@@ -46,7 +46,7 @@ type Config struct {
 	MCPReadOnly        bool
 }
 
-// LoadConfig reads environment variables and applies defaults.
+// LoadConfig reads environment variables, applies defaults, and validates required settings.
 func LoadConfig() (Config, error) {
 	env := strings.ToLower(strings.TrimSpace(getEnv("PIN_ENV", "development")))
 	isProd := env == "production"
@@ -109,7 +109,7 @@ func LoadConfig() (Config, error) {
 	}, nil
 }
 
-// getBaseDir resolves the working directory or executable path for assets.
+// getBaseDir returns the working directory or executable directory as a fallback.
 func getBaseDir() string {
 	if wd, err := os.Getwd(); err == nil {
 		return wd
@@ -121,7 +121,7 @@ func getBaseDir() string {
 	return filepath.Dir(exe)
 }
 
-// randomSecret returns a hex-encoded random token (fallbacks to time-based string).
+// randomSecret returns a hex token, falling back to a timestamp on RNG failure.
 func randomSecret(n int) string {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {

@@ -2,6 +2,7 @@ package settings
 
 import "testing"
 
+// TestNormalizeThemeChoice verifies normalize theme choice behavior.
 func TestNormalizeThemeChoice(t *testing.T) {
 	if got := NormalizeThemeChoice(""); got != DefaultThemeName {
 		t.Fatalf("expected default theme, got %q", got)
@@ -17,6 +18,7 @@ func TestNormalizeThemeChoice(t *testing.T) {
 	}
 }
 
+// TestThemeCustomCSSURL verifies theme custom cssurl behavior.
 func TestThemeCustomCSSURL(t *testing.T) {
 	if got := ThemeCustomCSSURL("themes/custom.css"); got != "/static/uploads/themes/custom.css" {
 		t.Fatalf("unexpected css url: %q", got)

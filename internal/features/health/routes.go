@@ -7,7 +7,7 @@ import (
 	"pin/internal/platform/transport"
 )
 
-// Register wires health check endpoints.
+// Register registers routes and handlers.
 func Register(mux *http.ServeMux, reg transport.Registrar, cfg config.Config) {
 	register := func(pattern string, handler http.Handler) {
 		reg.RegisterRoute(mux, pattern, handler)

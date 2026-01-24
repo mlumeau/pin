@@ -12,7 +12,7 @@ import (
 	"pin/internal/config"
 )
 
-// BackupToZip writes a zip of the database and uploads directory.
+// BackupToZip returns to zip.
 func BackupToZip(cfg config.Config, destPath string) (string, error) {
 	if destPath == "" {
 		destPath = fmt.Sprintf("pin-backup-%s.zip", time.Now().UTC().Format("20060102-150405"))
@@ -41,6 +41,7 @@ func BackupToZip(cfg config.Config, destPath string) (string, error) {
 	return destPath, nil
 }
 
+// addFileToZip adds file to zip to the collection.
 func addFileToZip(zipWriter *zip.Writer, sourcePath, name string) error {
 	file, err := os.Open(sourcePath)
 	if err != nil {
@@ -64,6 +65,7 @@ func addFileToZip(zipWriter *zip.Writer, sourcePath, name string) error {
 	return err
 }
 
+// addDirToZip adds dir to zip to the collection.
 func addDirToZip(zipWriter *zip.Writer, sourceDir, prefix string) error {
 	return filepath.WalkDir(sourceDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {

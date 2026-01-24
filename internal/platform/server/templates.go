@@ -2,6 +2,7 @@ package server
 
 import "html/template"
 
+// applyTemplateFuncs applies template funcs to the target.
 func applyTemplateFuncs(base template.FuncMap, extras ...template.FuncMap) {
 	if base == nil {
 		return

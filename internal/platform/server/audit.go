@@ -5,6 +5,7 @@ import (
 	"errors"
 )
 
+// auditStatus records status as an audit event.
 func auditStatus(err error) string {
 	if err == nil {
 		return "success"
@@ -18,6 +19,7 @@ func auditStatus(err error) string {
 	return "failure"
 }
 
+// mergeAuditMeta merges audit meta values into the target.
 func mergeAuditMeta(meta map[string]string, extra map[string]string) map[string]string {
 	if meta == nil {
 		meta = map[string]string{}
@@ -28,11 +30,13 @@ func mergeAuditMeta(meta map[string]string, extra map[string]string) map[string]
 	return meta
 }
 
+// auditAttempt records attempt as an audit event.
 func (s *Server) auditAttempt(ctx context.Context, actorID int, action, target string, meta map[string]string) {
 	meta = mergeAuditMeta(meta, map[string]string{"status": "attempt"})
 	_ = s.repos.Audit.WriteAuditLog(ctx, actorID, action, target, meta)
 }
 
+// auditOutcome records outcome as an audit event.
 func (s *Server) auditOutcome(ctx context.Context, actorID int, action, target string, err error, meta map[string]string) {
 	status := auditStatus(err)
 	meta = mergeAuditMeta(meta, map[string]string{"status": status})

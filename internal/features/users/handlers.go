@@ -50,14 +50,17 @@ type Handler struct {
 	deps Dependencies
 }
 
+// NewHandler constructs a new handler.
 func NewHandler(deps Dependencies) Handler {
 	return Handler{deps: deps}
 }
 
+// Users handles the HTTP request.
 func (h Handler) Users(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/admin/server#section-users", http.StatusFound)
 }
 
+// User handles the HTTP request.
 func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 	current, err := h.deps.CurrentUser(r)
 	if err != nil || !isAdmin(current) {
@@ -349,6 +352,7 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 	http.NotFound(w, r)
 }
 
+// isAdmin reports whether admin is true.
 func isAdmin(user domain.User) bool {
 	return strings.EqualFold(user.Role, "admin") || strings.EqualFold(user.Role, "owner")
 }
