@@ -18,4 +18,7 @@
         <div class="admin-layout">
             {{ template "settings_nav" . }}
             <div class="admin-main">
+                <header class="settings-page-header">
+                    <h1>{{ if .SectionTitle }}{{ .SectionTitle }}{{ else }}{{ .Title }}{{ end }}</h1>
+                </header>
 {{ end }}

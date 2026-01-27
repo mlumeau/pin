@@ -43,6 +43,14 @@
             return;
         }
 
+        const preview = qs("[data-profile-preview]");
+        function syncPreviewTheme(themeName) {
+            if (!preview || !themeName) {
+                return;
+            }
+            preview.setAttribute("data-theme", themeName);
+        }
+
         // Handle theme selection directly on radio inputs (preview only)
         const themeInputs = document.querySelectorAll(".theme-choice");
         themeInputs.forEach((input) => {
@@ -52,7 +60,13 @@
                 }
                 const themeName = input.value;
                 document.body.setAttribute("data-theme", themeName);
+                syncPreviewTheme(themeName);
             });
         });
+
+        const checked = document.querySelector(".theme-choice:checked");
+        if (checked) {
+            syncPreviewTheme(checked.value);
+        }
     };
 })();

@@ -134,6 +134,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		"ProfilePictures":        []domain.ProfilePicture{},
 		"ActiveProfilePictureID": int64(0),
 		"Title":                  "Settings - Profile",
+		"SectionTitle":           "Profile",
 		"Message":                message,
 		"CSRFToken":              h.deps.EnsureCSRF(session),
 		"PrivateIdentityURL":     h.deps.BaseURL(r) + "/p/" + url.PathEscape(core.ShortHash(strings.ToLower(currentIdentity.Handle), 7)) + "/" + url.PathEscape(currentIdentity.PrivateToken),
@@ -142,6 +143,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		"ProtectedDomain":        h.deps.ProtectedDomain(r.Context()),
 		"DomainVisibility":       users.DomainVisibilityMap(visibility),
 	}
+	data["Preview"] = buildProfilePreviewData(currentIdentity, theme)
 	if toast := r.URL.Query().Get("toast"); toast != "" {
 		message = toast
 		data["Message"] = message
@@ -235,6 +237,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		data["VerifiedDomains"] = identity.DomainsToText(domainRows)
 		data["ATProtoHandleVerified"] = identity.IsATProtoHandleVerified(currentIdentity.ATProtoHandle, identity.VerifiedDomains(domainRows))
 		data["DomainVisibility"] = users.DomainVisibilityMap(identity.DecodeVisibilityMap(currentIdentity.VisibilityJSON))
+		data["Preview"] = buildProfilePreviewData(currentIdentity, theme)
 	}
 
 renderProfile:

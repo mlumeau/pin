@@ -1,70 +1,72 @@
 {{ define "settings_security.html" }}
 {{ template "settings_layout_start" . }}
-                <div class="section" id="section-password">
-                    <form method="post" action="/settings/security">
-                        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                <div class="settings-panel">
+                    <div class="section" id="section-password">
+                        <form method="post" action="/settings/security">
+                            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
 
-                        <h2>Password</h2>
-                        <label for="new_password">New password</label>
-                        <div>
-                            <input type="password" id="new_password" name="new_password">
-                            <button type="submit">Update password</button>
-                        </div>
-                    </form>
-                </div>
+                            <h2>Password</h2>
+                            <label for="new_password">New password</label>
+                            <div>
+                                <input type="password" id="new_password" name="new_password">
+                                <button type="submit">Update password</button>
+                            </div>
+                        </form>
+                    </div>
 
-                <div class="section" id="section-passkeys">
-                    <div id="passkey-section" data-csrf="{{ .CSRFToken }}">
-                        <h2>Passkeys</h2>
-                        <label for="passkey-name">Passkey name</label>
-                        <div>
-                            <input type="text" id="passkey-name" name="passkey-name" placeholder="MacBook Touch ID">
-                            <button type="button" id="passkey-register">Add passkey</button>
-                        </div>
-                        <div id="passkey-list" style="margin-top: 0.8rem;">
-                            {{ if .Passkeys }}
-                            <div class="list">
-                                {{ range .Passkeys }}
-                                <div class="list-row">
-                                    <div>
-                                        <strong>{{ .Name }}</strong><br>
-                                        <span class="meta">Created {{ .CreatedAt.Format "2006-01-02" }}</span>
-                                        {{ if .LastUsedAt.Valid }}
-                                        <span class="meta"> · Last used {{ .LastUsedAt.Time.Format "2006-01-02" }}</span>
-                                        {{ end }}
+                    <div class="section" id="section-passkeys">
+                        <div id="passkey-section" data-csrf="{{ .CSRFToken }}">
+                            <h2>Passkeys</h2>
+                            <label for="passkey-name">Passkey name</label>
+                            <div>
+                                <input type="text" id="passkey-name" name="passkey-name" placeholder="MacBook Touch ID">
+                                <button type="button" id="passkey-register">Add passkey</button>
+                            </div>
+                            <div id="passkey-list" style="margin-top: 0.8rem;">
+                                {{ if .Passkeys }}
+                                <div class="list">
+                                    {{ range .Passkeys }}
+                                    <div class="list-row">
+                                        <div>
+                                            <strong>{{ .Name }}</strong><br>
+                                            <span class="meta">Created {{ .CreatedAt.Format "2006-01-02" }}</span>
+                                            {{ if .LastUsedAt.Valid }}
+                                            <span class="meta"> · Last used {{ .LastUsedAt.Time.Format "2006-01-02" }}</span>
+                                            {{ end }}
+                                        </div>
+                                        <div class="link-actions">
+                                        <button type="button" class="icon-button passkey-delete" data-passkey-id="{{ .ID }}" aria-label="Remove passkey">
+                                            <span class="icon icon-trash" aria-hidden="true"></span>
+                                        </button>
+                                        </div>
                                     </div>
-                                    <div class="link-actions">
-                                    <button type="button" class="icon-button passkey-delete" data-passkey-id="{{ .ID }}" aria-label="Remove passkey">
-                                        <span class="icon icon-trash" aria-hidden="true"></span>
-                                    </button>
-                                    </div>
+                                    {{ end }}
                                 </div>
+                                {{ else }}
+                                <p class="meta">No passkeys enrolled yet.</p>
                                 {{ end }}
                             </div>
-                            {{ else }}
-                            <p class="meta">No passkeys enrolled yet.</p>
-                            {{ end }}
                         </div>
                     </div>
-                </div>
 
-                <div class="section" id="section-private-identity">
-                    <h2>Private identity</h2>
-                    <div class="highlight-note">Use this secret link to share your full private identity.</div>
-                    <div class="inline-row">
-                        <div>
-                            <label for="private_identity_url">Private identity URL</label>
-                            <div class="copy-pill copy-pill-actions">
-                                <span class="copy-pill-text" id="private_identity_url">{{ .PrivateIdentityURL }}</span>
-                                <button type="button" class="icon-button copy-button" data-copy-target="private_identity_url" data-copy-feedback="Copied" aria-label="Copy private identity URL">
-                                    <span class="icon icon-copy" aria-hidden="true"></span>
-                                </button>
-                                <form method="post" action="/settings/security/private-identity/regenerate" class="inline-form">
-                                    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-                                    <button type="submit" class="icon-button" aria-label="Regenerate secret link">
-                                        <span class="icon icon-refresh" aria-hidden="true"></span>
+                    <div class="section" id="section-private-identity">
+                        <h2>Private identity</h2>
+                        <div class="highlight-note">Use this secret link to share your full private identity.</div>
+                        <div class="inline-row">
+                            <div>
+                                <label for="private_identity_url">Private identity URL</label>
+                                <div class="copy-pill copy-pill-actions">
+                                    <span class="copy-pill-text" id="private_identity_url">{{ .PrivateIdentityURL }}</span>
+                                    <button type="button" class="icon-button copy-button" data-copy-target="private_identity_url" data-copy-feedback="Copied" aria-label="Copy private identity URL">
+                                        <span class="icon icon-copy" aria-hidden="true"></span>
                                     </button>
-                                </form>
+                                    <form method="post" action="/settings/security/private-identity/regenerate" class="inline-form">
+                                        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                                        <button type="submit" class="icon-button" aria-label="Regenerate secret link">
+                                            <span class="icon icon-refresh" aria-hidden="true"></span>
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     </div>

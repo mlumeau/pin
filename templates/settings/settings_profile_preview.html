@@ -1,0 +1,137 @@
+{{ define "settings_profile_preview" }}
+                <aside class="settings-preview-column" aria-label="Profile preview" data-profile-preview data-preview-mode="public" data-theme="{{ .Preview.Theme.ProfileTheme }}">
+                    <div class="settings-preview">
+                        <div class="settings-preview-header">
+                            <span class="settings-preview-title">Live preview</span>
+                            <div class="settings-preview-toggle" role="group" aria-label="Preview visibility">
+                                <span class="preview-mode-label is-active" data-preview-label="public">Public</span>
+                                <label class="visibility-switch preview-mode-switch">
+                                    <input type="checkbox" id="preview_visibility_toggle" data-preview-toggle>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
+                                <span class="preview-mode-label" data-preview-label="private">Private</span>
+                            </div>
+                        </div>
+                        <div class="settings-preview-scroll">
+                            <div class="profile-preview-frame">
+                                <div class="card profile-preview-card">
+                                <div class="hero">
+                                    <div class="profile-preview-avatar">
+                                        <img class="profile-picture" data-preview-avatar src="{{ .Preview.Data.Public.ProfilePictureURL }}?s=128" alt="{{ if .Preview.Data.Public.ProfilePictureAlt }}{{ .Preview.Data.Public.ProfilePictureAlt }}{{ else }}Profile picture{{ end }}">
+                                        <span class="profile-preview-fallback" data-preview-fallback>{{ if .Preview.Data.Public.User.DisplayName }}{{ printf "%.1s" .Preview.Data.Public.User.DisplayName }}{{ else }}{{ printf "%.1s" .Preview.Data.Public.User.Handle }}{{ end }}</span>
+                                    </div>
+                                    <h1 data-preview-display-name>{{ if .Preview.Data.Public.User.DisplayName }}{{ .Preview.Data.Public.User.DisplayName }}{{ else }}{{ .Preview.Data.Public.User.Handle }}{{ end }}</h1>
+                                    <div class="pill {{ if not .Preview.Data.Public.User.Pronouns }}is-hidden{{ end }}" data-preview-pronouns>{{ .Preview.Data.Public.User.Pronouns }}</div>
+                                    <p class="lead {{ if not .Preview.Data.Public.User.Bio }}is-hidden{{ end }}" data-preview-bio>{{ .Preview.Data.Public.User.Bio }}</p>
+                                </div>
+
+                                <div class="grid">
+                                    <div class="section two-col profile-preview-section {{ if not (or .Preview.Data.Public.User.Organization .Preview.Data.Public.User.JobTitle .Preview.Data.Public.User.Birthdate .Preview.Data.Public.User.Location .Preview.Data.Public.User.Languages .Preview.Data.Public.User.Timezone) }}is-hidden{{ end }}" data-preview-section="basics">
+                                        <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.Organization }}is-hidden{{ end }}" data-preview-item="organization"><strong>Organization</strong><br><span data-preview-value="organization">{{ .Preview.Data.Public.User.Organization }}</span></p>
+                                        <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.JobTitle }}is-hidden{{ end }}" data-preview-item="job_title"><strong>Job title</strong><br><span data-preview-value="job_title">{{ .Preview.Data.Public.User.JobTitle }}</span></p>
+                                        <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.Birthdate }}is-hidden{{ end }}" data-preview-item="birthdate"><strong>Birthdate</strong><br><span data-preview-value="birthdate">{{ .Preview.Data.Public.User.Birthdate }}</span></p>
+                                        <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.Location }}is-hidden{{ end }}" data-preview-item="location"><strong>Location</strong><br><span data-preview-value="location">{{ .Preview.Data.Public.User.Location }}</span></p>
+                                        <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.Languages }}is-hidden{{ end }}" data-preview-item="languages"><strong>Languages</strong><br><span data-preview-value="languages">{{ .Preview.Data.Public.User.Languages }}</span></p>
+                                        <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.Timezone }}is-hidden{{ end }}" data-preview-item="timezone"><strong>Timezone</strong><br><span data-preview-value="timezone">{{ .Preview.Data.Public.User.Timezone }}</span></p>
+                                    </div>
+
+                                    <div class="section profile-preview-section {{ if not (or .Preview.Data.Public.User.Email .Preview.Data.Public.User.Phone .Preview.Data.Public.User.Address .Preview.Data.Public.User.Website) }}is-hidden{{ end }}" data-preview-section="contact">
+                                        <h2>Contact</h2>
+                                        <div class="two-col">
+                                            <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.Email }}is-hidden{{ end }}" data-preview-item="email"><strong>Email</strong><br><span data-preview-value="email">{{ .Preview.Data.Public.User.Email }}</span></p>
+                                            <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.Phone }}is-hidden{{ end }}" data-preview-item="phone"><strong>Phone</strong><br><span data-preview-value="phone">{{ .Preview.Data.Public.User.Phone }}</span></p>
+                                            <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.Address }}is-hidden{{ end }}" data-preview-item="address"><strong>Address</strong><br><span data-preview-value="address">{{ .Preview.Data.Public.User.Address }}</span></p>
+                                            <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.Website }}is-hidden{{ end }}" data-preview-item="website"><strong>Website</strong><br><span data-preview-value="website">{{ .Preview.Data.Public.User.Website }}</span></p>
+                                        </div>
+                                    </div>
+
+                                    <div class="section profile-preview-section {{ if not .Preview.Data.Public.CustomFields }}is-hidden{{ end }}" data-preview-section="custom">
+                                        <h2>Additional information</h2>
+                                        {{ range $key, $value := .Preview.Data.Public.CustomFields }}
+                                        <p class="meta"><strong>{{ $key }}</strong><br>{{ $value }}</p>
+                                        {{ end }}
+                                    </div>
+
+                                    <div class="section profile-preview-section {{ if not .Preview.Data.Public.Links }}is-hidden{{ end }}" data-preview-section="links">
+                                        <h2>Links</h2>
+                                        <ul class="links">
+                                            {{ range .Preview.Data.Public.Links }}
+                                            <li><a href="{{ .URL }}" rel="me" target="_blank"><span>{{ .Label }}</span><span>></span></a></li>
+                                            {{ end }}
+                                        </ul>
+                                    </div>
+
+                                    <div class="section profile-preview-section {{ if not .Preview.Data.Public.SocialProfiles }}is-hidden{{ end }}" data-preview-section="social">
+                                        <h2>Social profiles</h2>
+                                        <ul class="links">
+                                            {{ range .Preview.Data.Public.SocialProfiles }}
+                                            <li>
+                                                <a href="{{ .URL }}" rel="me" target="_blank">
+                                                    <span>{{ .Label }}</span>
+                                                    {{ if .Verified }}<span class="badge">verified</span>{{ else }}<span>></span>{{ end }}
+                                                </a>
+                                            </li>
+                                            {{ end }}
+                                        </ul>
+                                    </div>
+
+                                    <div class="section profile-preview-section {{ if not (or .Preview.Data.Public.User.ATProtoHandle .Preview.Data.Public.User.ATProtoDID) }}is-hidden{{ end }}" data-preview-section="atproto">
+                                        <h2>AT Protocol</h2>
+                                        <div class="two-col">
+                                            <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.ATProtoHandle }}is-hidden{{ end }}" data-preview-item="atproto_handle"><strong>Handle</strong><br><span data-preview-value="atproto_handle">{{ .Preview.Data.Public.User.ATProtoHandle }}</span></p>
+                                            <p class="meta profile-preview-item {{ if not .Preview.Data.Public.User.ATProtoDID }}is-hidden{{ end }}" data-preview-item="atproto_did"><strong>DID</strong><br><span data-preview-value="atproto_did">{{ .Preview.Data.Public.User.ATProtoDID }}</span></p>
+                                        </div>
+                                    </div>
+
+                                    <div class="section profile-preview-section {{ if not .Preview.Data.Public.VerifiedDomains }}is-hidden{{ end }}" data-preview-section="domains">
+                                        <h2>Verified domains</h2>
+                                        <ul class="links">
+                                            {{ range .Preview.Data.Public.VerifiedDomains }}
+                                            <li><a href="https://{{ .Domain }}" rel="me" target="_blank"><span>{{ .Domain }}</span><span>></span></a></li>
+                                            {{ end }}
+                                        </ul>
+                                    </div>
+
+                                    <div class="section profile-preview-section {{ if not .Preview.Data.Public.Wallets }}is-hidden{{ end }}" data-preview-section="wallets">
+                                        <h2>Wallets</h2>
+                                        <div class="two-col">
+                                            {{ range .Preview.Data.Public.Wallets }}
+                                            <p class="meta"><strong>{{ .Label | toUpper }}</strong><br>{{ .Address }}</p>
+                                            {{ end }}
+                                        </div>
+                                    </div>
+
+                                    <div class="section profile-preview-section {{ if not .Preview.Data.Public.PublicKeys }}is-hidden{{ end }}" data-preview-section="keys">
+                                        <h2>Public keys</h2>
+                                        <ul class="links">
+                                            {{ range .Preview.Data.Public.PublicKeys }}
+                                            <li><a href="#" onclick="return false;"><span>{{ .Algorithm }}</span><span>{{ .Key }}</span></a></li>
+                                            {{ end }}
+                                        </ul>
+                                    </div>
+
+                                    <div class="section profile-preview-section">
+                                        <h2>Identity exports</h2>
+                                        <p class="meta">
+                                            <a class="link-inline" data-preview-export=".json" href="{{ .Preview.Data.Public.ExportBase }}.json">JSON</a> ·
+                                            <a class="link-inline" data-preview-export=".xml" href="{{ .Preview.Data.Public.ExportBase }}.xml">XML</a> ·
+                                            <a class="link-inline" data-preview-export=".txt" href="{{ .Preview.Data.Public.ExportBase }}.txt">TXT</a> ·
+                                            <a class="link-inline" data-preview-export=".vcf" href="{{ .Preview.Data.Public.ExportBase }}.vcf">vCard</a>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <footer>
+                                    Updated {{ .Preview.Data.Public.UpdatedAt.Format "2006-01-02" }}
+                                </footer>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="settings-preview-note">Changes update instantly.</p>
+                </aside>
+                <script>
+                    window.__PROFILE_PREVIEW__ = {{ .Preview.Data | toJSON }};
+                </script>
+{{ end }}

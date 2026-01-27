@@ -1,6 +1,7 @@
 {{ define "settings_admin.html" }}
 {{ template "settings_layout_start" . }}
                 {{ if .IsAdmin }}
+                <div class="settings-panel">
                 <div class="section" id="section-landing">
                     <h2>Landing page</h2>
                     <p class="meta">Choose what visitors see at the root URL.</p>
@@ -282,9 +283,14 @@
                     {{ end }}
                 </div>
                 {{ else }}
-                <div class="section">
-                    <h2>Server</h2>
-                    <p class="meta">You do not have access to server administration.</p>
+                <div class="settings-panel">
+                    <div class="section">
+                        <h2>Server</h2>
+                        <p class="meta">You do not have access to server administration.</p>
+                    </div>
+                </div>
+                {{ end }}
+                {{ if .IsAdmin }}
                 </div>
                 {{ end }}
     <script src="/static/js/settings-nav.js"></script>
