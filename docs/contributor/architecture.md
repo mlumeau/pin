@@ -1,7 +1,7 @@
 ﻿# Architecture
 
 This project uses a feature-first layout with thin, reusable platform layers. The goal is small files, clear ownership, and easy navigation for contributors.
-For the external contract and protocol details, see RFC-PINC.md.
+For the external contract and protocol details, see [RFC-PINC.md](../../RFC-PINC.md).
 
 ## High-level layers
 - `main.go` - explicit wiring for the binary (kept minimal).

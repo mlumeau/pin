@@ -1,7 +1,7 @@
 # Endpoints
 
 This is a high-level overview of the main routes. See feature `routes.go` files for the full list.
-For the normative PINC contract, see RFC-PINC.md.
+For the normative PINC contract, see [RFC-PINC.md](../../RFC-PINC.md).
 
 ## PINC endpoints (RFC-PINC)
 All paths are relative to the Base URL.

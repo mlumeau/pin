@@ -13,7 +13,7 @@ Thanks for helping improve PIN. We aim for small, focused changes that are easy 
 - Core types and shared helpers are in `internal/domain`.
 - Repo interfaces live in `internal/contracts`.
 
-See `docs/architecture.md` for conventions.
+See `docs/contributor/architecture.md` for conventions.
 
 ## Coding guidelines
 - Prefer small files and feature-local helpers.

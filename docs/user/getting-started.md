@@ -29,7 +29,7 @@ Open http://127.0.0.1:5000 and complete the setup flow at `/setup` to create the
 All settings are configured through environment variables. See [configuration.md](configuration.md).
 
 ## Protocol reference
-For the external contract and identity export rules, see [RFC-PINC.md](../RFC-PINC.md).
+For the external contract and identity export rules, see [RFC-PINC.md](../../RFC-PINC.md).
 
 ## Build a binary
 ```bash

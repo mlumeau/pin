@@ -27,20 +27,21 @@ By default, PIN listens on `127.0.0.1:5000` and stores data in `identity.db` in 
 
 ### Next steps
 
-- Getting started guide: see [docs/getting-started.md](docs/getting-started.md).
-- Configuration: all settings are configured through environment variables. See [docs/configuration.md](docs/configuration.md).
-- Backup/export: see [docs/backup.md](docs/backup.md).
-- Key endpoints: see [docs/endpoints.md](docs/endpoints.md).
+- Getting started guide: see [docs/user/getting-started.md](docs/user/getting-started.md).
+- Configuration: all settings are configured through environment variables. See [docs/user/configuration.md](docs/user/configuration.md).
+- Backup/export: see [docs/user/backup.md](docs/user/backup.md).
+- Key endpoints: see [docs/user/endpoints.md](docs/user/endpoints.md).
 
 ## Documentation
 
-- [docs/getting-started.md](docs/getting-started.md)
-- [docs/testing.md](docs/testing.md)
-- [docs/configuration.md](docs/configuration.md)
-- [docs/deployment.md](docs/deployment.md)
-- [docs/backup.md](docs/backup.md)
-- [docs/themes.md](docs/themes.md)
-- [docs/endpoints.md](docs/endpoints.md)
+- [docs/user/getting-started.md](docs/user/getting-started.md)
+- [docs/user/configuration.md](docs/user/configuration.md)
+- [docs/user/deployment.md](docs/user/deployment.md)
+- [docs/user/backup.md](docs/user/backup.md)
+- [docs/user/themes.md](docs/user/themes.md)
+- [docs/user/endpoints.md](docs/user/endpoints.md)
+- [docs/contributor/testing.md](docs/contributor/testing.md)
+- [docs/contributor/architecture.md](docs/contributor/architecture.md)
 - [RFC-PINC.md](RFC-PINC.md) (PINC interoperability contract)
 
 ## Technical stack
@@ -52,7 +53,7 @@ By default, PIN listens on `127.0.0.1:5000` and stores data in `identity.db` in 
 
 ## Architecture
 
-The codebase uses a feature-first layout with small platform layers. Routes and handlers live with their feature (public, auth, admin, domains, invites, passkeys, OAuth, profile pictures, MCP, identity, federation, health, settings), while shared concerns sit under `internal/config`, `internal/domain`, `internal/platform/http`, `internal/platform/server`, `internal/platform/storage/sqlite`, `internal/platform/media`, and `internal/platform/core`. See [docs/architecture.md](docs/architecture.md) for conventions.
+The codebase uses a feature-first layout with small platform layers. Routes and handlers live with their feature (public, auth, admin, domains, invites, passkeys, OAuth, profile pictures, MCP, identity, federation, health, settings), while shared concerns sit under `internal/config`, `internal/domain`, `internal/platform/http`, `internal/platform/server`, `internal/platform/storage/sqlite`, `internal/platform/media`, and `internal/platform/core`. See [docs/contributor/architecture.md](docs/contributor/architecture.md) for conventions.
 
 ## Philosophy
 
