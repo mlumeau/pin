@@ -1,6 +1,8 @@
 {{ define "settings_appearance.html" }}
 {{ template "settings_layout_start" . }}
-                <form method="post" action="/settings/appearance" enctype="multipart/form-data" id="appearance-settings-form">
+                <div class="settings-split">
+                    <div class="settings-form-column settings-panel">
+                        <form method="post" action="/settings/appearance" enctype="multipart/form-data" id="appearance-settings-form">
                     <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
 
                     {{ if not .CanSelectTheme }}
@@ -80,12 +82,20 @@
                     {{ if or .CanSelectTheme .CanCustomCSS }}
                     <div class="section"></div>
                     {{ end }}
-                </form>
+                        </form>
+                    </div>
+                    {{ template "settings_profile_preview" . }}
+                </div>
     <script src="/static/js/settings-nav.js"></script>
+    <script src="/static/js/settings-preview.js"></script>
+    <script src="/static/js/settings-profile.js"></script>
     <script src="/static/js/settings-appearance.js"></script>
     <script>
         initSettingsNav();
         initAppearanceAutoSave();
+        if (window.initProfilePreview) {
+            window.initProfilePreview();
+        }
         (function () {
             const cards = Array.from(document.querySelectorAll(".theme-preview"));
             const pageLabel = document.getElementById("theme_page_label");

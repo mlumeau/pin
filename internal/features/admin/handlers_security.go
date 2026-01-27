@@ -42,6 +42,7 @@ func (h Handler) Security(w http.ResponseWriter, r *http.Request) {
 		"IsAdmin":            isAdminUser,
 		"Passkeys":           passkeys,
 		"Title":              "Settings - Privacy & security",
+		"SectionTitle":       "Privacy & security",
 		"Message":            message,
 		"CSRFToken":          h.deps.EnsureCSRF(session),
 		"PrivateIdentityURL": h.deps.BaseURL(r) + "/p/" + url.PathEscape(core.ShortHash(strings.ToLower(currentIdentity.Handle), 7)) + "/" + url.PathEscape(currentIdentity.PrivateToken),

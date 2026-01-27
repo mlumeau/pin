@@ -180,6 +180,7 @@ func buildAppearanceData(currentIdentity domain.Identity, theme featuresettings.
 		"Themes":               featuresettings.ThemeOptions(),
 		"Theme":                theme,
 		"Title":                "Settings - Appearance",
+		"SectionTitle":         "Appearance",
 		"DefaultCustomTheme":   defaultCustomThemeOption,
 		"HasDefaultCustomCSS":  hasDefaultCustomCSS,
 		"DefaultCustomCSSURL":  featuresettings.ThemeCustomCSSURL(defaultCustomCSSPath),
@@ -189,5 +190,6 @@ func buildAppearanceData(currentIdentity domain.Identity, theme featuresettings.
 		"CanSelectTheme":       perms.canSelectTheme,
 		"CanCustomCSS":         perms.canCustomCSS,
 		"ShowAppearanceNav":    perms.showAppearanceNav,
+		"Preview":              buildProfilePreviewData(currentIdentity, theme),
 	}
 }

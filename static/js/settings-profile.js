@@ -427,5 +427,8 @@
         initDynamicList("#social-list", "#add-social", "social-template");
         initWalletList();
         initDomainList(csrfToken);
+        if (window.initProfilePreview) {
+            window.initProfilePreview();
+        }
     };
 })();

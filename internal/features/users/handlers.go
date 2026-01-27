@@ -155,6 +155,7 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 			"FormAction":            "/settings/admin/users/" + strconv.Itoa(targetUser.ID) + "/edit",
 			"CanEditRole":           targetUser.Role != "owner",
 			"Title":                 "Settings - Edit User",
+			"SectionTitle":          "Edit user",
 			"Message":               "",
 			"CSRFToken":             h.deps.EnsureCSRF(session),
 			"Theme":                 theme,

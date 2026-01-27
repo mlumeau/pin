@@ -1,18 +1,18 @@
 {{ define "settings_profile.html" }}
 {{ template "settings_layout_start" . }}
-                <form method="post" action="{{ .FormAction }}" enctype="multipart/form-data" id="profile-settings-form">
+                <div class="settings-split">
+                    <div class="settings-form-column settings-panel">
+                        <form method="post" action="{{ .FormAction }}" enctype="multipart/form-data" id="profile-settings-form">
                     <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
                     <div class="section" id="section-basics">
                         <h2>Basics</h2>
-                        <div class="inline-row">
-                            <div>
-                                <label for="handle">Handle</label>
-                                <input type="text" id="handle" name="handle" value="{{ .User.Handle }}" required>
-                            </div>
-                            <div>
-                                <label for="display_name">Display name</label>
-                                <input type="text" id="display_name" name="display_name" value="{{ .User.DisplayName }}" required>
-                            </div>
+                        <div>
+                            <label for="handle">Handle</label>
+                            <input type="text" id="handle" name="handle" value="{{ .User.Handle }}" required>
+                        </div>
+                        <div>
+                            <label for="display_name">Display name</label>
+                            <input type="text" id="display_name" name="display_name" value="{{ .User.DisplayName }}" required>
                         </div>
                         <label for="bio">Bio</label>
                         <textarea id="bio" name="bio" rows="4">{{ .User.Bio }}</textarea>
@@ -423,7 +423,10 @@
                             {{ end }}
                         </div>
                     </div>
-                </form>
+                        </form>
+                    </div>
+                    {{ template "settings_profile_preview" . }}
+                </div>
 
                 <div class="modal" id="bluesky-modal" aria-hidden="true">
                     <div class="modal-backdrop" data-close="true"></div>
@@ -517,6 +520,7 @@
     </template>
     <script src="/static/js/settings-nav.js"></script>
     <script src="/static/js/settings-copy.js"></script>
+    <script src="/static/js/settings-preview.js"></script>
     <script src="/static/js/settings-profile.js"></script>
     <script>
         initSettingsNav();

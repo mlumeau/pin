@@ -156,6 +156,8 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 		"User":                 current,
 		"IsAdmin":              isAdmin(current),
 		"Message":              message,
+		"Title":                "Settings - Server",
+		"SectionTitle":         "Server",
 		"CSRFToken":            h.deps.EnsureCSRF(session),
 		"Theme":                theme,
 		"ShowAppearanceNav":    showAppearanceNav,
