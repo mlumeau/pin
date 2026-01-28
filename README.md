@@ -34,14 +34,7 @@ By default, PIN listens on `127.0.0.1:5000` and stores data in `identity.db` in 
 
 ## Documentation
 
-- [docs/user/getting-started.md](docs/user/getting-started.md)
-- [docs/user/configuration.md](docs/user/configuration.md)
-- [docs/user/deployment.md](docs/user/deployment.md)
-- [docs/user/backup.md](docs/user/backup.md)
-- [docs/user/themes.md](docs/user/themes.md)
-- [docs/user/endpoints.md](docs/user/endpoints.md)
-- [docs/contributor/testing.md](docs/contributor/testing.md)
-- [docs/contributor/architecture.md](docs/contributor/architecture.md)
+- Documentation root: [docs/](docs/)
 - [RFC-PINC.md](RFC-PINC.md) (PINC interoperability contract)
 
 ## Technical stack
