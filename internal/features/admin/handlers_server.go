@@ -117,6 +117,17 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 		if result.message != "" {
 			message = result.message
 		}
+
+		landing = settingsSvc.LandingSettings(r.Context())
+		themePolicy = settingsSvc.ServerThemePolicy(r.Context())
+		showAppearanceNav = isAdminUser || themePolicy.AllowUserTheme
+		defaultTheme = featuresettings.DefaultThemeName
+		defaultThemeForce = false
+		if themeValue, ok, force := settingsSvc.ServerDefaultTheme(r.Context()); ok {
+			defaultTheme = themeValue
+			defaultThemeForce = force
+		}
+		defaultCustomCSSPath, hasDefaultCustomCSS = settingsSvc.ServerDefaultCustomCSS(r.Context())
 	}
 
 	userQuery, userSort, userDir, userPage = parseUserListParams(r)
@@ -158,6 +169,7 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 		"Message":              message,
 		"Title":                "Settings - Server",
 		"SectionTitle":         "Server",
+		"SectionLayout":        "narrow",
 		"CSRFToken":            h.deps.EnsureCSRF(session),
 		"Theme":                theme,
 		"ShowAppearanceNav":    showAppearanceNav,

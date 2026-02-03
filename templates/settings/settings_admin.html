@@ -5,46 +5,68 @@
                 <div class="section" id="section-landing">
                     <h2>Landing page</h2>
                     <p class="meta">Choose what visitors see at the root URL.</p>
-                    <form method="post" action="/settings/admin/server#section-landing" class="landing-form" enctype="multipart/form-data">
+                    <form method="post" action="/settings/admin/server#section-landing" class="landing-form admin-form" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
                         <input type="hidden" name="server_action" value="landing">
                         <div class="landing-options">
                             <div class="landing-choice-group">
                                 <label class="landing-choice">
                                     <input type="radio" name="landing_mode" value="generic" {{ if ne .LandingMode "profile" }}checked{{ end }}>
-                                    <div>
-                                        <strong>Product landing (default)</strong>
-                                        <div class="meta">Explain PIN, link to the profile, and feature identity exports.</div>
+                                    <div class="landing-card">
+                                        <svg class="landing-illustration" viewBox="0 0 96 96" role="img" aria-label="Product landing illustration">
+                                            <rect x="8" y="12" width="80" height="72" rx="12" fill="currentColor" opacity="0.08"></rect>
+                                            <rect x="20" y="24" width="56" height="10" rx="5" fill="currentColor" opacity="0.2"></rect>
+                                            <rect x="20" y="40" width="34" height="8" rx="4" fill="currentColor" opacity="0.2"></rect>
+                                            <rect x="20" y="54" width="56" height="16" rx="8" fill="currentColor" opacity="0.35"></rect>
+                                        </svg>
+                                        <div class="landing-text">
+                                            <strong>Product landing (default)</strong>
+                                            <div class="meta">Explain PIN, link to the profile, and feature identity exports.</div>
+                                        </div>
                                     </div>
                                 </label>
                             </div>
                             <div class="landing-choice-group">
                                 <label class="landing-choice">
                                     <input type="radio" name="landing_mode" value="profile" {{ if eq .LandingMode "profile" }}checked{{ end }}>
-                                    <div>
-                                        <strong>Profile first</strong>
-                                        <div class="meta">Send visitors straight to the owner profile.</div>
+                                    <div class="landing-card">
+                                        <svg class="landing-illustration" viewBox="0 0 96 96" role="img" aria-label="Profile first illustration">
+                                            <rect x="10" y="14" width="76" height="68" rx="16" fill="currentColor" opacity="0.08"></rect>
+                                            <circle cx="48" cy="40" r="14" fill="currentColor" opacity="0.3"></circle>
+                                            <rect x="26" y="58" width="44" height="10" rx="5" fill="currentColor" opacity="0.2"></rect>
+                                        </svg>
+                                        <div class="landing-text">
+                                            <strong>Profile first</strong>
+                                            <div class="meta">Send visitors straight to the owner profile.</div>
+                                        </div>
                                     </div>
                                 </label>
                             </div>
                             <div class="landing-choice-group">
                                 <label class="landing-choice">
                                     <input type="radio" name="landing_mode" value="custom" {{ if eq .LandingMode "custom" }}checked{{ end }}>
-                                    <div>
-                                        <strong>Custom index.html</strong>
-                                        <p class="meta">Upload a full HTML file to replace the built-in landing page. Select "Custom index.html" to make it live.</p>
-                                        <div class="landing-custom-upload">
-                                            <input type="file" id="landing_custom_file" name="landing_custom_file" accept=".html,.htm">
-                                            {{ if .HasCustomLandingFile }}
-                                            <div class="landing-file-row">
-                                                <p class="meta">Current file: {{ if .LandingCustomURL }}<a class="link-inline" href="{{ .LandingCustomURL }}" target="_blank" rel="noreferrer">{{ .LandingCustomPath }}</a>{{ else }}{{ .LandingCustomPath }}{{ end }}</p>
-                                                <button type="submit" class="icon-button" name="landing_remove_custom" value="1" aria-label="Remove custom landing page">
-                                                    <span class="icon icon-trash" aria-hidden="true"></span>
-                                                </button>
+                                    <div class="landing-card">
+                                        <svg class="landing-illustration" viewBox="0 0 96 96" role="img" aria-label="Custom landing illustration">
+                                            <rect x="12" y="12" width="72" height="72" rx="12" fill="currentColor" opacity="0.08"></rect>
+                                            <path d="M32 34h32M32 46h32M32 58h18" stroke="currentColor" stroke-width="6" stroke-linecap="round" opacity="0.35"></path>
+                                            <rect x="52" y="54" width="16" height="16" rx="4" fill="currentColor" opacity="0.35"></rect>
+                                        </svg>
+                                        <div class="landing-text">
+                                            <strong>Custom index.html</strong>
+                                            <p class="meta">Upload a full HTML file to replace the built-in landing page.</p>
+                                            <div class="landing-custom-upload">
+                                                <input type="file" id="landing_custom_file" name="landing_custom_file" accept=".html,.htm">
+                                                {{ if .HasCustomLandingFile }}
+                                                <div class="landing-file-row">
+                                                    <p class="meta">Current file: {{ if .LandingCustomURL }}<a class="link-inline" href="{{ .LandingCustomURL }}" target="_blank" rel="noreferrer">{{ .LandingCustomPath }}</a>{{ else }}{{ .LandingCustomPath }}{{ end }}</p>
+                                                    <button type="submit" class="icon-button" name="landing_remove_custom" value="1" aria-label="Remove custom landing page">
+                                                        <span class="icon icon-trash" aria-hidden="true"></span>
+                                                    </button>
+                                                </div>
+                                                {{ else }}
+                                                <p class="meta">No custom landing page uploaded.</p>
+                                                {{ end }}
                                             </div>
-                                            {{ else }}
-                                            <p class="meta">No custom landing page uploaded.</p>
-                                            {{ end }}
                                         </div>
                                     </div>
                                 </label>
@@ -57,7 +79,7 @@
                 <div class="section" id="section-theme">
                     <h2>Theme</h2>
                     <p class="meta">Set the default look and control what users can customize.</p>
-                    <form method="post" action="/settings/admin/server#section-theme">
+                    <form method="post" action="/settings/admin/server#section-theme" class="admin-form">
                         <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
                         <input type="hidden" name="server_action" value="theme_default">
                         <label for="default_theme">Default theme</label>
@@ -78,7 +100,7 @@
                     <div class="section" id="section-default-theme-css">
                         <h3>Default theme CSS</h3>
                         <p class="meta">Upload a CSS file that powers the "Default theme" option in appearance.</p>
-                        <form method="post" action="/settings/admin/server#section-theme" enctype="multipart/form-data">
+                        <form method="post" action="/settings/admin/server#section-theme" enctype="multipart/form-data" class="admin-form">
                             <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
                             <input type="hidden" name="server_action" value="theme_default_css">
                             <div class="custom-css-row">
@@ -100,7 +122,7 @@
                         </form>
                     </div>
                     <div class="section-divider"></div>
-                    <form method="post" action="/settings/admin/server#section-theme">
+                    <form method="post" action="/settings/admin/server#section-theme" class="admin-form">
                         <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
                         <input type="hidden" name="server_action" value="theme_access">
                         <label class="checkbox-row">
@@ -146,12 +168,16 @@
                             </div>
                         </div>
                     </form>
-                    <div class="list">
+                    <div class="list is-inline">
                         {{ range .Users }}
                         <div class="list-row">
                             <div>
                                 <strong>{{ if .DisplayName }}{{ .DisplayName }}{{ else }}{{ .Handle }}{{ end }}</strong>
-                                <div class="meta">{{ .Handle }} · {{ .Email }} · {{ .Role }}</div>
+                                <div class="meta-row">
+                                    <span class="meta">{{ .Handle }}</span>
+                                    <span class="meta">{{ .Email }}</span>
+                                    <span class="meta">{{ .Role }}</span>
+                                </div>
                             </div>
                             <div class="link-actions">
                                 <a href="/settings/admin/users/{{ .ID }}/edit">Edit</a>
@@ -192,7 +218,7 @@
                         <button type="button" class="ghost invite-toggle" id="invite_used_toggle" data-show-label="Show used invites ({{ .UsedInvitesCount }})" data-hide-label="Hide used invites ({{ .UsedInvitesCount }})" aria-pressed="false">Show used invites ({{ .UsedInvitesCount }})</button>
                         {{ end }}
                     </div>
-                    <form method="post" action="/settings/admin/invites/create">
+                    <form method="post" action="/settings/admin/invites/create" class="admin-form">
                         <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
                         <label for="invite_role">Role</label>
                         <div class="invite-create-row">
@@ -215,7 +241,7 @@
                                 <span>(active)</span>
                                 {{ end }}
                             </div>
-                            <span class="copy-pill">
+                            <span class="copy-pill marquee">
                                 <span class="copy-pill-text">{{ $.InviteBaseURL }}/invite/{{ .Token }}</span>
                                 <button type="button" class="icon-button copy-button" data-copy-value="{{ $.InviteBaseURL }}/invite/{{ .Token }}" data-copy-feedback="Copied" aria-label="Copy invite link">
                                     <span class="icon icon-copy" aria-hidden="true"></span>
@@ -246,15 +272,15 @@
                         <a class="link-inline" href="/settings/admin/audit-log/download?scope=all&format=json">All JSON</a>
                         <a class="link-inline" href="/settings/admin/audit-log/download?scope=all&format=txt">All TXT</a>
                     </div>
-                    <div class="list is-terminal">
+                    <div class="list is-terminal is-inline">
                         {{ range .AuditLogs }}
                         <div class="list-row">
                             <div>
                                 <strong>{{ .Action }}</strong>
-                                <div class="meta">
-                                    <span>by {{ if .ActorName }}{{ .ActorName }}{{ else }}system{{ end }}</span>
-                                    <span>· object {{ if .Target }}{{ .Target }}{{ else }}n/a{{ end }}</span>
-                                    <span>· log #{{ .ID }}</span>
+                                <div class="meta-row">
+                                    <span class="meta">by {{ if .ActorName }}{{ .ActorName }}{{ else }}system{{ end }}</span>
+                                    <span class="meta">object {{ if .Target }}{{ .Target }}{{ else }}n/a{{ end }}</span>
+                                    <span class="meta">log #{{ .ID }}</span>
                                 </div>
                             </div>
                             <div class="meta">{{ .CreatedAt.Format "2006-01-02 15:04:05" }}</div>
