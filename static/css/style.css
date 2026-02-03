@@ -92,6 +92,34 @@ body {
     white-space: nowrap;
 }
 
+.copy-pill.marquee {
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+}
+
+.copy-pill.marquee .copy-pill-text {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: none;
+}
+
+.copy-pill.marquee .copy-pill-text::-webkit-scrollbar {
+    height: 0;
+    display: none;
+}
+
+.copy-pill.marquee .copy-pill-text::-webkit-scrollbar-thumb {
+    background: transparent;
+}
+
+.copy-pill.marquee .icon-button {
+    flex: 0 0 auto;
+}
+
 .copy-pill .icon-button {
     width: 28px;
     height: 28px;

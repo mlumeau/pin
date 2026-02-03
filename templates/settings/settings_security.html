@@ -24,15 +24,17 @@
                             </div>
                             <div id="passkey-list" style="margin-top: 0.8rem;">
                                 {{ if .Passkeys }}
-                                <div class="list">
+                                <div class="list is-inline">
                                     {{ range .Passkeys }}
                                     <div class="list-row">
                                         <div>
-                                            <strong>{{ .Name }}</strong><br>
-                                            <span class="meta">Created {{ .CreatedAt.Format "2006-01-02" }}</span>
-                                            {{ if .LastUsedAt.Valid }}
-                                            <span class="meta"> · Last used {{ .LastUsedAt.Time.Format "2006-01-02" }}</span>
-                                            {{ end }}
+                                            <strong>{{ .Name }}</strong>
+                                            <div class="meta-row">
+                                                <span class="meta">Created {{ .CreatedAt.Format "2006-01-02" }}</span>
+                                                {{ if .LastUsedAt.Valid }}
+                                                <span class="meta">Last used {{ .LastUsedAt.Time.Format "2006-01-02" }}</span>
+                                                {{ end }}
+                                            </div>
                                         </div>
                                         <div class="link-actions">
                                         <button type="button" class="icon-button passkey-delete" data-passkey-id="{{ .ID }}" aria-label="Remove passkey">
@@ -55,14 +57,14 @@
                         <div class="inline-row">
                             <div>
                                 <label for="private_identity_url">Private identity URL</label>
-                                <div class="copy-pill copy-pill-actions">
+                                <div class="copy-pill copy-pill-actions marquee">
                                     <span class="copy-pill-text" id="private_identity_url">{{ .PrivateIdentityURL }}</span>
                                     <button type="button" class="icon-button copy-button" data-copy-target="private_identity_url" data-copy-feedback="Copied" aria-label="Copy private identity URL">
                                         <span class="icon icon-copy" aria-hidden="true"></span>
                                     </button>
                                     <form method="post" action="/settings/security/private-identity/regenerate" class="inline-form">
                                         <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-                                        <button type="submit" class="icon-button" aria-label="Regenerate secret link">
+                                        <button type="submit" class="icon-button" aria-label="Regenerate secret link" onclick="return confirm('Regenerating this private link will invalidate any link you already shared. Continue?')">
                                             <span class="icon icon-refresh" aria-hidden="true"></span>
                                         </button>
                                     </form>

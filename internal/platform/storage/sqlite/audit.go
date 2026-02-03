@@ -37,7 +37,7 @@ func ListAuditLogs(ctx context.Context, db *sql.DB, limit, offset int) ([]domain
 	if offset < 0 {
 		offset = 0
 	}
-	rows, err := db.QueryContext(ctx, "SELECT audit_log.id, COALESCE(audit_log.actor_id, 0), COALESCE(identity.handle,''), audit_log.action, COALESCE(audit_log.target,''), COALESCE(audit_log.metadata,''), audit_log.created_at FROM audit_log LEFT JOIN user ON user.id = audit_log.actor_id LEFT JOIN identity ON identity.user_id = user.id ORDER BY audit_log.id DESC LIMIT ? OFFSET ?", limit, offset)
+	rows, err := db.QueryContext(ctx, "SELECT audit_log.id, COALESCE(audit_log.actor_id, 0), COALESCE(identity.handle,''), audit_log.action, COALESCE(audit_log.target,''), COALESCE(audit_log.metadata,''), audit_log.created_at FROM audit_log LEFT JOIN user ON user.id = audit_log.actor_id LEFT JOIN identity ON identity.user_id = user.id WHERE COALESCE(audit_log.metadata,'') NOT LIKE '%\"status\":\"attempt\"%' ORDER BY audit_log.id DESC LIMIT ? OFFSET ?", limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func ListAuditLogs(ctx context.Context, db *sql.DB, limit, offset int) ([]domain
 
 // CountAuditLogs returns audit logs.
 func CountAuditLogs(ctx context.Context, db *sql.DB) (int, error) {
-	row := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM audit_log")
+	row := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM audit_log WHERE COALESCE(audit_log.metadata,'') NOT LIKE '%\"status\":\"attempt\"%'")
 	var count int
 	if err := row.Scan(&count); err != nil {
 		return 0, err
@@ -72,7 +72,7 @@ func CountAuditLogs(ctx context.Context, db *sql.DB) (int, error) {
 
 // ListAllAuditLogs returns the all audit logs list in the SQLite store.
 func ListAllAuditLogs(ctx context.Context, db *sql.DB) ([]domain.AuditLog, error) {
-	rows, err := db.QueryContext(ctx, "SELECT audit_log.id, COALESCE(audit_log.actor_id, 0), COALESCE(identity.handle,''), audit_log.action, COALESCE(audit_log.target,''), COALESCE(audit_log.metadata,''), audit_log.created_at FROM audit_log LEFT JOIN user ON user.id = audit_log.actor_id LEFT JOIN identity ON identity.user_id = user.id ORDER BY audit_log.id")
+	rows, err := db.QueryContext(ctx, "SELECT audit_log.id, COALESCE(audit_log.actor_id, 0), COALESCE(identity.handle,''), audit_log.action, COALESCE(audit_log.target,''), COALESCE(audit_log.metadata,''), audit_log.created_at FROM audit_log LEFT JOIN user ON user.id = audit_log.actor_id LEFT JOIN identity ON identity.user_id = user.id WHERE COALESCE(audit_log.metadata,'') NOT LIKE '%\"status\":\"attempt\"%' ORDER BY audit_log.id")
 	if err != nil {
 		return nil, err
 	}

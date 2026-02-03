@@ -320,13 +320,13 @@ func (h Handler) LoginFinish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	credentialID := base64.RawURLEncoding.EncodeToString(credential.ID)
-	h.deps.AuditAttempt(r.Context(), user.ID, "passkey.update", credentialID, nil)
+	h.deps.AuditAttempt(r.Context(), user.ID, "passkey.login", credentialID, nil)
 	if err := h.deps.UpdatePasskeyCredential(r.Context(), user.ID, credentialID, *credential); err != nil {
-		h.deps.AuditOutcome(r.Context(), user.ID, "passkey.update", credentialID, err, nil)
+		h.deps.AuditOutcome(r.Context(), user.ID, "passkey.login", credentialID, err, nil)
 		http.Error(w, "Failed to update passkey", http.StatusInternalServerError)
 		return
 	}
-	h.deps.AuditOutcome(r.Context(), user.ID, "passkey.update", credentialID, nil, nil)
+	h.deps.AuditOutcome(r.Context(), user.ID, "passkey.login", credentialID, nil, nil)
 
 	// Promote the authenticated user into the session and clear ceremony state.
 	session.Values["user_id"] = user.ID
