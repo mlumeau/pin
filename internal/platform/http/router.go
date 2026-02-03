@@ -56,5 +56,5 @@ func Routes(s *pinserver.Server) http.Handler {
 	adminHandler := admin.NewHandler(deps)
 	register("/settings/security/private-identity/regenerate", http.HandlerFunc(s.RequireSession(adminHandler.PrivateIdentityRegenerate, "/login?next=/settings")))
 
-	return s.WithSecurityHeaders(public.WithSetupRedirect(deps, mux))
+	return s.WithSecurityHeaders(public.WithPrivateRateLimit(public.WithSetupRedirect(deps, mux)))
 }
