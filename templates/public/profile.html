@@ -64,7 +64,7 @@
                 <h2>Links</h2>
                 <ul class="links">
                     {{ range .Links }}
-                    <li><a href="{{ .URL }}" rel="me" target="_blank"><span>{{ .Label }}</span><span>→</span></a></li>
+                    <li><a href="{{ .URL }}" rel="me noopener noreferrer" referrerpolicy="no-referrer" target="_blank"><span>{{ .Label }}</span><span>→</span></a></li>
                     {{ end }}
                 </ul>
             </div>
@@ -76,7 +76,7 @@
                 <ul class="links">
                     {{ range .SocialProfiles }}
                     <li>
-                        <a href="{{ .URL }}" rel="me" target="_blank">
+                        <a href="{{ .URL }}" rel="me noopener noreferrer" referrerpolicy="no-referrer" target="_blank">
                             <span>{{ .Label }}</span>
                             {{ if .Verified }}<span class="badge">verified</span>{{ else }}<span>→</span>{{ end }}
                         </a>
@@ -101,7 +101,7 @@
                 <h2>Verified domains</h2>
                 <ul class="links">
                     {{ range .VerifiedDomains }}
-                    <li><a href="https://{{ .Domain }}" rel="me" target="_blank"><span>{{ .Domain }}</span><span>></span></a></li>
+                    <li><a href="https://{{ .Domain }}" rel="me noopener noreferrer" referrerpolicy="no-referrer" target="_blank"><span>{{ .Domain }}</span><span>></span></a></li>
                     {{ end }}
                 </ul>
             </div>
@@ -132,10 +132,10 @@
             <div class="section">
                 <h2>Identity exports</h2>
                 <p class="meta">
-                    <a class="link-inline" href="{{ .ExportBase }}.json">JSON</a> ·
-                    <a class="link-inline" href="{{ .ExportBase }}.xml">XML</a> ·
-                    <a class="link-inline" href="{{ .ExportBase }}.txt">TXT</a> ·
-                    <a class="link-inline" href="{{ .ExportBase }}.vcf">vCard</a>
+                    <a class="link-inline" href="{{ .ExportBase }}.json"{{ if .IsPrivateIdentity }} rel="nofollow"{{ end }}>JSON</a> ·
+                    <a class="link-inline" href="{{ .ExportBase }}.xml"{{ if .IsPrivateIdentity }} rel="nofollow"{{ end }}>XML</a> ·
+                    <a class="link-inline" href="{{ .ExportBase }}.txt"{{ if .IsPrivateIdentity }} rel="nofollow"{{ end }}>TXT</a> ·
+                    <a class="link-inline" href="{{ .ExportBase }}.vcf"{{ if .IsPrivateIdentity }} rel="nofollow"{{ end }}>vCard</a>
                 </p>
             </div>
         </div>

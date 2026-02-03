@@ -276,6 +276,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 
 // PrivateIdentity handles HTTP requests for identity.
 func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
+	setPrivateIdentityHeaders(w)
 	path := strings.TrimPrefix(r.URL.Path, "/p/")
 	path = strings.Trim(path, "/")
 	if path == "" {
@@ -380,6 +381,11 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 	if err := h.deps.RenderTemplate(w, "index.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 	}
+}
+
+func setPrivateIdentityHeaders(w http.ResponseWriter) {
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 }
 
 // profilePictureHandler returns picture handler.
