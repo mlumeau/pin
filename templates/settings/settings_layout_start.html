@@ -21,6 +21,9 @@
             {{ template "settings_nav" . }}
             <div class="admin-main">
                 <header class="settings-page-header">
-                    <h1>{{ if .SectionTitle }}{{ .SectionTitle }}{{ else }}{{ .Title }}{{ end }}</h1>
+                    <div class="settings-page-header-row">
+                        <h1>{{ if .SectionTitle }}{{ .SectionTitle }}{{ else }}{{ .Title }}{{ end }}</h1>
+                        <a class="link-inline settings-profile-shortcut" data-profile-shortcut hidden>View profile</a>
+                    </div>
                 </header>
 {{ end }}
