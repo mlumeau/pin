@@ -17,6 +17,7 @@
         let currentMode = preview.dataset.previewMode || "public";
         const previewToggle = qs("[data-preview-toggle]", preview);
         const modeLabels = qsa("[data-preview-label]", preview);
+        const headerShortcut = qs("[data-profile-shortcut]");
 
         const form = qs("#profile-settings-form");
         const handleInput = qs("#handle");
@@ -123,6 +124,23 @@
                 const suffix = link.dataset.previewExport || "";
                 link.setAttribute("href", `${exportBase}${suffix}`);
             });
+        }
+
+        function updateProfileShortcut(modeKey) {
+            if (!previewData || !previewData[modeKey]) {
+                return;
+            }
+            const snapshot = previewData[modeKey];
+            if (!snapshot.ProfileURL) {
+                return;
+            }
+            const label = modeKey === "Private" ? "View private profile →" : "View public profile →";
+            if (!headerShortcut) {
+                return;
+            }
+            headerShortcut.textContent = label;
+            headerShortcut.setAttribute("href", snapshot.ProfileURL);
+            headerShortcut.removeAttribute("hidden");
         }
 
         function updatePreview() {
@@ -634,6 +652,7 @@
                     applySnapshot(previewData[modeKey]);
                 }
             }
+            updateProfileShortcut(modeKey);
         }
 
         if (previewToggle) {
