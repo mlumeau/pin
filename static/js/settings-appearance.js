@@ -44,11 +44,18 @@
         }
 
         const preview = qs("[data-profile-preview]");
+        const themeLink = qs("link[data-theme-css]");
         function syncPreviewTheme(themeName) {
             if (!preview || !themeName) {
                 return;
             }
             preview.setAttribute("data-theme", themeName);
+        }
+        function syncThemeStylesheet(themeName) {
+            if (!themeLink || !themeName) {
+                return;
+            }
+            themeLink.setAttribute("href", `/static/css/themes/${themeName}.css`);
         }
 
         // Handle theme selection directly on radio inputs (preview only)
@@ -60,12 +67,14 @@
                 }
                 const themeName = input.value;
                 document.body.setAttribute("data-theme", themeName);
+                syncThemeStylesheet(themeName);
                 syncPreviewTheme(themeName);
             });
         });
 
         const checked = document.querySelector(".theme-choice:checked");
         if (checked) {
+            syncThemeStylesheet(checked.value);
             syncPreviewTheme(checked.value);
         }
     };
