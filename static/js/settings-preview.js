@@ -46,6 +46,8 @@
         const hasLiveForm = !!form;
 
         const visibilityInputs = {
+            display_name: qs("input[name=\"visibility_display_name\"]"),
+            bio: qs("input[name=\"visibility_bio\"]"),
             organization: qs("input[name=\"visibility_organization\"]"),
             job_title: qs("input[name=\"visibility_job_title\"]"),
             birthdate: qs("input[name=\"visibility_birthdate\"]"),
@@ -149,16 +151,17 @@
             }
             const handle = getValue(handleInput);
             const displayName = getValue(displayInput);
+            const visibleDisplayName = isVisible("display_name", displayName) ? displayName : "";
             const bio = getValue(bioInput);
             const pronouns = getValue(pronounsInput);
 
             if (nameEl) {
-                setText(nameEl, displayName || handle || "Profile");
+                setText(nameEl, visibleDisplayName || handle || "Profile");
             }
 
             if (bioEl) {
                 setText(bioEl, bio);
-                bioEl.classList.toggle("is-hidden", !bio);
+                bioEl.classList.toggle("is-hidden", !isVisible("bio", bio));
             }
 
             if (pronounsEl) {
@@ -186,7 +189,7 @@
             updateSection("atproto");
 
             if (fallbackEl) {
-                fallbackEl.textContent = initialsFrom(displayName || handle);
+                fallbackEl.textContent = initialsFrom(visibleDisplayName || handle);
             }
 
             if (avatarEl && handle) {

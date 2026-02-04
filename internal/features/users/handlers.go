@@ -174,6 +174,16 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 			data["ATProtoHandleVerified"] = identity.IsATProtoHandleVerified(targetIdentity.ATProtoHandle, identity.VerifiedDomains(rows))
 		}
 
+		renderEdit := func() {
+			if err := session.Save(r, w); err != nil {
+				http.Error(w, "Session error", http.StatusInternalServerError)
+				return
+			}
+			if err := h.deps.RenderTemplate(w, "settings_profile.html", data); err != nil {
+				http.Error(w, "Template error", http.StatusInternalServerError)
+			}
+		}
+
 		if r.Method == http.MethodPost {
 			if err := r.ParseMultipartForm(h.deps.Config().MaxUploadBytes); err != nil {
 				http.Error(w, "Upload too large", http.StatusBadRequest)
@@ -190,6 +200,8 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 			links, linkVisibility := ParseLinksForm(r.Form["link_label"], r.Form["link_url"], r.Form["link_visibility"])
 			customFields := ParseCustomFieldsForm(r.Form["custom_key"], r.Form["custom_value"])
 			fieldVisibility := ParseVisibilityForm(r.Form, []string{
+				"display_name",
+				"bio",
 				"email",
 				"organization",
 				"job_title",
@@ -213,12 +225,14 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 			social = identity.MergeSocialProfiles(social, socialProfiles)
 			handle := strings.TrimSpace(r.FormValue("handle"))
 			if err := identity.ValidateHandle(r.Context(), handle, targetIdentity.ID, h.deps.Reserved(), h.deps.CheckHandleCollision); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				data["Message"] = err.Error()
+				renderEdit()
 				return
 			}
 			wallets, walletVisibility, err := ParseWalletForm(r.Form["wallet_label"], r.Form["wallet_address"], r.Form["wallet_visibility"])
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				data["Message"] = err.Error()
+				renderEdit()
 				return
 			}
 			for key, value := range walletVisibility {
@@ -339,14 +353,7 @@ func (h Handler) User(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := session.Save(r, w); err != nil {
-			http.Error(w, "Session error", http.StatusInternalServerError)
-			return
-		}
-
-		if err := h.deps.RenderTemplate(w, "settings_profile.html", data); err != nil {
-			http.Error(w, "Template error", http.StatusInternalServerError)
-		}
+		renderEdit()
 		return
 	}
 

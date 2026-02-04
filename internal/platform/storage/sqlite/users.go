@@ -156,8 +156,32 @@ func UpdateUser(ctx context.Context, db *sql.DB, u domain.User) error {
 
 // DeleteUser deletes user in the SQLite store.
 func DeleteUser(ctx context.Context, db *sql.DB, userID int) error {
-	_, err := db.ExecContext(ctx, "DELETE FROM user WHERE id = ?", userID)
-	return err
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, "DELETE FROM domain_verification WHERE identity_id IN (SELECT id FROM identity WHERE user_id = ?)", userID); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, "DELETE FROM profile_picture WHERE identity_id IN (SELECT id FROM identity WHERE user_id = ?)", userID); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, "DELETE FROM identity WHERE user_id = ?", userID); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, "DELETE FROM passkey WHERE user_id = ?", userID); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, "DELETE FROM user WHERE id = ?", userID); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 // ResetAllUserThemes resets all user themes to its default state.

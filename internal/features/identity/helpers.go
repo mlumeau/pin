@@ -27,6 +27,8 @@ func VisibleIdentity(user domain.Identity, isPrivate bool) (domain.Identity, map
 	}
 	customVisibility := fieldVisibility
 	applyVisibilityToStringFields(map[string]*string{
+		"display_name":   &user.DisplayName,
+		"bio":            &user.Bio,
 		"email":          &user.Email,
 		"organization":   &user.Organization,
 		"job_title":      &user.JobTitle,
@@ -102,6 +104,12 @@ func VisibleIdentity(user domain.Identity, isPrivate bool) (domain.Identity, map
 		}
 	}
 
+	if user.DisplayName != "" && NormalizeVisibility(fieldVisibility["display_name"]) == "private" {
+		user.DisplayName = ""
+	}
+	if user.Bio != "" && NormalizeVisibility(fieldVisibility["bio"]) == "private" {
+		user.Bio = ""
+	}
 	if user.Email != "" && NormalizeVisibility(fieldVisibility["email"]) == "private" {
 		user.Email = ""
 	}
@@ -316,7 +324,6 @@ func EncodeVerifiedDomains(values []domain.VerifiedDomain) string {
 	}
 	return ""
 }
-
 
 // DecodeLinks decodes links from a string representation.
 func DecodeLinks(jsonStr string) []domain.Link {

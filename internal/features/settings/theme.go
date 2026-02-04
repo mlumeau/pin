@@ -89,11 +89,6 @@ func NormalizeThemeChoice(name string) string {
 	if name == "" {
 		return defaultThemeName
 	}
-	switch name {
-	case "brutalist":
-		// Legacy alias kept for backward compatibility with older saved profiles.
-		name = "highcontrast"
-	}
 	if name == defaultCustomThemeName {
 		return name
 	}

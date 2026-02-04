@@ -6,22 +6,44 @@
                     <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
                     <div class="section" id="section-basics">
                         <h2>Basics</h2>
+                        <div class="highlight-note">
+                            Visibility: <span class="visibility-key"><span class="visibility-icon is-public" aria-hidden="true"></span>Public</span> or <span class="visibility-key"><span class="visibility-icon is-private" aria-hidden="true"></span>Private profile</span>
+                        </div>
                         <div class="field-visibility-row">
                             <div class="field-visibility-input">
                                 <label for="handle">Handle</label>
-                                <input type="text" id="handle" name="handle" value="{{ .User.Handle }}" required>
+                                <input type="text" id="handle" name="handle" value="{{ .User.Handle }}" placeholder="alice.dev" pattern="[A-Za-z0-9._-]+" title="Use letters, numbers, dot (.), underscore (_), or hyphen (-)." required>
+                                <p class="field-hint">Allowed: letters, numbers, dot <span class="inline-code">.</span>, underscore <span class="inline-code">_</span>, hyphen <span class="inline-code">-</span>.</p>
+                                <p id="handle-validation-hint" class="field-hint field-hint-error is-hidden" aria-live="polite"></p>
                             </div>
                         </div>
                         <div class="field-visibility-row">
                             <div class="field-visibility-input">
                                 <label for="display_name">Display name</label>
-                                <input type="text" id="display_name" name="display_name" value="{{ .User.DisplayName }}" required>
+                                <input type="text" id="display_name" name="display_name" placeholder="Alice Doe" value="{{ .User.DisplayName }}">
+                                <p class="field-hint">If private or left empty, profile page and identity exports will use your handle as display name.</p>
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_display_name" value="{{ if eq (index .FieldVisibility "display_name") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "display_name") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-visibility-row">
                             <div class="field-visibility-input">
                                 <label for="bio">Bio</label>
-                                <textarea id="bio" name="bio" rows="4">{{ .User.Bio }}</textarea>
+                                <textarea id="bio" name="bio" rows="4" placeholder="Short profile summary">{{ .User.Bio }}</textarea>
+                            </div>
+                            <div class="visibility-control" data-visibility-control>
+                                <input type="hidden" name="visibility_bio" value="{{ if eq (index .FieldVisibility "bio") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
+                                <label class="visibility-switch">
+                                    <input type="checkbox" data-visibility-toggle {{ if eq (index .FieldVisibility "bio") "private" }}checked{{ end }}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label visually-hidden">Private</span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -65,13 +87,10 @@
                     </div>
                     <div class="section" id="section-profile">
                         <h2>Profile</h2>
-                        <div class="highlight-note">
-                            Visibility: <span class="visibility-key"><span class="visibility-icon is-public" aria-hidden="true"></span>Public</span> or <span class="visibility-key"><span class="visibility-icon is-private" aria-hidden="true"></span>Private profile</span>
-                        </div>
                         <div class="field-visibility-row">
                             <div class="field-visibility-input">
                                 <label for="organization">Organization</label>
-                                <input type="text" id="organization" name="organization" value="{{ .User.Organization }}">
+                                <input type="text" id="organization" name="organization" placeholder="Acme Corp" value="{{ .User.Organization }}">
                             </div>
                             <div class="visibility-control" data-visibility-control>
                                 <input type="hidden" name="visibility_organization" value="{{ if eq (index .FieldVisibility "organization") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
@@ -85,7 +104,7 @@
                         <div class="field-visibility-row">
                             <div class="field-visibility-input">
                                 <label for="job_title">Job title</label>
-                                <input type="text" id="job_title" name="job_title" value="{{ .User.JobTitle }}">
+                                <input type="text" id="job_title" name="job_title" placeholder="Software Engineer" value="{{ .User.JobTitle }}">
                             </div>
                             <div class="visibility-control" data-visibility-control>
                                 <input type="hidden" name="visibility_job_title" value="{{ if eq (index .FieldVisibility "job_title") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
@@ -127,7 +146,7 @@
                         <div class="field-visibility-row">
                             <div class="field-visibility-input">
                                 <label for="pronouns">Pronouns</label>
-                                <input type="text" id="pronouns" name="pronouns" value="{{ .User.Pronouns }}">
+                                <input type="text" id="pronouns" name="pronouns" placeholder="she/her, they/them" value="{{ .User.Pronouns }}">
                             </div>
                             <div class="visibility-control" data-visibility-control>
                                 <input type="hidden" name="visibility_pronouns" value="{{ if eq (index .FieldVisibility "pronouns") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
@@ -141,7 +160,7 @@
                         <div class="field-visibility-row">
                             <div class="field-visibility-input">
                                 <label for="location">Location</label>
-                                <input type="text" id="location" name="location" value="{{ .User.Location }}">
+                                <input type="text" id="location" name="location" placeholder="City, Country" value="{{ .User.Location }}">
                             </div>
                             <div class="visibility-control" data-visibility-control>
                                 <input type="hidden" name="visibility_location" value="{{ if eq (index .FieldVisibility "location") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
@@ -207,7 +226,7 @@
                         <div class="field-visibility-row">
                             <div class="field-visibility-input">
                                 <label for="email_contact">Email</label>
-                                <input type="email" id="email_contact" name="email" value="{{ .User.Email }}">
+                                <input type="email" id="email_contact" name="email" placeholder="you@example.com" value="{{ .User.Email }}">
                             </div>
                             <div class="visibility-control" data-visibility-control>
                                 <input type="hidden" name="visibility_email" value="{{ if eq (index .FieldVisibility "email") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
@@ -221,7 +240,7 @@
                         <div class="field-visibility-row">
                             <div class="field-visibility-input">
                                 <label for="phone">Phone</label>
-                                <input type="tel" id="phone" name="phone" value="{{ .User.Phone }}">
+                                <input type="tel" id="phone" name="phone" placeholder="+1 555 123 4567" value="{{ .User.Phone }}">
                             </div>
                             <div class="visibility-control" data-visibility-control>
                                 <input type="hidden" name="visibility_phone" value="{{ if eq (index .FieldVisibility "phone") "private" }}private{{ else }}public{{ end }}" data-visibility-input>
@@ -249,7 +268,7 @@
                         <div class="field-visibility-row">
                             <div class="field-visibility-input">
                                 <label for="website">Website</label>
-                                <input type="url" id="website" name="website" value="{{ .User.Website }}">
+                                <input type="url" id="website" name="website" placeholder="https://example.com" value="{{ .User.Website }}">
                             </div>
                             <div class="visibility-control" data-visibility-control>
                                 <input type="hidden" name="visibility_website" value="{{ if eq (index .FieldVisibility "website") "private" }}private{{ else }}public{{ end }}" data-visibility-input>

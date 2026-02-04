@@ -124,8 +124,10 @@ metadata.
 
 **Handle:**  
 The canonical identifier of an identity within a PIN (commonly a
-username-like string).  PINC does not constrain handle syntax beyond
-safe use in URLs.
+username-like string).  For interoperable URL behavior, PINC RECOMMENDS
+the handle profile `^[a-z0-9._-]+$` (lowercase ASCII letters, digits,
+dot, underscore, hyphen).  PIN implementations SHOULD canonicalize
+handles to lowercase and SHOULD reject characters outside this profile.
 
 **Owner Identity:**  
 The designated primary identity of a PIN instance.  The Owner Identity

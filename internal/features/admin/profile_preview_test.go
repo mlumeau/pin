@@ -13,11 +13,14 @@ import (
 
 func TestBuildProfilePreviewDataBuildsPublicAndPrivateSnapshots(t *testing.T) {
 	visibility := map[string]string{
-		"email": "private",
+		"display_name": "private",
+		"bio":          "private",
+		"email":        "private",
 	}
 	identityRecord := domain.Identity{
 		Handle:              "alice",
 		DisplayName:         "Alice",
+		Bio:                 "hello",
 		Email:               "alice@example.com",
 		PrivateToken:        "tok_123",
 		CustomFieldsJSON:    identity.EncodeStringMap(map[string]string{"note": "hello"}),
@@ -38,8 +41,20 @@ func TestBuildProfilePreviewDataBuildsPublicAndPrivateSnapshots(t *testing.T) {
 	if publicPreview.User.Email != "" {
 		t.Fatalf("expected public email redacted, got %q", publicPreview.User.Email)
 	}
+	if publicPreview.User.DisplayName != "" {
+		t.Fatalf("expected public display name redacted, got %q", publicPreview.User.DisplayName)
+	}
+	if publicPreview.User.Bio != "" {
+		t.Fatalf("expected public bio redacted, got %q", publicPreview.User.Bio)
+	}
 	if privatePreview.User.Email != "alice@example.com" {
 		t.Fatalf("expected private email present, got %q", privatePreview.User.Email)
+	}
+	if privatePreview.User.DisplayName != "Alice" {
+		t.Fatalf("expected private display name present, got %q", privatePreview.User.DisplayName)
+	}
+	if privatePreview.User.Bio != "hello" {
+		t.Fatalf("expected private bio present, got %q", privatePreview.User.Bio)
 	}
 	if len(publicPreview.Links) != 1 || publicPreview.Links[0].Label != "Site" {
 		t.Fatalf("expected public links present, got %+v", publicPreview.Links)

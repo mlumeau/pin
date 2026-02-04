@@ -19,6 +19,8 @@ func TestVisibleIdentityFiltersPrivateFields(t *testing.T) {
 
 	user := domain.Identity{
 		Handle:             "alice",
+		DisplayName:        "Alice",
+		Bio:                "hello",
 		Email:              "alice@example.com",
 		Phone:              "123",
 		Location:           "Paris",
@@ -28,17 +30,25 @@ func TestVisibleIdentityFiltersPrivateFields(t *testing.T) {
 		PublicKeysJSON:     EncodeStringMap(map[string]string{"pgp": "key"}),
 		CustomFieldsJSON:   EncodeStringMap(map[string]string{"foo": "bar"}),
 		VisibilityJSON: EncodeVisibilityMap(map[string]string{
-			"email":      "private",
-			"phone":      "private",
-			"link:1":     "private",
-			"social:1":   "private",
-			"wallet.btc": "private",
-			"key.pgp":    "private",
-			"custom.foo": "private",
+			"display_name": "private",
+			"bio":          "private",
+			"email":        "private",
+			"phone":        "private",
+			"link:1":       "private",
+			"social:1":     "private",
+			"wallet.btc":   "private",
+			"key.pgp":      "private",
+			"custom.foo":   "private",
 		}),
 	}
 
 	publicUser, customFields := VisibleIdentity(user, false)
+	if publicUser.DisplayName != "" {
+		t.Fatalf("expected display name to be filtered")
+	}
+	if publicUser.Bio != "" {
+		t.Fatalf("expected bio to be filtered")
+	}
 	if publicUser.Email != "" {
 		t.Fatalf("expected email to be filtered")
 	}
@@ -69,6 +79,12 @@ func TestVisibleIdentityFiltersPrivateFields(t *testing.T) {
 	}
 
 	privateUser, _ := VisibleIdentity(user, true)
+	if privateUser.DisplayName != "Alice" {
+		t.Fatalf("expected display name to remain in private view")
+	}
+	if privateUser.Bio != "hello" {
+		t.Fatalf("expected bio to remain in private view")
+	}
 	if privateUser.Email != "alice@example.com" {
 		t.Fatalf("expected email to remain in private view")
 	}
@@ -249,7 +265,6 @@ func TestEncodeDecodeSocialProfiles(t *testing.T) {
 		t.Fatalf("unexpected decoded social profiles: %+v", decoded)
 	}
 }
-
 
 // TestEncodeDecodeCustomFields verifies encode decode custom fields behavior.
 func TestEncodeDecodeCustomFields(t *testing.T) {

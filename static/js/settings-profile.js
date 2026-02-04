@@ -486,9 +486,39 @@
         if (!form) {
             return;
         }
+        const handleInput = qs("#handle", form);
+        const handleValidationHint = qs("#handle-validation-hint", form);
 
         let saveTimeout;
         let hasChanges = false;
+
+        function clearHandleValidationError() {
+            if (!handleInput) {
+                return;
+            }
+            handleInput.classList.remove("is-invalid");
+            handleInput.removeAttribute("aria-invalid");
+            if (handleValidationHint) {
+                handleValidationHint.textContent = "";
+                handleValidationHint.classList.add("is-hidden");
+            }
+        }
+
+        function setHandleValidationError(message) {
+            if (!handleInput) {
+                return;
+            }
+            handleInput.classList.add("is-invalid");
+            handleInput.setAttribute("aria-invalid", "true");
+            if (handleValidationHint) {
+                handleValidationHint.textContent = message || "Invalid handle";
+                handleValidationHint.classList.remove("is-hidden");
+            }
+        }
+
+        function isHandleValidationMessage(message) {
+            return (message || "").toLowerCase().includes("handle");
+        }
 
         function showToast(message, type = "info") {
             // Remove any existing toast
@@ -535,14 +565,38 @@
                 const formData = new FormData(form);
                 const response = await fetch(form.action, {
                     method: "POST",
+                    headers: {
+                        "X-PIN-Autosave": "1",
+                    },
                     body: formData,
                 });
 
-                if (response.ok) {
-                    showToast("Changes saved", "success");
-                    hasChanges = false;
+                const html = await response.text();
+                let serverMessage = (html || "").trim();
+                if (html && html.includes("<")) {
+                    const doc = new DOMParser().parseFromString(html, "text/html");
+                    const toast = doc.querySelector("[data-toast]");
+                    if (toast) {
+                        serverMessage = (toast.textContent || "").trim();
+                    }
+                }
+
+                if (!response.ok) {
+                    if (isHandleValidationMessage(serverMessage)) {
+                        setHandleValidationError(serverMessage);
+                    } else {
+                        clearHandleValidationError();
+                    }
+                    showToast(serverMessage || "Error saving changes", "error");
+                    return;
+                }
+
+                clearHandleValidationError();
+                if (serverMessage && serverMessage !== "Profile updated successfully.") {
+                    showToast(serverMessage, "error");
                 } else {
-                    showToast("Error saving changes", "error");
+                    showToast(serverMessage || "Changes saved", "success");
+                    hasChanges = false;
                 }
             } catch (error) {
                 console.error("Auto-save error:", error);
@@ -571,6 +625,12 @@
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(saveForm, 1500);
         });
+
+        if (handleInput) {
+            handleInput.addEventListener("input", () => {
+                clearHandleValidationError();
+            });
+        }
     }
 
     function initDomainList(csrfToken) {
