@@ -46,7 +46,7 @@
     --button-bg-hover: #b34721;
     --button-text: #ffffff;
     --button-border: #7f3117;
-    --button-shadow: 0 12px 26px rgba(157, 63, 30, 0.25);
+    --button-shadow: 0 4px 10px rgba(157, 63, 30, 0.14);
     --button-focus: rgba(255, 107, 53, 0.45);
     --icon-button-bg: var(--panel);
     --icon-button-text: var(--ink);

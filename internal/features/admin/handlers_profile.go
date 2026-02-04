@@ -62,6 +62,28 @@ type uploadResult struct {
 	pictureID sql.NullInt64
 }
 
+// prioritizeActiveProfilePicture returns a copy with the active picture first.
+func prioritizeActiveProfilePicture(pics []domain.ProfilePicture, activeID int64) []domain.ProfilePicture {
+	if len(pics) < 2 || activeID <= 0 {
+		return pics
+	}
+	activeIndex := -1
+	for i := range pics {
+		if pics[i].ID == activeID {
+			activeIndex = i
+			break
+		}
+	}
+	if activeIndex <= 0 {
+		return pics
+	}
+	ordered := make([]domain.ProfilePicture, 0, len(pics))
+	ordered = append(ordered, pics[activeIndex])
+	ordered = append(ordered, pics[:activeIndex]...)
+	ordered = append(ordered, pics[activeIndex+1:]...)
+	return ordered
+}
+
 // Profile handles the HTTP request.
 func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/settings/identity" {
@@ -149,6 +171,9 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		data["Message"] = message
 	}
 	if pics, err := h.deps.ListProfilePictures(r.Context(), currentIdentity.ID); err == nil {
+		if currentIdentity.ProfilePictureID.Valid {
+			pics = prioritizeActiveProfilePicture(pics, currentIdentity.ProfilePictureID.Int64)
+		}
 		data["ProfilePictures"] = pics
 	}
 	if currentIdentity.ProfilePictureID.Valid {

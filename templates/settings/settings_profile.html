@@ -6,33 +6,46 @@
                     <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
                     <div class="section" id="section-basics">
                         <h2>Basics</h2>
-                        <div>
-                            <label for="handle">Handle</label>
-                            <input type="text" id="handle" name="handle" value="{{ .User.Handle }}" required>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="handle">Handle</label>
+                                <input type="text" id="handle" name="handle" value="{{ .User.Handle }}" required>
+                            </div>
                         </div>
-                        <div>
-                            <label for="display_name">Display name</label>
-                            <input type="text" id="display_name" name="display_name" value="{{ .User.DisplayName }}" required>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="display_name">Display name</label>
+                                <input type="text" id="display_name" name="display_name" value="{{ .User.DisplayName }}" required>
+                            </div>
                         </div>
-                        <label for="bio">Bio</label>
-                        <textarea id="bio" name="bio" rows="4">{{ .User.Bio }}</textarea>
+                        <div class="field-visibility-row">
+                            <div class="field-visibility-input">
+                                <label for="bio">Bio</label>
+                                <textarea id="bio" name="bio" rows="4">{{ .User.Bio }}</textarea>
+                            </div>
+                        </div>
                     </div>
-
                     <div class="section" id="section-picture">
                         <div class="section-header">
                             <h2>Profile picture</h2>
                             <button type="button" class="ghost" id="open-upload-modal">Upload new</button>
                         </div>
-                        <div class="profile-picture-gallery" id="profile-picture-gallery" data-active="{{ .ActiveProfilePictureID }}" data-user="{{ .User.Handle }}">
+                        <p class="meta">Choose one image as active. Click a card or use "Set active".</p>
+                        <div class="profile-picture-gallery" id="profile-picture-gallery" data-active="{{ .ActiveProfilePictureID }}" data-user="{{ .User.Handle }}" role="listbox" aria-label="Profile picture gallery">
                             {{ if .ProfilePictures }}
                             {{ range .ProfilePictures }}
-                            <div class="profile-picture-card {{ if eq $.ActiveProfilePictureID .ID }}is-selected{{ end }}" data-picture-id="{{ .ID }}">
-                                <img src="/{{ $.User.Handle }}/profile-picture?s=160&picture_id={{ .ID }}&v={{ .Filename }}" alt="Profile picture">
+                            <div class="profile-picture-card {{ if eq $.ActiveProfilePictureID .ID }}is-selected{{ end }}" data-picture-id="{{ .ID }}" role="option" aria-selected="{{ if eq $.ActiveProfilePictureID .ID }}true{{ else }}false{{ end }}" tabindex="0">
+                                <div class="profile-picture-frame">
+                                    <img class="profile-picture-thumb" src="/{{ $.User.Handle }}/profile-picture?s=194&picture_id={{ .ID }}&v={{ .Filename }}" alt="Profile picture">
+                                    <span class="profile-picture-active-chip" {{ if ne $.ActiveProfilePictureID .ID }}hidden{{ end }}>Active</span>
+                                </div>
                                 <div class="profile-picture-meta">
-                                    <span class="badge">{{ if eq $.ActiveProfilePictureID .ID }}Active{{ end }}</span>
-                                    <button type="button" class="profile-picture-alt edit-picture" data-picture-id="{{ .ID }}">Edit alt text</button>
+                                    <button type="button" class="profile-picture-alt edit-picture" data-picture-id="{{ .ID }}" title="{{ if .AltText }}{{ .AltText }}{{ else }}Add alt text{{ end }}">
+                                        <span class="profile-picture-alt-label">{{ if .AltText }}{{ .AltText }}{{ else }}Add alt text{{ end }}</span>
+                                        <span class="icon icon-edit" aria-hidden="true"></span>
+                                    </button>
                                     <div class="profile-picture-actions">
-                                        <button type="button" class="ghost select-picture" data-picture-id="{{ .ID }}" {{ if eq $.ActiveProfilePictureID .ID }}disabled{{ end }}>Select</button>
+                                        <button type="button" class="ghost select-picture" data-picture-id="{{ .ID }}" {{ if eq $.ActiveProfilePictureID .ID }}disabled{{ end }}>{{ if eq $.ActiveProfilePictureID .ID }}Selected{{ else }}Set active{{ end }}</button>
                                         <button type="button" class="icon-button delete-picture" data-picture-id="{{ .ID }}" aria-label="Delete picture">
                                             <span class="icon icon-trash" aria-hidden="true"></span>
                                         </button>
@@ -41,8 +54,13 @@
                             </div>
                             {{ end }}
                             {{ else }}
-                            <p class="meta">No profile pictures yet. Upload one to get started.</p>
+                            <p class="meta profile-picture-empty">No profile pictures yet. Upload one to get started.</p>
                             {{ end }}
+                        </div>
+                        <div class="profile-picture-pagination" id="profile-picture-pagination" hidden>
+                            <button type="button" class="ghost" id="profile-picture-prev" aria-label="Previous pictures page">Previous</button>
+                            <span class="meta" id="profile-picture-page-label">Page 1 of 1</span>
+                            <button type="button" class="ghost" id="profile-picture-next" aria-label="Next pictures page">Next</button>
                         </div>
                     </div>
                     <div class="section" id="section-profile">
@@ -274,19 +292,17 @@
                         <button type="button" id="add-social">Add social profile</button>
 
                         {{ if .IsSelf }}
+                        {{ if or .GitHubOAuthEnabled .RedditOAuthEnabled }}
                         <div class="link-actions" style="margin-top: 0.75rem;">
                             {{ if .GitHubOAuthEnabled }}
                             <a href="/oauth/github/start">Connect GitHub</a>
-                            {{ else }}
-                            <span>Connect GitHub (not configured)</span>
                             {{ end }}
-                            |
+                            {{ if and .GitHubOAuthEnabled .RedditOAuthEnabled }}|{{ end }}
                             {{ if .RedditOAuthEnabled }}
                             <a href="/oauth/reddit/start">Connect Reddit</a>
-                            {{ else }}
-                            <span>Connect Reddit (not configured)</span>
                             {{ end }}
                         </div>
+                        {{ end }}
                         <div style="margin-top: 0.75rem;">
                             <button type="button" class="ghost" id="open-bluesky" {{ if not .BlueskyEnabled }}disabled{{ end }}>Verify Bluesky</button>
                         </div>
