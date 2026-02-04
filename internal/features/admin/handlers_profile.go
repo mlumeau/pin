@@ -192,6 +192,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
+		autoSave := isAutoSaveRequest(r)
 		r.Body = http.MaxBytesReader(w, r.Body, cfg.MaxUploadBytes)
 		if err := r.ParseMultipartForm(cfg.MaxUploadBytes); err != nil {
 			http.Error(w, "Upload too large", http.StatusBadRequest)
@@ -205,6 +206,10 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		form, err := h.parseProfileForm(r, currentIdentity, socialProfiles)
 		if err != nil {
 			h.deps.AuditOutcome(r.Context(), current.ID, "profile.update", currentIdentity.Handle, err, nil)
+			if autoSave {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 			data["Message"] = err.Error()
 			goto renderProfile
 		}
@@ -263,6 +268,10 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		data["ATProtoHandleVerified"] = identity.IsATProtoHandleVerified(currentIdentity.ATProtoHandle, identity.VerifiedDomains(domainRows))
 		data["DomainVisibility"] = users.DomainVisibilityMap(identity.DecodeVisibilityMap(currentIdentity.VisibilityJSON))
 		data["Preview"] = buildProfilePreviewData(currentIdentity, theme)
+		if autoSave {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 	}
 
 renderProfile:
@@ -298,6 +307,8 @@ func (h Handler) parseProfileForm(r *http.Request, currentIdentity domain.Identi
 	form.links, form.linkVisibility = users.ParseLinksForm(r.Form["link_label"], r.Form["link_url"], r.Form["link_visibility"])
 	form.customFields = users.ParseCustomFieldsForm(r.Form["custom_key"], r.Form["custom_value"])
 	form.fieldVisibility = users.ParseVisibilityForm(r.Form, []string{
+		"display_name",
+		"bio",
 		"email",
 		"organization",
 		"job_title",
@@ -432,4 +443,9 @@ func buildProfileVisibility(form profileFormData) map[string]string {
 		visibility[key] = value
 	}
 	return visibility
+}
+
+// isAutoSaveRequest reports whether the request was sent by client autosave.
+func isAutoSaveRequest(r *http.Request) bool {
+	return strings.TrimSpace(r.Header.Get("X-PIN-Autosave")) == "1"
 }

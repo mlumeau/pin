@@ -499,7 +499,7 @@ func (h Handler) Setup(w http.ResponseWriter, r *http.Request) {
 				UserID:              int(userID),
 				Handle:              handle,
 				Email:               email,
-				DisplayName:         handle,
+				DisplayName:         "",
 				CustomFieldsJSON:    "{}",
 				VisibilityJSON:      "{}",
 				PrivateToken:        privateToken,

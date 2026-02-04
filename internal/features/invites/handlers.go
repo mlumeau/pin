@@ -62,19 +62,20 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 	settingsSvc := featuresettings.NewService(h.deps)
 	theme := settingsSvc.ThemeSettings(r.Context(), nil)
 	data := map[string]interface{}{
-		"Error":            "",
-		"Success":          false,
-		"CSRFToken":        h.deps.EnsureCSRF(session),
-		"Theme":            theme,
-		"PageTitle":        "Pin - Accept Invite",
-		"PageHeading":      "Join this Pin instance",
-		"PageSubheading":   "Create your account to get started.",
-		"FormAction":       r.URL.String(),
-		"FormButtonLabel":  "Create account",
-		"SuccessMessage":   "Account created. Set up your authenticator app to finish.",
-		"TOTP":             "",
-		"TOTPURL":          "",
-		"IsAdmin":          false,
+		"Error":           "",
+		"Success":         false,
+		"CSRFToken":       h.deps.EnsureCSRF(session),
+		"Theme":           theme,
+		"PageTitle":       "Pin - Accept Invite",
+		"PageHeading":     "Join this Pin instance",
+		"PageSubheading":  "Create your account to get started.",
+		"FormAction":      r.URL.String(),
+		"FormButtonLabel": "Create account",
+		"FormIntro":       "You can change these details later in settings.",
+		"SuccessMessage":  "Account created. Set up your authenticator app to finish.",
+		"TOTP":            "",
+		"TOTPURL":         "",
+		"IsAdmin":         true,
 	}
 
 	if r.Method == http.MethodPost {
@@ -120,14 +121,14 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 			userID, err := h.deps.CreateUser(r.Context(), invite.Role, string(hash), secret, defaultTheme)
 			if err != nil {
 				h.deps.AuditOutcome(r.Context(), 0, "user.create", handle, err, map[string]string{"source": "invite"})
-				http.Error(w, "Failed to create account", http.StatusInternalServerError)
-				return
+				data["Error"] = accountCreationErrorMessage(err)
+				goto renderInvite
 			}
 			identityRecord := domain.Identity{
 				UserID:              int(userID),
 				Handle:              handle,
 				Email:               email,
-				DisplayName:         handle,
+				DisplayName:         "",
 				CustomFieldsJSON:    "{}",
 				VisibilityJSON:      "{}",
 				PrivateToken:        privateToken,
@@ -140,8 +141,8 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 			if _, err := h.deps.CreateIdentity(r.Context(), identityRecord); err != nil {
 				_ = h.deps.DeleteUser(r.Context(), int(userID))
 				h.deps.AuditOutcome(r.Context(), 0, "user.create", handle, err, map[string]string{"source": "invite"})
-				http.Error(w, "Failed to create account", http.StatusInternalServerError)
-				return
+				data["Error"] = accountCreationErrorMessage(err)
+				goto renderInvite
 			}
 			_ = h.deps.MarkInviteUsed(r.Context(), invite.ID, int(userID))
 			h.deps.AuditOutcome(r.Context(), int(userID), "user.create", handle, nil, map[string]string{"source": "invite"})
@@ -151,6 +152,7 @@ func (h Handler) Invite(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+renderInvite:
 	if err := session.Save(r, w); err != nil {
 		http.Error(w, "Session error", http.StatusInternalServerError)
 		return
@@ -237,4 +239,16 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 // isAdmin reports whether admin is true.
 func isAdmin(user domain.User) bool {
 	return user.Role == "owner" || user.Role == "admin"
+}
+
+// accountCreationErrorMessage normalizes storage errors into user-facing messages.
+func accountCreationErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, "identity.handle") || strings.Contains(msg, "idx_identity_handle_nocase") || strings.Contains(msg, "handle already exists") {
+		return "Handle already exists"
+	}
+	return "Failed to create account"
 }

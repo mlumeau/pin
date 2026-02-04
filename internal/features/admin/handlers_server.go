@@ -228,7 +228,7 @@ func (e requestError) Error() string {
 	return e.err.Error()
 }
 
-// serverAction normalizes the form action name across legacy field names.
+// serverAction normalizes the form action name across accepted field names.
 func serverAction(r *http.Request) string {
 	action := strings.TrimSpace(r.FormValue("server_action"))
 	if action == "" {

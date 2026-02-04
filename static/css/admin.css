@@ -252,6 +252,32 @@
     gap: 0.75rem;
 }
 
+.field-hint {
+    margin: 0;
+    font-size: 0.82rem;
+}
+
+.field-hint-error {
+    color: var(--error);
+    font-weight: 600;
+}
+
+#handle.is-invalid {
+    border-color: var(--error);
+    background: var(--panel);
+}
+
+#handle.is-invalid:focus {
+    border-color: var(--error);
+}
+
+.display-name-note {
+    margin: 0;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
 .field-visibility-actions {
     display: grid;
     gap: 0.5rem;

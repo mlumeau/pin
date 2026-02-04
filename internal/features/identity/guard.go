@@ -37,6 +37,9 @@ func ValidateHandle(ctx context.Context, handle string, excludeID int, reserved 
 	if normalized == "" {
 		return errors.New("Handle is required")
 	}
+	if !isURLSafeHandle(normalized) {
+		return errors.New("Handle can only contain letters, numbers, dot (.), underscore (_), and hyphen (-)")
+	}
 	if IsReservedIdentifier(normalized, reserved) {
 		return errors.New("Handle is reserved")
 	}
@@ -44,6 +47,24 @@ func ValidateHandle(ctx context.Context, handle string, excludeID int, reserved 
 		return errors.New("Handle already exists")
 	}
 	return nil
+}
+
+// isURLSafeHandle reports whether a handle is URL-path safe for profile routes.
+func isURLSafeHandle(handle string) bool {
+	for i := 0; i < len(handle); i++ {
+		c := handle[i]
+		switch {
+		case c >= 'a' && c <= 'z':
+			continue
+		case c >= '0' && c <= '9':
+			continue
+		case c == '.', c == '_', c == '-':
+			continue
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // MatchesIdentity reports whether the identifier matches the user's handle.

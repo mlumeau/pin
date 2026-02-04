@@ -48,6 +48,7 @@ func InitDB(db *sql.DB) error {
             updated_at TEXT,
             UNIQUE(user_id)
         )`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_identity_handle_nocase ON identity(lower(handle))`,
 		`CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT
@@ -59,7 +60,8 @@ func InitDB(db *sql.DB) error {
             created_by INTEGER NOT NULL,
             created_at TEXT NOT NULL,
             used_at TEXT,
-            used_by INTEGER
+            used_by INTEGER,
+            used_by_name TEXT
         )`,
 		`CREATE TABLE IF NOT EXISTS passkey (
             id INTEGER PRIMARY KEY,
@@ -84,6 +86,7 @@ func InitDB(db *sql.DB) error {
 		`CREATE TABLE IF NOT EXISTS audit_log (
             id INTEGER PRIMARY KEY,
             actor_id INTEGER,
+            actor_name TEXT,
             action TEXT NOT NULL,
             target TEXT,
             metadata TEXT,

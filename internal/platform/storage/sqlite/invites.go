@@ -3,6 +3,7 @@ package sqlitestore
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"pin/internal/domain"
@@ -16,7 +17,7 @@ func CreateInvite(ctx context.Context, db *sql.DB, token, role string, createdBy
 
 // ListInvites returns the invites list in the SQLite store.
 func ListInvites(ctx context.Context, db *sql.DB) ([]domain.Invite, error) {
-	rows, err := db.QueryContext(ctx, "SELECT id, token, role, created_by, created_at, used_at, used_by FROM invite ORDER BY id DESC")
+	rows, err := db.QueryContext(ctx, "SELECT id, token, role, created_by, created_at, used_at, used_by, COALESCE(used_by_name,'') FROM invite ORDER BY id DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -26,10 +27,12 @@ func ListInvites(ctx context.Context, db *sql.DB) ([]domain.Invite, error) {
 	for rows.Next() {
 		var invite domain.Invite
 		var created string
-		if err := rows.Scan(&invite.ID, &invite.Token, &invite.Role, &invite.CreatedBy, &created, &invite.UsedAt, &invite.UsedBy); err != nil {
+		var usedAt sql.NullString
+		if err := rows.Scan(&invite.ID, &invite.Token, &invite.Role, &invite.CreatedBy, &created, &usedAt, &invite.UsedBy, &invite.UsedByName); err != nil {
 			return nil, err
 		}
 		invite.CreatedAt, _ = time.Parse(time.RFC3339, created)
+		invite.UsedAt = parseNullTime(usedAt)
 		invites = append(invites, invite)
 	}
 	return invites, nil
@@ -37,19 +40,28 @@ func ListInvites(ctx context.Context, db *sql.DB) ([]domain.Invite, error) {
 
 // GetInviteByToken returns invite by token.
 func GetInviteByToken(ctx context.Context, db *sql.DB, token string) (domain.Invite, error) {
-	row := db.QueryRowContext(ctx, "SELECT id, token, role, created_by, created_at, used_at, used_by FROM invite WHERE token = ? LIMIT 1", token)
+	row := db.QueryRowContext(ctx, "SELECT id, token, role, created_by, created_at, used_at, used_by, COALESCE(used_by_name,'') FROM invite WHERE token = ? LIMIT 1", token)
 	var invite domain.Invite
 	var created string
-	if err := row.Scan(&invite.ID, &invite.Token, &invite.Role, &invite.CreatedBy, &created, &invite.UsedAt, &invite.UsedBy); err != nil {
+	var usedAt sql.NullString
+	if err := row.Scan(&invite.ID, &invite.Token, &invite.Role, &invite.CreatedBy, &created, &usedAt, &invite.UsedBy, &invite.UsedByName); err != nil {
 		return domain.Invite{}, err
 	}
 	invite.CreatedAt, _ = time.Parse(time.RFC3339, created)
+	invite.UsedAt = parseNullTime(usedAt)
 	return invite, nil
 }
 
 // MarkInviteUsed returns invite used.
 func MarkInviteUsed(ctx context.Context, db *sql.DB, id int, usedBy int) error {
-	_, err := db.ExecContext(ctx, "UPDATE invite SET used_at = ?, used_by = ? WHERE id = ?", time.Now().UTC().Format(time.RFC3339), usedBy, id)
+	usedByName := ""
+	if usedBy > 0 {
+		row := db.QueryRowContext(ctx, "SELECT COALESCE(handle,'') FROM identity WHERE user_id = ? LIMIT 1", usedBy)
+		if err := row.Scan(&usedByName); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+	}
+	_, err := db.ExecContext(ctx, "UPDATE invite SET used_at = ?, used_by = ?, used_by_name = ? WHERE id = ?", time.Now().UTC().Format(time.RFC3339), usedBy, usedByName, id)
 	return err
 }
 
@@ -57,4 +69,16 @@ func MarkInviteUsed(ctx context.Context, db *sql.DB, id int, usedBy int) error {
 func DeleteInvite(ctx context.Context, db *sql.DB, id int) error {
 	_, err := db.ExecContext(ctx, "DELETE FROM invite WHERE id = ?", id)
 	return err
+}
+
+// parseNullTime converts a nullable RFC3339 string into sql.NullTime.
+func parseNullTime(value sql.NullString) sql.NullTime {
+	if !value.Valid || value.String == "" {
+		return sql.NullTime{}
+	}
+	parsed, err := time.Parse(time.RFC3339, value.String)
+	if err != nil {
+		return sql.NullTime{}
+	}
+	return sql.NullTime{Time: parsed, Valid: true}
 }

@@ -55,7 +55,8 @@
         <form class="setup-form" method="post" action="{{ .FormAction }}">
             <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
             <label for="handle">Handle</label>
-            <input type="text" id="handle" name="handle" required>
+            <input type="text" id="handle" name="handle" pattern="[A-Za-z0-9._-]+" title="Use letters, numbers, dot (.), underscore (_), or hyphen (-)." required>
+            <p class="meta">Allowed: letters, numbers, dot <span class="inline-code">.</span>, underscore <span class="inline-code">_</span>, hyphen <span class="inline-code">-</span>.</p>
 
             <label for="password">Password</label>
             <input type="password" id="password" name="password" required>
