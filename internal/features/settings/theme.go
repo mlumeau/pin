@@ -71,21 +71,16 @@ func NewService(store Store) Service {
 }
 
 var builtInThemes = []ThemeOption{
-	{Name: "classic", Label: "Classic paper", Description: "Warm paper, serif body, muted orange highlights. Default look."},
-	{Name: "noir", Label: "Noir studio", Description: "Deep midnight panels with electric cyan accents for a dramatic dark mode."},
-	{Name: "mono", Label: "Terminal mono", Description: "Developer-focused, near-black canvas with neon green details and monospace type."},
-	{Name: "sunrise", Label: "Sunrise pop", Description: "Bold modern gradient vibe with coral and amber accents."},
-	{Name: "forest", Label: "Evergreen modern", Description: "Fresh botanical palette with crisp sans headings and soft shadows."},
-	{Name: "slate", Label: "Slate serif", Description: "Cool graphite neutrals with lavender accents and transitional typography."},
-	{Name: "desert", Label: "Desert bloom", Description: "Sandy neutrals with turquoise punches and a humanist serif/sans mix."},
-	{Name: "ocean", Label: "Ocean depth", Description: "Deep navy gradients with seafoam accents and rounded sans headings."},
-	{Name: "pastel", Label: "Pastel cloud", Description: "Playful candy palette with soft rounded cards and friendly fonts."},
-	{Name: "brutalist", Label: "Brutalist mono", Description: "High-contrast black/white with bold yellow accents and rigid grids."},
-	{Name: "neonpop", Label: "Neon pop", Description: "Black canvas, hyper-saturated magenta/cyan accents, bold geometric type."},
-	{Name: "velvet", Label: "Velvet luxe", Description: "Deep burgundy and gold with elegant serif headings and soft glow."},
-	{Name: "glass", Label: "Glass frost", Description: "Frosted glass blur vibe with icy blues and sleek sans typography."},
-	{Name: "midcentury", Label: "Mid-century", Description: "Muted teals and mustards with rounded cards and retro sans serif."},
-	{Name: "tech", Label: "Tech grid", Description: "Slate/teal gradient, neon lime highlights, condensed tech-forward font."},
+	{Name: "classic", Label: "Classic paper", Description: "Warm paper-inspired layout with editorial serif typography and clay accents."},
+	{Name: "noir", Label: "Noir blueprint", Description: "Cinematic dark interface with ocean-tinted cyan highlights and high legibility contrast."},
+	{Name: "mono", Label: "Terminal mono", Description: "Monospace terminal style with deep black surfaces and vivid green focus states."},
+	{Name: "forest", Label: "Forest atlas", Description: "Calm botanical greens with practical sans-serif typography and gentle depth."},
+	{Name: "slate", Label: "Slate office", Description: "Pragmatic blue-gray theme with subtle glass-like surfaces for long-form reading."},
+	{Name: "pastel", Label: "Pastel cloud", Description: "Soft candy palette with sunrise-inspired coral actions and playful display headings."},
+	{Name: "highcontrast", Label: "High contrast", Description: "Accessibility-first black/white contrast with strong focus rings and bold controls."},
+	{Name: "neonpop", Label: "Neon boulevard", Description: "Expressive night palette with electric pink/cyan accents and punchy typography."},
+	{Name: "velvet", Label: "Velvet theatre", Description: "Luxurious dark plum surfaces with gold details and refined serif titles."},
+	{Name: "tech", Label: "Tech console", Description: "Focused dark productivity theme with mint accents and an ocean-depth backdrop."},
 }
 
 // NormalizeThemeChoice normalizes theme choice into a canonical form.
@@ -93,6 +88,11 @@ func NormalizeThemeChoice(name string) string {
 	name = strings.ToLower(strings.TrimSpace(name))
 	if name == "" {
 		return defaultThemeName
+	}
+	switch name {
+	case "brutalist":
+		// Legacy alias kept for backward compatibility with older saved profiles.
+		name = "highcontrast"
 	}
 	if name == defaultCustomThemeName {
 		return name

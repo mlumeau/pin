@@ -50,6 +50,160 @@
         const uploadModal = qs("#profile-picture-modal");
         const altModal = qs("#profile-picture-alt-modal");
         const deleteModal = qs("#profile-picture-delete-modal");
+        const gallery = qs("#profile-picture-gallery");
+        const pagination = qs("#profile-picture-pagination");
+        const prevPageButton = qs("#profile-picture-prev");
+        const nextPageButton = qs("#profile-picture-next");
+        const pageLabel = qs("#profile-picture-page-label");
+        const picturesPerPage = 4;
+        let currentGalleryPage = 1;
+
+        function showToast(message, type = "info") {
+            const existingToast = document.querySelector("[data-toast]");
+            if (existingToast) {
+                existingToast.remove();
+            }
+            const toast = document.createElement("div");
+            toast.setAttribute("data-toast", "");
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.classList.add("is-visible"), 50);
+            setTimeout(() => {
+                toast.classList.add("is-hiding");
+                toast.classList.remove("is-visible");
+            }, 2800);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function postJSON(url, payload) {
+            const body = new URLSearchParams();
+            Object.entries(payload).forEach(([key, value]) => {
+                body.set(key, value);
+            });
+            return fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept": "application/json",
+                },
+                body,
+            });
+        }
+
+        function setGalleryBusy(isBusy) {
+            if (!gallery) {
+                return;
+            }
+            qsa(".profile-picture-card", gallery).forEach((card) => {
+                card.classList.toggle("is-busy", isBusy);
+            });
+        }
+
+        function setActiveCard(activeID) {
+            if (!gallery) {
+                return;
+            }
+            const active = String(activeID || "");
+            gallery.dataset.active = active;
+            qsa(".profile-picture-card", gallery).forEach((card) => {
+                const cardID = String(card.dataset.pictureId || "");
+                const selected = cardID === active;
+                card.classList.toggle("is-selected", selected);
+                card.setAttribute("aria-selected", selected ? "true" : "false");
+
+                const chip = qs(".profile-picture-active-chip", card);
+                if (chip) {
+                    chip.hidden = !selected;
+                }
+                const selectButton = qs(".select-picture", card);
+                if (selectButton) {
+                    selectButton.disabled = selected;
+                    selectButton.textContent = selected ? "Selected" : "Set active";
+                }
+            });
+        }
+
+        function ensureEmptyState() {
+            if (!gallery) {
+                return;
+            }
+            const cards = qsa(".profile-picture-card", gallery);
+            const empty = qs(".profile-picture-empty", gallery);
+            if (cards.length === 0 && !empty) {
+                const p = document.createElement("p");
+                p.className = "meta profile-picture-empty";
+                p.textContent = "No profile pictures yet. Upload one to get started.";
+                gallery.appendChild(p);
+            } else if (cards.length > 0 && empty) {
+                empty.remove();
+            }
+            applyGalleryPagination(currentGalleryPage);
+        }
+
+        function applyGalleryPagination(page) {
+            if (!gallery) {
+                return;
+            }
+            if (typeof page === "number" && !Number.isNaN(page)) {
+                currentGalleryPage = page;
+            }
+            const cards = qsa(".profile-picture-card", gallery);
+            const totalPages = Math.max(1, Math.ceil(cards.length / picturesPerPage));
+            currentGalleryPage = Math.min(Math.max(currentGalleryPage, 1), totalPages);
+
+            cards.forEach((card, index) => {
+                const cardPage = Math.floor(index / picturesPerPage) + 1;
+                card.classList.toggle("is-hidden", cardPage !== currentGalleryPage);
+            });
+
+            if (pagination) {
+                pagination.hidden = cards.length <= picturesPerPage;
+            }
+            if (pageLabel) {
+                pageLabel.textContent = `Page ${currentGalleryPage} of ${totalPages}`;
+            }
+            if (prevPageButton) {
+                prevPageButton.disabled = currentGalleryPage <= 1;
+            }
+            if (nextPageButton) {
+                nextPageButton.disabled = currentGalleryPage >= totalPages;
+            }
+        }
+
+        async function selectPicture(picId) {
+            if (!gallery || !picId) {
+                return;
+            }
+            const current = String(gallery.dataset.active || "");
+            if (current === String(picId)) {
+                return;
+            }
+            setGalleryBusy(true);
+            try {
+                const response = await postJSON("/settings/profile/profile-picture/select", {
+                    csrf_token: csrfToken,
+                    profile_picture_id: String(picId),
+                });
+                if (!response.ok) {
+                    throw new Error("select failed");
+                }
+                let active = picId;
+                const contentType = (response.headers.get("Content-Type") || "").toLowerCase();
+                if (contentType.includes("json")) {
+                    const payload = await response.json();
+                    if (payload && payload.active) {
+                        active = payload.active;
+                    }
+                }
+                setActiveCard(active);
+                showToast("Active profile picture updated.", "success");
+            } catch (err) {
+                window.location.reload();
+            } finally {
+                setGalleryBusy(false);
+            }
+        }
 
         wireModal(uploadModal);
         wireModal(altModal);
@@ -77,8 +231,9 @@
             });
         }
 
-        const gallery = qs("#profile-picture-gallery");
         if (gallery) {
+            applyGalleryPagination(1);
+
             gallery.addEventListener("click", (event) => {
                 const editButton = event.target.closest(".edit-picture");
                 if (editButton) {
@@ -109,45 +264,109 @@
 
                 const selectButton = event.target.closest(".select-picture");
                 if (selectButton) {
-                    const picId = selectButton.dataset.pictureId;
-                    selectButton.disabled = true;
-                    postForm("/settings/profile/profile-picture/select", {
-                        csrf_token: csrfToken,
-                        profile_picture_id: picId || "",
-                    })
-                        .then(() => window.location.reload())
-                        .catch(() => window.location.reload());
+                    selectPicture(selectButton.dataset.pictureId || "");
+                    return;
+                }
+
+                const card = event.target.closest(".profile-picture-card");
+                if (card && gallery.contains(card)) {
+                    selectPicture(card.dataset.pictureId || "");
                 }
             });
+
+            gallery.addEventListener("keydown", (event) => {
+                if (event.key !== "Enter" && event.key !== " ") {
+                    return;
+                }
+                if (event.target.closest("button, input, textarea, select, a")) {
+                    return;
+                }
+                const card = event.target.closest(".profile-picture-card");
+                if (!card || !gallery.contains(card)) {
+                    return;
+                }
+                event.preventDefault();
+                selectPicture(card.dataset.pictureId || "");
+            });
+        }
+
+        if (prevPageButton) {
+            prevPageButton.addEventListener("click", () => applyGalleryPagination(currentGalleryPage - 1));
+        }
+        if (nextPageButton) {
+            nextPageButton.addEventListener("click", () => applyGalleryPagination(currentGalleryPage + 1));
         }
 
         const altForm = qs("#profile-picture-alt-form");
         if (altForm) {
-            altForm.addEventListener("submit", (event) => {
+            altForm.addEventListener("submit", async (event) => {
                 event.preventDefault();
                 const altInput = qs("#profile-picture-alt-input");
                 const idInput = qs("#profile-picture-alt-id");
-            postForm("/settings/profile/profile-picture/alt", {
-                csrf_token: csrfToken,
-                profile_picture_id: idInput ? idInput.value : "",
-                profile_picture_alt: altInput ? altInput.value : "",
-            })
-                    .then(() => window.location.reload())
-                    .catch(() => window.location.reload());
+                const picId = idInput ? idInput.value : "";
+                const altText = altInput ? altInput.value.trim() : "";
+                try {
+                    const response = await postJSON("/settings/profile/profile-picture/alt", {
+                        csrf_token: csrfToken,
+                        profile_picture_id: picId,
+                        profile_picture_alt: altText,
+                    });
+                    if (!response.ok) {
+                        throw new Error("alt update failed");
+                    }
+                    const picture = pictureById.get(picId) || {};
+                    picture.alt_text = altText;
+                    picture.AltText = altText;
+                    pictureById.set(picId, picture);
+                    const card = qs(`.profile-picture-card[data-picture-id="${picId}"]`, gallery);
+                    const editButton = card ? qs(".edit-picture", card) : null;
+                    const altLabel = editButton ? qs(".profile-picture-alt-label", editButton) : null;
+                    if (altLabel) {
+                        altLabel.textContent = altText || "Add alt text";
+                    }
+                    if (editButton) {
+                        editButton.setAttribute("title", altText || "Add alt text");
+                    }
+                    closeModal(altModal);
+                    showToast("Alt text saved.", "success");
+                } catch (err) {
+                    window.location.reload();
+                }
             });
         }
 
         const deleteForm = qs("#profile-picture-delete-form");
         if (deleteForm) {
-            deleteForm.addEventListener("submit", (event) => {
+            deleteForm.addEventListener("submit", async (event) => {
                 event.preventDefault();
                 const idInput = qs("#profile-picture-delete-id");
-            postForm("/settings/profile/profile-picture/delete", {
-                csrf_token: csrfToken,
-                profile_picture_id: idInput ? idInput.value : "",
-            })
-                    .then(() => window.location.reload())
-                    .catch(() => window.location.reload());
+                const picId = idInput ? idInput.value : "";
+                try {
+                    const response = await postJSON("/settings/profile/profile-picture/delete", {
+                        csrf_token: csrfToken,
+                        profile_picture_id: picId,
+                    });
+                    if (!response.ok) {
+                        throw new Error("delete failed");
+                    }
+                    const card = qs(`.profile-picture-card[data-picture-id="${picId}"]`, gallery);
+                    if (card) {
+                        card.remove();
+                    }
+                    pictureById.delete(picId);
+                    const contentType = (response.headers.get("Content-Type") || "").toLowerCase();
+                    if (contentType.includes("json")) {
+                        const payload = await response.json();
+                        if (payload && payload.active) {
+                            setActiveCard(payload.active);
+                        }
+                    }
+                    ensureEmptyState();
+                    closeModal(deleteModal);
+                    showToast("Profile picture deleted.", "success");
+                } catch (err) {
+                    window.location.reload();
+                }
             });
         }
     }

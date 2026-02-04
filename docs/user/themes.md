@@ -5,21 +5,16 @@ Themes control both the public profile and the settings UI.
 ## Built-in themes
 Select a built-in theme from **Settings > Appearance**. The default is `classic`.
 
-- `classic` - Warm paper, serif body, muted orange highlights. Default look.
-- `noir` - Deep midnight panels with electric cyan accents for a dramatic dark mode.
-- `mono` - Developer-focused, near-black canvas with neon green details and monospace type.
-- `sunrise` - Bold modern gradient vibe with coral and amber accents.
-- `forest` - Fresh botanical palette with crisp sans headings and soft shadows.
-- `slate` - Cool graphite neutrals with lavender accents and transitional typography.
-- `desert` - Sandy neutrals with turquoise punches and a humanist serif/sans mix.
-- `ocean` - Deep navy gradients with seafoam accents and rounded sans headings.
-- `pastel` - Playful candy palette with soft rounded cards and friendly fonts.
-- `brutalist` - High-contrast black/white with bold yellow accents and rigid grids.
-- `neonpop` - Black canvas, hyper-saturated magenta/cyan accents, bold geometric type.
-- `velvet` - Deep burgundy and gold with elegant serif headings and soft glow.
-- `glass` - Frosted glass blur vibe with icy blues and sleek sans typography.
-- `midcentury` - Muted teals and mustards with rounded cards and retro sans serif.
-- `tech` - Slate/teal gradient, neon lime highlights, condensed tech-forward font.
+- `classic` - Warm paper-inspired layout with editorial serif typography and clay accents.
+- `noir` - Cinematic dark interface with ocean-tinted cyan highlights and high legibility contrast.
+- `mono` - Monospace terminal style with deep black surfaces and vivid green focus states.
+- `forest` - Calm botanical greens with practical sans-serif typography and gentle depth.
+- `slate` - Pragmatic blue-gray theme with subtle glass-like surfaces for long-form reading.
+- `pastel` - Soft candy palette with sunrise-inspired coral actions and playful headings.
+- `highcontrast` - Accessibility-first high-contrast black/white style with strong focus states.
+- `neonpop` - Expressive night palette with electric pink/cyan accents and punchy typography.
+- `velvet` - Luxurious dark plum surfaces with gold details and refined serif titles.
+- `tech` - Focused dark productivity theme with mint accents and an ocean-depth backdrop.
 
 ## Custom CSS
 You can either:

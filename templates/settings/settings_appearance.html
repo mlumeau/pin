@@ -3,85 +3,82 @@
                 <div class="settings-split">
                     <div class="settings-form-column settings-panel">
                         <form method="post" action="/settings/appearance" enctype="multipart/form-data" id="appearance-settings-form">
-                    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
 
-                    {{ if not .CanSelectTheme }}
-                    <div class="highlight-note">Theme selection is disabled by the server administrator.</div>
-                    {{ end }}
-
-                    {{ if .CanSelectTheme }}
-                    <div class="section" id="section-themes">
-                        <h2>Built-in themes</h2>
-                        <p class="meta">Pick one theme for the whole app. Click a card to select.</p>
-                        <div class="theme-preview-list" data-theme-pages>
-                            {{ if .HasDefaultCustomCSS }}
-                            <label class="theme-preview {{ if eq $.Theme.ProfileTheme $.DefaultCustomTheme.Name }}is-selected{{ end }}" data-preview-theme="{{ $.DefaultCustomTheme.Name }}" data-page="1">
-                                <input type="radio" name="profile_theme" value="{{ $.DefaultCustomTheme.Name }}" {{ if eq $.Theme.ProfileTheme $.DefaultCustomTheme.Name }}checked{{ end }} class="theme-choice" aria-label="{{ $.DefaultCustomTheme.Label }}" data-page="1">
-                                <div class="theme-preview-header">
-                                    <span>{{ $.DefaultCustomTheme.Label }}</span>
-                                </div>
-                                <div class="theme-preview-description meta">{{ $.DefaultCustomTheme.Description }}</div>
-                                {{ if .DefaultCustomCSSURL }}
-                                <p class="meta">Active file: <a class="link-inline" href="{{ .DefaultCustomCSSURL }}" target="_blank" rel="noreferrer">{{ .DefaultCustomCSSName }}</a></p>
-                                {{ end }}
-                            </label>
+                            {{ if not .CanSelectTheme }}
+                            <div class="highlight-note">Theme selection is disabled by the server administrator.</div>
                             {{ end }}
-                            {{ range .Themes }}
-                            <label class="theme-preview {{ if eq $.Theme.ProfileTheme .Name }}is-selected{{ end }}" data-preview-theme="{{ .Name }}" data-page="{{ .Page }}">
-                                <input type="radio" name="profile_theme" value="{{ .Name }}" {{ if eq $.Theme.ProfileTheme .Name }}checked{{ end }} class="theme-choice" aria-label="{{ .Label }}" data-page="{{ .Page }}">
-                                <div class="theme-preview-header">
-                                    <span>{{ .Label }}</span>
-                                </div>
-                                <div class="theme-preview-description meta">{{ .Description }}</div>
-                                <div class="theme-preview-swatches" aria-hidden="true">
-                                    <span class="theme-swatch surface"></span>
-                                    <span class="theme-swatch panel"></span>
-                                    <span class="theme-swatch accent"></span>
-                                    <span class="theme-swatch ink"></span>
-                                </div>
-                            </label>
-                            {{ end }}
-                        </div>
-                        <div class="theme-pagination">
-                            <button type="button" class="ghost" id="theme_page_prev" aria-label="Previous page">Previous</button>
-                            <span class="meta" id="theme_page_label">Page</span>
-                            <button type="button" class="ghost" id="theme_page_next" aria-label="Next page">Next</button>
-                        </div>
-                        <button type="submit" class="ghost" name="action" value="save-theme">Save theme</button>
-                    </div>
-                    {{ end }}
 
-                    {{ if .CanCustomCSS }}
-                    <div class="section" id="section-custom-css">
-                        <h2>Custom CSS</h2>
-                        <div class="highlight-note">Upload a CSS file or paste overrides. Custom styles load after built-in themes. Uploading a CSS file overwrites your previous custom CSS and clears inline overrides.</div>
-                        {{ if .Theme.CustomCSSURL }}
-                        <div class="css-file-row">
-                            <p class="meta">Current file: <a class="link-inline" href="{{ .Theme.CustomCSSURL }}" target="_blank" rel="noreferrer">{{ .Theme.CustomCSSURL }}</a></p>
-                            <button type="submit" class="icon-button" name="action" value="delete-css" aria-label="Delete CSS file">
-                                <span class="icon icon-trash" aria-hidden="true"></span>
-                            </button>
-                        </div>
-                        {{ end }}
-                        <div class="custom-css-row">
-                            <div class="custom-css-upload">
-                                <label for="custom_css_file">Upload CSS file</label>
-                                <input type="file" id="custom_css_file" name="custom_css_file" accept=".css">
+                            {{ if .CanSelectTheme }}
+                            <div class="section" id="section-themes">
+                                <h2>Built-in themes</h2>
+                                <p class="meta">Pick one theme for the whole app. Click a card to select.</p>
+                                <div class="theme-preview-list" data-theme-pages>
+                                    {{ if .HasDefaultCustomCSS }}
+                                    <label class="theme-preview {{ if eq $.Theme.ProfileTheme $.DefaultCustomTheme.Name }}is-selected{{ end }}" data-preview-theme="{{ $.DefaultCustomTheme.Name }}" data-page="1">
+                                        <input type="radio" name="profile_theme" value="{{ $.DefaultCustomTheme.Name }}" {{ if eq $.Theme.ProfileTheme $.DefaultCustomTheme.Name }}checked{{ end }} class="theme-choice" aria-label="{{ $.DefaultCustomTheme.Label }}" data-page="1">
+                                        <div class="theme-preview-header">
+                                            <span>{{ $.DefaultCustomTheme.Label }}</span>
+                                        </div>
+                                        <div class="theme-preview-description meta">{{ $.DefaultCustomTheme.Description }}</div>
+                                        {{ if .DefaultCustomCSSURL }}
+                                        <p class="meta">Active file: <a class="link-inline" href="{{ .DefaultCustomCSSURL }}" target="_blank" rel="noreferrer">{{ .DefaultCustomCSSName }}</a></p>
+                                        {{ end }}
+                                    </label>
+                                    {{ end }}
+                                    {{ range .Themes }}
+                                    <label class="theme-preview {{ if eq $.Theme.ProfileTheme .Name }}is-selected{{ end }}" data-preview-theme="{{ .Name }}" data-page="{{ .Page }}">
+                                        <input type="radio" name="profile_theme" value="{{ .Name }}" {{ if eq $.Theme.ProfileTheme .Name }}checked{{ end }} class="theme-choice" aria-label="{{ .Label }}" data-page="{{ .Page }}">
+                                        <div class="theme-preview-header">
+                                            <span>{{ .Label }}</span>
+                                        </div>
+                                        <div class="theme-preview-description meta">{{ .Description }}</div>
+                                        <div class="theme-preview-swatches" aria-hidden="true">
+                                            <span class="theme-swatch surface"></span>
+                                            <span class="theme-swatch panel"></span>
+                                            <span class="theme-swatch accent"></span>
+                                            <span class="theme-swatch ink"></span>
+                                        </div>
+                                    </label>
+                                    {{ end }}
+                                </div>
+                                <div class="theme-pagination">
+                                    <button type="button" class="ghost" id="theme_page_prev" aria-label="Previous page">Previous</button>
+                                    <span class="meta" id="theme_page_label">Page</span>
+                                    <button type="button" class="ghost" id="theme_page_next" aria-label="Next page">Next</button>
+                                </div>
+                                <button type="submit" class="ghost" name="action" value="save-theme">Save theme</button>
                             </div>
-                            <button type="submit" class="ghost" name="action" value="upload-css">Upload</button>
-                        </div>
-                        <label for="inline_css">Inline CSS</label>
-                        <textarea id="inline_css" name="inline_css" rows="6" placeholder=":root { --brand: #000; }">{{ .Theme.InlineCSS }}</textarea>
-                        <p class="meta">Use <code>[data-theme="classic"]</code> to scope to a specific theme.</p>
-                        <button type="submit" class="ghost" name="action" value="save-css">Save CSS</button>
-                    </div>
-                    {{ else if .CanSelectTheme }}
-                    <div class="highlight-note">Custom CSS is disabled by the server administrator.</div>
-                    {{ end }}
+                            {{ end }}
 
-                    {{ if or .CanSelectTheme .CanCustomCSS }}
-                    <div class="section"></div>
-                    {{ end }}
+                            {{ if .CanCustomCSS }}
+                            <div class="section" id="section-custom-css">
+                                <h2>Custom CSS</h2>
+                                <div class="highlight-note">Upload a CSS file or paste overrides. Custom styles load after built-in themes. Uploading a CSS file overwrites your previous custom CSS and clears inline overrides.</div>
+                                {{ if .Theme.CustomCSSURL }}
+                                <div class="css-file-row">
+                                    <p class="meta">Current file: <a class="link-inline" href="{{ .Theme.CustomCSSURL }}" target="_blank" rel="noreferrer">{{ .Theme.CustomCSSURL }}</a></p>
+                                    <button type="submit" class="icon-button" name="action" value="delete-css" aria-label="Delete CSS file">
+                                        <span class="icon icon-trash" aria-hidden="true"></span>
+                                    </button>
+                                </div>
+                                {{ end }}
+                                <div class="custom-css-row">
+                                    <div class="custom-css-upload">
+                                        <label for="custom_css_file">Upload CSS file</label>
+                                        <input type="file" id="custom_css_file" name="custom_css_file" accept=".css">
+                                    </div>
+                                    <button type="submit" class="ghost" name="action" value="upload-css">Upload</button>
+                                </div>
+                                <label for="inline_css">Inline CSS</label>
+                                <textarea id="inline_css" name="inline_css" rows="6" placeholder=":root { --brand: #000; }">{{ .Theme.InlineCSS }}</textarea>
+                                <p class="meta">Use <code>[data-theme="classic"]</code> to scope to a specific theme.</p>
+                                <button type="submit" class="ghost" name="action" value="save-css">Save CSS</button>
+                            </div>
+                            {{ else if .CanSelectTheme }}
+                            <div class="highlight-note">Custom CSS is disabled by the server administrator.</div>
+                            {{ end }}
+
                         </form>
                     </div>
                     {{ template "settings_profile_preview" . }}
@@ -106,13 +103,7 @@
                 return cards.reduce((max, card) => Math.max(max, parseInt(card.dataset.page || "1", 10)), 1);
             }
 
-            let currentPage = (() => {
-                const checked = document.querySelector(".theme-choice:checked");
-                if (checked && checked.dataset.page) {
-                    return parseInt(checked.dataset.page, 10);
-                }
-                return 1;
-            })();
+            let currentPage = 1;
 
             function setPage(page) {
                 const total = maxPage();
