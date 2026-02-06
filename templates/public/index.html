@@ -7,7 +7,11 @@
     <title>{{ if .ShowLanding }}PIN - Your Identity, Your Rules{{ else }}{{ if .User.DisplayName }}{{ .User.DisplayName }}{{ else }}{{ .User.Handle }}{{ end }} - Identity{{ end }}</title>
     <link rel="stylesheet" href="/static/css/themes/{{ .Theme.ProfileTheme }}.css" data-theme-css>
     <link rel="stylesheet" href="/static/css/style.css">
-    {{ if .ShowLanding }}<link rel="stylesheet" href="/static/css/landing.css">{{ end }}
+    {{ if .ShowLanding }}
+    <link rel="stylesheet" href="/static/css/landing.css">
+    {{ else }}
+    <link rel="stylesheet" href="/static/css/profile.css">
+    {{ end }}
     {{ if .Theme.CustomCSSURL }}<link rel="stylesheet" href="{{ .Theme.CustomCSSURL }}">{{ end }}
     {{ if .Theme.InlineCSS }}<style>{{ .Theme.InlineCSSTemplate }}</style>{{ end }}
 </head>
