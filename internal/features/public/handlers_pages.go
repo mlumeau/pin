@@ -65,6 +65,7 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	settingsSvc := featuresettings.NewService(h.deps)
 	landing := settingsSvc.LandingSettings(r.Context())
+	footerLinks := settingsSvc.FooterLinksSettings(r.Context())
 	theme := settingsSvc.DefaultThemeSettings(r.Context())
 
 	// Render custom landing HTML when configured and available on disk.
@@ -83,10 +84,12 @@ func (h Handler) Index(w http.ResponseWriter, r *http.Request) {
 	profilePictureAlt := profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user)
 
 	data := map[string]interface{}{
-		"User":              publicUser,
-		"Theme":             theme,
-		"ProfilePictureAlt": profilePictureAlt,
-		"ShowLanding":       showLanding,
+		"User":                publicUser,
+		"Theme":               theme,
+		"ProfilePictureAlt":   profilePictureAlt,
+		"ShowLanding":         showLanding,
+		"ShowFooterAboutLink": footerLinks.ShowAbout,
+		"ShowFooterLoginLink": footerLinks.ShowLogin,
 	}
 
 	if !showLanding {
@@ -236,6 +239,7 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	settingsSvc := featuresettings.NewService(h.deps)
+	footerLinks := settingsSvc.FooterLinksSettings(r.Context())
 	theme := settingsSvc.DefaultThemeSettings(r.Context())
 	if authUser, err := h.deps.GetUserByID(r.Context(), user.UserID); err == nil {
 		theme = settingsSvc.ThemeSettings(r.Context(), &authUser)
@@ -254,19 +258,21 @@ func (h Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	profileURL := h.deps.BaseURL(r) + profilePath
 	profilePictureAlt := profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user)
 	data := map[string]interface{}{
-		"User":              publicUser,
-		"Links":             links,
-		"SocialProfiles":    socialProfiles,
-		"CustomFields":      customFields,
-		"Wallets":           wallets,
-		"PublicKeys":        publicKeys,
-		"VerifiedDomains":   verifiedDomains,
-		"ProfileURL":        profileURL,
-		"ExportBase":        profilePath,
-		"ProfilePictureURL": "/" + url.PathEscape(user.Handle) + "/profile-picture",
-		"ProfilePictureAlt": profilePictureAlt,
-		"UpdatedAt":         updatedAt,
-		"Theme":             theme,
+		"User":                publicUser,
+		"Links":               links,
+		"SocialProfiles":      socialProfiles,
+		"CustomFields":        customFields,
+		"Wallets":             wallets,
+		"PublicKeys":          publicKeys,
+		"VerifiedDomains":     verifiedDomains,
+		"ProfileURL":          profileURL,
+		"ExportBase":          profilePath,
+		"ProfilePictureURL":   "/" + url.PathEscape(user.Handle) + "/profile-picture",
+		"ProfilePictureAlt":   profilePictureAlt,
+		"UpdatedAt":           updatedAt,
+		"Theme":               theme,
+		"ShowFooterAboutLink": footerLinks.ShowAbout,
+		"ShowFooterLoginLink": footerLinks.ShowLogin,
 	}
 
 	if err := h.deps.RenderTemplate(w, "index.html", data); err != nil {
@@ -352,9 +358,11 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 
 	links := identity.DecodeLinks(privateUser.LinksJSON)
 	socialProfiles := identity.DecodeSocialProfiles(privateUser.SocialProfilesJSON)
-	theme := featuresettings.NewService(h.deps).DefaultThemeSettings(r.Context())
+	settingsSvc := featuresettings.NewService(h.deps)
+	footerLinks := settingsSvc.FooterLinksSettings(r.Context())
+	theme := settingsSvc.DefaultThemeSettings(r.Context())
 	if authUser, err := h.deps.GetUserByID(r.Context(), user.UserID); err == nil {
-		theme = featuresettings.NewService(h.deps).ThemeSettings(r.Context(), &authUser)
+		theme = settingsSvc.ThemeSettings(r.Context(), &authUser)
 	}
 	updatedAt := user.UpdatedAt
 	if updatedAt.IsZero() {
@@ -363,20 +371,22 @@ func (h Handler) PrivateIdentity(w http.ResponseWriter, r *http.Request) {
 	profilePath := "/p/" + url.PathEscape(expectedHash) + "/" + url.PathEscape(user.PrivateToken)
 	profileURL := h.deps.BaseURL(r) + profilePath
 	data := map[string]interface{}{
-		"User":              privateUser,
-		"Links":             links,
-		"SocialProfiles":    socialProfiles,
-		"CustomFields":      customFields,
-		"Wallets":           identity.WalletsMapToStructs(identity.DecodeStringMap(privateUser.WalletsJSON)),
-		"PublicKeys":        identity.PublicKeysMapToStructs(identity.DecodeStringMap(privateUser.PublicKeysJSON)),
-		"VerifiedDomains":   identity.VerifiedDomainsSliceToStructs(identity.DecodeStringSlice(privateUser.VerifiedDomainsJSON)),
-		"ProfileURL":        profileURL,
-		"ExportBase":        profilePath,
-		"ProfilePictureURL": profilePath + "/profile-picture",
-		"ProfilePictureAlt": profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user),
-		"IsPrivateIdentity": true,
-		"UpdatedAt":         updatedAt,
-		"Theme":             theme,
+		"User":                privateUser,
+		"Links":               links,
+		"SocialProfiles":      socialProfiles,
+		"CustomFields":        customFields,
+		"Wallets":             identity.WalletsMapToStructs(identity.DecodeStringMap(privateUser.WalletsJSON)),
+		"PublicKeys":          identity.PublicKeysMapToStructs(identity.DecodeStringMap(privateUser.PublicKeysJSON)),
+		"VerifiedDomains":     identity.VerifiedDomainsSliceToStructs(identity.DecodeStringSlice(privateUser.VerifiedDomainsJSON)),
+		"ProfileURL":          profileURL,
+		"ExportBase":          profilePath,
+		"ProfilePictureURL":   profilePath + "/profile-picture",
+		"ProfilePictureAlt":   profilepicture.NewService(h.deps).ActiveAlt(r.Context(), user),
+		"IsPrivateIdentity":   true,
+		"UpdatedAt":           updatedAt,
+		"Theme":               theme,
+		"ShowFooterAboutLink": footerLinks.ShowAbout,
+		"ShowFooterLoginLink": footerLinks.ShowLogin,
 	}
 	if err := h.deps.RenderTemplate(w, "index.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)

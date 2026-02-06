@@ -621,9 +621,7 @@ button.ghost:disabled {
 }
 
 .meta { margin: 0; color: var(--muted); }
-
 footer { margin-top: 2rem; text-align: center; color: var(--muted); font-size: 0.9rem; }
-
 .link-actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
 
 .link-actions a { color: var(--brand); text-decoration: none; font-weight: 700; }
@@ -660,3 +658,7 @@ footer { margin-top: 2rem; text-align: center; color: var(--muted); font-size: 0
     button.icon-button { width: 32px; height: 32px; }
     .profile-picture { border-radius: 20px; }
 }
+.field-visibility-input label {
+    line-height: 1.1;
+}
+

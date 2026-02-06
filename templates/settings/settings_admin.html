@@ -138,6 +138,24 @@
                     </form>
                 </div>
 
+                <div class="section" id="section-footer-links">
+                    <h2>Profile footer links</h2>
+                    <p class="meta">Control subtle links shown below the public profile card.</p>
+                    <form method="post" action="/settings/admin/server#section-footer-links" class="admin-form">
+                        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                        <input type="hidden" name="server_action" value="footer_links">
+                        <label class="checkbox-row">
+                            <input type="checkbox" name="show_footer_about" value="1" {{ if .ShowFooterAboutLink }}checked{{ end }}>
+                            <span>Show about link</span>
+                        </label>
+                        <label class="checkbox-row">
+                            <input type="checkbox" name="show_footer_login" value="1" {{ if .ShowFooterLoginLink }}checked{{ end }}>
+                            <span>Show login link</span>
+                        </label>
+                        <button type="submit">Save footer links</button>
+                    </form>
+                </div>
+
                 <div class="section" id="section-users">
                     <h2>Users</h2>
                     <form method="get" action="/settings/admin/server#section-users" class="user-controls">

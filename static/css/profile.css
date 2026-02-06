@@ -1,0 +1,42 @@
+.profile-shell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(var(--card-width), 100%);
+}
+
+.profile-shell .card {
+    width: 100%;
+}
+
+.profile-login-row {
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.4rem;
+    line-height: 1;
+}
+
+.profile-login-sep {
+    color: var(--muted);
+    font-size: 0.72rem;
+    opacity: 0.28;
+}
+
+.profile-login-link {
+    color: var(--muted);
+    font-size: 0.74rem;
+    font-weight: 500;
+    opacity: 0.32;
+    text-decoration: none;
+    transition: opacity 120ms ease;
+}
+
+.profile-login-link:hover,
+.profile-login-link:focus-visible {
+    opacity: 0.66;
+    text-decoration: underline;
+}

@@ -49,6 +49,7 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 	theme := settingsSvc.ThemeSettings(r.Context(), &current)
 	isAdminUser := isAdmin(current)
 	landing := settingsSvc.LandingSettings(r.Context())
+	footerLinks := settingsSvc.FooterLinksSettings(r.Context())
 	message := r.URL.Query().Get("toast")
 	var users []userSummary
 	var invites []domain.Invite
@@ -119,6 +120,7 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 		}
 
 		landing = settingsSvc.LandingSettings(r.Context())
+		footerLinks = settingsSvc.FooterLinksSettings(r.Context())
 		themePolicy = settingsSvc.ServerThemePolicy(r.Context())
 		showAppearanceNav = isAdminUser || themePolicy.AllowUserTheme
 		defaultTheme = featuresettings.DefaultThemeName
@@ -178,6 +180,8 @@ func (h Handler) Server(w http.ResponseWriter, r *http.Request) {
 		"LandingCustomPath":    landing.CustomPath,
 		"HasCustomLandingFile": landing.CustomPath != "",
 		"LandingCustomURL":     featuresettings.LandingCustomURL(landing.CustomPath),
+		"ShowFooterAboutLink":  footerLinks.ShowAbout,
+		"ShowFooterLoginLink":  footerLinks.ShowLogin,
 		"DefaultTheme":         defaultTheme,
 		"DefaultThemeForce":    defaultThemeForce,
 		"DefaultCustomCSS":     featuresettings.ThemeCustomCSSURL(defaultCustomCSSPath),
@@ -253,6 +257,9 @@ func (h Handler) handleServerAction(w http.ResponseWriter, r *http.Request, sett
 		return result, err
 	case "theme_access":
 		message, err := h.saveThemePolicy(r, settingsSvc)
+		return serverActionResult{message: message}, err
+	case "footer_links":
+		message, err := h.saveFooterLinks(r, settingsSvc)
 		return serverActionResult{message: message}, err
 	case "theme_default_css":
 		message, err := h.saveDefaultCustomCSS(r, settingsSvc, defaultCustomCSSPath)
@@ -371,6 +378,18 @@ func (h Handler) saveThemePolicy(r *http.Request, settingsSvc featuresettings.Se
 		return "", err
 	}
 	return "Theme policy saved.", nil
+}
+
+// saveFooterLinks updates profile footer-link visibility settings.
+func (h Handler) saveFooterLinks(r *http.Request, settingsSvc featuresettings.Service) (string, error) {
+	settings := featuresettings.FooterLinksSettings{
+		ShowAbout: r.FormValue("show_footer_about") == "1",
+		ShowLogin: r.FormValue("show_footer_login") == "1",
+	}
+	if err := settingsSvc.SaveFooterLinksSettings(r.Context(), settings); err != nil {
+		return "", err
+	}
+	return "Footer links saved.", nil
 }
 
 // saveDefaultCustomCSS uploads or removes the server-wide default CSS file.

@@ -53,6 +53,8 @@ func InitDB(db *sql.DB) error {
             key TEXT PRIMARY KEY,
             value TEXT
         )`,
+		`INSERT INTO settings (key, value) VALUES ('footer_link_about', '1') ON CONFLICT(key) DO NOTHING`,
+		`INSERT INTO settings (key, value) VALUES ('footer_link_login', '1') ON CONFLICT(key) DO NOTHING`,
 		`CREATE TABLE IF NOT EXISTS invite (
             id INTEGER PRIMARY KEY,
             token TEXT UNIQUE NOT NULL,
