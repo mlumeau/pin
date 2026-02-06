@@ -1,64 +1,32 @@
 {{ define "profile.html" }}
-    <div class="card">
-        <div class="hero">
-            {{ if .IsPrivateIdentity }}
-            <div class="pill private-pill">Private profile</div>
-            {{ end }}
-            <button type="button" class="profile-picture-flip" data-qr="{{ .ProfileURL }}" aria-label="Show QR code">
-                <div class="profile-picture-inner">
-                    <div class="profile-picture-face profile-picture-front">
-                        <picture>
-                            <source type="image/webp" srcset="{{ .ProfilePictureURL }}?s=128&format=webp">
-                            <img class="profile-picture" src="{{ .ProfilePictureURL }}?s=128" alt="{{ if .ProfilePictureAlt }}{{ .ProfilePictureAlt }}{{ else }}Profile picture{{ end }}">
-                        </picture>
+    <div class="profile-shell">
+        <div class="card">
+            <div class="hero">
+                {{ if .IsPrivateIdentity }}
+                <div class="pill private-pill">Private profile</div>
+                {{ end }}
+                <button type="button" class="profile-picture-flip" data-qr="{{ .ProfileURL }}" aria-label="Show QR code">
+                    <div class="profile-picture-inner">
+                        <div class="profile-picture-face profile-picture-front">
+                            <picture>
+                                <source type="image/webp" srcset="{{ .ProfilePictureURL }}?s=128&format=webp">
+                                <img class="profile-picture" src="{{ .ProfilePictureURL }}?s=128" alt="{{ if .ProfilePictureAlt }}{{ .ProfilePictureAlt }}{{ else }}Profile picture{{ end }}">
+                            </picture>
+                        </div>
+                        <div class="profile-picture-face profile-picture-back">
+                            <img class="qr" src="" alt="Profile QR code">
+                        </div>
                     </div>
-                    <div class="profile-picture-face profile-picture-back">
-                        <img class="qr" src="" alt="Profile QR code">
-                    </div>
-                </div>
-                <span class="profile-picture-tooltip" role="status">Tap to reveal QR</span>
-            </button>
-            <h1>{{ if .User.DisplayName }}{{ .User.DisplayName }}{{ else }}{{ .User.Handle }}{{ end }}</h1>
-            {{ if .User.Pronouns }}<div class="pill">{{ .User.Pronouns }}</div>{{ end }}
-            {{ if .User.Bio }}
-            <p class="lead">{{ .User.Bio }}</p>
-            {{ end }}
-        </div>
-
-        <div class="grid">
-
-            {{ if or .User.Organization .User.JobTitle .User.Birthdate .User.Languages .User.Location .User.Timezone }}
-            <div class="section two-col">
-                {{ if .User.Organization }}<p class="meta"><strong>Organization</strong><br>{{ .User.Organization }}</p>{{ end }}
-                {{ if .User.JobTitle }}<p class="meta"><strong>Job title</strong><br>{{ .User.JobTitle }}</p>{{ end }}
-                {{ if .User.Birthdate }}<p class="meta"><strong>Birthdate</strong><br>{{ .User.Birthdate }}</p>{{ end }}
-                {{ if .User.Location }}<p class="meta"><strong>Location</strong><br>{{ .User.Location }}</p>{{ end }}
-                {{ if .User.Languages }}<p class="meta"><strong>Languages</strong><br>{{ .User.Languages }}</p>{{ end }}
-                {{ if .User.Timezone }}<p class="meta"><strong>Timezone</strong><br>{{ .User.Timezone }}</p>{{ end }}
-            </div>
-            {{ end }}
-
-            {{ if or .User.Email .User.Phone .User.Address .User.Website}}
-            <div class="section">
-                <h2>Contact</h2>
-                <div class="two-col">
-                    {{ if .User.Email }}<p class="meta"><strong>Email</strong><br>{{ .User.Email }}</p>{{ end }}
-                    {{ if .User.Phone }}<p class="meta"><strong>Phone</strong><br>{{ .User.Phone }}</p>{{ end }}
-                    {{ if .User.Address }}<p class="meta"><strong>Address</strong><br>{{ .User.Address }}</p>{{ end }}
-                    {{ if .User.Website }}<p class="meta"><strong>Website</strong><br>{{ .User.Website }}</p>{{ end }}
-                </div>
-            </div>
-            {{ end }}
-
-            {{ if .CustomFields }}
-            <div class="section">
-                <h2>Additional information</h2>
-                {{ range $key, $value := .CustomFields }}
-                <p class="meta"><strong>{{ $key }}</strong><br>{{ $value }}</p>
+                    <span class="profile-picture-tooltip" role="status">Tap to reveal QR</span>
+                </button>
+                <h1>{{ if .User.DisplayName }}{{ .User.DisplayName }}{{ else }}{{ .User.Handle }}{{ end }}</h1>
+                {{ if .User.Pronouns }}<div class="pill">{{ .User.Pronouns }}</div>{{ end }}
+                {{ if .User.Bio }}
+                <p class="lead">{{ .User.Bio }}</p>
                 {{ end }}
             </div>
-            {{ end }}
 
+<<<<<<< Updated upstream
             {{ if .Links }}
             <div class="section">
                 <h2>Links</h2>
@@ -92,10 +60,22 @@
                 <div class="two-col">
                     {{ if .User.ATProtoHandle }}<p class="meta"><strong>Handle</strong><br>{{ .User.ATProtoHandle }}</p>{{ end }}
                     {{ if .User.ATProtoDID }}<p class="meta"><strong>DID</strong><br>{{ .User.ATProtoDID }}</p>{{ end }}
-                </div>
-            </div>
-            {{ end }}
+=======
+            <div class="grid">
 
+                {{ if or .User.Organization .User.JobTitle .User.Birthdate .User.Languages .User.Location .User.Timezone }}
+                <div class="section two-col">
+                    {{ if .User.Organization }}<p class="meta"><strong>Organization</strong><br>{{ .User.Organization }}</p>{{ end }}
+                    {{ if .User.JobTitle }}<p class="meta"><strong>Job title</strong><br>{{ .User.JobTitle }}</p>{{ end }}
+                    {{ if .User.Birthdate }}<p class="meta"><strong>Birthdate</strong><br>{{ .User.Birthdate }}</p>{{ end }}
+                    {{ if .User.Location }}<p class="meta"><strong>Location</strong><br>{{ .User.Location }}</p>{{ end }}
+                    {{ if .User.Languages }}<p class="meta"><strong>Languages</strong><br>{{ .User.Languages }}</p>{{ end }}
+                    {{ if .User.Timezone }}<p class="meta"><strong>Timezone</strong><br>{{ .User.Timezone }}</p>{{ end }}
+>>>>>>> Stashed changes
+                </div>
+                {{ end }}
+
+<<<<<<< Updated upstream
             {{ if .VerifiedDomains }}
             <div class="section">
                 <h2>Verified domains</h2>
@@ -106,29 +86,41 @@
                 </ul>
             </div>
             {{ end }}
+=======
+                {{ if or .User.Email .User.Phone .User.Address .User.Website}}
+                <div class="section">
+                    <h2>Contact</h2>
+                    <div class="two-col">
+                        {{ if .User.Email }}<p class="meta"><strong>Email</strong><br>{{ .User.Email }}</p>{{ end }}
+                        {{ if .User.Phone }}<p class="meta"><strong>Phone</strong><br>{{ .User.Phone }}</p>{{ end }}
+                        {{ if .User.Address }}<p class="meta"><strong>Address</strong><br>{{ .User.Address }}</p>{{ end }}
+                        {{ if .User.Website }}<p class="meta"><strong>Website</strong><br>{{ .User.Website }}</p>{{ end }}
+                    </div>
+                </div>
+                {{ end }}
+>>>>>>> Stashed changes
 
-            {{ if .Wallets }}
-            <div class="section">
-                <h2>Wallets</h2>
-                <div class="two-col">
-                    {{ range .Wallets }}
-                    <p class="meta"><strong>{{ .Label | toUpper }}</strong><br>{{ .Address }}</p>
+                {{ if .CustomFields }}
+                <div class="section">
+                    <h2>Additional information</h2>
+                    {{ range $key, $value := .CustomFields }}
+                    <p class="meta"><strong>{{ $key }}</strong><br>{{ $value }}</p>
                     {{ end }}
                 </div>
-            </div>
-            {{ end }}
+                {{ end }}
 
-            {{ if .PublicKeys }}
-            <div class="section">
-                <h2>Public keys</h2>
-                <ul class="links">
-                    {{ range .PublicKeys }}
-                    <li><a href="#" onclick="return false;"><span>{{ .Algorithm }}</span><span>{{ .Key }}</span></a></li>
-                    {{ end }}
-                </ul>
-            </div>
-            {{ end }}
+                {{ if .Links }}
+                <div class="section">
+                    <h2>Links</h2>
+                    <ul class="links">
+                        {{ range .Links }}
+                        <li><a href="{{ .URL }}" rel="me" target="_blank"><span>{{ .Label }}</span><span>></span></a></li>
+                        {{ end }}
+                    </ul>
+                </div>
+                {{ end }}
 
+<<<<<<< Updated upstream
             <div class="section">
                 <h2>Identity exports</h2>
                 <p class="meta">
@@ -137,12 +129,87 @@
                     <a class="link-inline" href="{{ .ExportBase }}.txt"{{ if .IsPrivateIdentity }} rel="nofollow"{{ end }}>TXT</a> ·
                     <a class="link-inline" href="{{ .ExportBase }}.vcf"{{ if .IsPrivateIdentity }} rel="nofollow"{{ end }}>vCard</a>
                 </p>
-            </div>
-        </div>
+=======
+                {{ if .SocialProfiles }}
+                <div class="section">
+                    <h2>Social profiles</h2>
+                    <ul class="links">
+                        {{ range .SocialProfiles }}
+                        <li>
+                            <a href="{{ .URL }}" rel="me" target="_blank">
+                                <span>{{ .Label }}</span>
+                                {{ if .Verified }}<span class="badge">verified</span>{{ else }}<span>></span>{{ end }}
+                            </a>
+                        </li>
+                        {{ end }}
+                    </ul>
+                </div>
+                {{ end }}
 
-        <footer>
-            Updated {{ .UpdatedAt.Format "2006-01-02" }}
-        </footer>
+                {{ if or .User.ATProtoHandle .User.ATProtoDID }}
+                <div class="section">
+                    <h2>AT Protocol</h2>
+                    <div class="two-col">
+                        {{ if .User.ATProtoHandle }}<p class="meta"><strong>Handle</strong><br>{{ .User.ATProtoHandle }}</p>{{ end }}
+                        {{ if .User.ATProtoDID }}<p class="meta"><strong>DID</strong><br>{{ .User.ATProtoDID }}</p>{{ end }}
+                    </div>
+                </div>
+                {{ end }}
+
+                {{ if .VerifiedDomains }}
+                <div class="section">
+                    <h2>Verified domains</h2>
+                    <ul class="links">
+                        {{ range .VerifiedDomains }}
+                        <li><a href="https://{{ .Domain }}" rel="me" target="_blank"><span>{{ .Domain }}</span><span>></span></a></li>
+                        {{ end }}
+                    </ul>
+                </div>
+                {{ end }}
+
+                {{ if .Wallets }}
+                <div class="section">
+                    <h2>Wallets</h2>
+                    <div class="two-col">
+                        {{ range .Wallets }}
+                        <p class="meta"><strong>{{ .Label | toUpper }}</strong><br>{{ .Address }}</p>
+                        {{ end }}
+                    </div>
+                </div>
+                {{ end }}
+
+                {{ if .PublicKeys }}
+                <div class="section">
+                    <h2>Public keys</h2>
+                    <ul class="links">
+                        {{ range .PublicKeys }}
+                        <li><a href="#" onclick="return false;"><span>{{ .Algorithm }}</span><span>{{ .Key }}</span></a></li>
+                        {{ end }}
+                    </ul>
+                </div>
+                {{ end }}
+
+                <div class="section">
+                    <h2>Identity exports</h2>
+                    <p class="meta">
+                        <a class="link-inline" href="{{ .ExportBase }}.json">JSON</a> ·
+                        <a class="link-inline" href="{{ .ExportBase }}.xml">XML</a> ·
+                        <a class="link-inline" href="{{ .ExportBase }}.txt">TXT</a> ·
+                        <a class="link-inline" href="{{ .ExportBase }}.vcf">vCard</a>
+                    </p>
+                </div>
+>>>>>>> Stashed changes
+            </div>
+
+            <footer>
+                Updated {{ .UpdatedAt.Format "2006-01-02" }}
+            </footer>
+        </div>
+        <div class="profile-login-row">
+            <a href="/landing" class="profile-login-link">about</a>
+            <span class="profile-login-sep" aria-hidden="true">·</span>
+            <a href="/login" class="profile-login-link">login</a>
+        </div>
     </div>
     <script src="/static/js/qrcode.min.js"></script>
     <script src="/static/js/qr.js"></script>
